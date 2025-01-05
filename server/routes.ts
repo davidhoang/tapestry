@@ -9,6 +9,7 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import express from "express";
+import { sql } from "drizzle-orm";
 
 // Configure multer for memory storage
 const upload = multer({
@@ -26,6 +27,38 @@ const upload = multer({
   },
 });
 
+// Add error handler for database operations
+const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
+  return async (req: any, res: any) => {
+    try {
+      await handler(req, res);
+    } catch (error: any) {
+      console.error('Database operation failed:', error);
+
+      // Check for specific database errors
+      if (error.code === '23505') { // Unique violation
+        return res.status(409).json({ 
+          error: "This record already exists",
+          details: error.detail 
+        });
+      }
+
+      if (error.code === '23503') { // Foreign key violation
+        return res.status(400).json({ 
+          error: "Referenced record does not exist",
+          details: error.detail 
+        });
+      }
+
+      // Generic database error
+      res.status(500).json({ 
+        error: "Database operation failed",
+        message: app.get('env') === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  };
+};
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
@@ -36,7 +69,68 @@ export function registerRoutes(app: Express): Server {
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
-  // Designer routes
+  // Designer routes with transaction support
+  app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const result = await db.transaction(async (tx) => {
+      if (!req.body.data) {
+        throw new Error("Designer data is required");
+      }
+
+      let designerData;
+      try {
+        designerData = JSON.parse(req.body.data);
+      } catch (err) {
+        throw new Error("Invalid designer data format");
+      }
+
+      // Check if email already exists within transaction
+      const existingDesigner = await tx.query.designers.findFirst({
+        where: eq(designers.email, designerData.email),
+      });
+
+      if (existingDesigner) {
+        throw new Error("Email already exists");
+      }
+
+      let photoUrl;
+      if (req.file) {
+        const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+        const filepath = path.join(uploadsDir, filename);
+
+        try {
+          await sharp(req.file.buffer)
+            .resize(800, 800, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .webp({ quality: 80 })
+            .toFile(filepath);
+
+          photoUrl = `/uploads/${filename}`;
+        } catch (err) {
+          throw new Error("Failed to process image");
+        }
+      }
+
+      const [designer] = await tx
+        .insert(designers)
+        .values({
+          ...designerData,
+          userId: req.user.id,
+          photoUrl,
+        })
+        .returning();
+
+      return designer;
+    });
+
+    res.json(result);
+  }));
+
   app.get("/api/designers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -53,71 +147,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/designers", upload.single('photo'), async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    try {
-      if (!req.body.data) {
-        return res.status(400).json({ error: "Designer data is required" });
-      }
-
-      let designerData;
-      try {
-        designerData = JSON.parse(req.body.data);
-      } catch (err) {
-        console.error('Error parsing designer data:', err);
-        return res.status(400).json({ error: "Invalid designer data format" });
-      }
-
-      // Check if email already exists
-      const existingDesigner = await db.query.designers.findFirst({
-        where: eq(designers.email, designerData.email),
-      });
-
-      if (existingDesigner) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-
-      let photoUrl;
-      if (req.file) {
-        const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const filepath = path.join(uploadsDir, filename);
-
-        try {
-          await sharp(req.file.buffer)
-            .resize(800, 800, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .webp({ quality: 80 })
-            .toFile(filepath);
-
-          photoUrl = `/uploads/${filename}`;
-        } catch (err) {
-          console.error('Error processing image:', err);
-          return res.status(500).json({ error: "Failed to process image" });
-        }
-      }
-
-      const [designer] = await db
-        .insert(designers)
-        .values({
-          ...designerData,
-          userId: req.user.id,
-          photoUrl,
-        })
-        .returning();
-
-      res.json(designer);
-    } catch (err) {
-      console.error('Error creating designer:', err);
-      res.status(500).json({ error: "Failed to create designer" });
-    }
-  });
-
-  app.put("/api/designers/:id", upload.single('photo'), async (req, res) => {
+  app.put("/api/designers/:id", upload.single('photo'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
@@ -126,15 +156,14 @@ export function registerRoutes(app: Express): Server {
 
     try {
       if (!req.body.data) {
-        return res.status(400).json({ error: "Designer data is required" });
+        throw new Error("Designer data is required");
       }
 
       let designerData;
       try {
         designerData = JSON.parse(req.body.data);
       } catch (err) {
-        console.error('Error parsing designer data:', err);
-        return res.status(400).json({ error: "Invalid designer data format" });
+        throw new Error("Invalid designer data format");
       }
 
       // Check if email already exists for a different designer
@@ -146,7 +175,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (existingDesigner) {
-        return res.status(400).json({ error: "Email already exists" });
+        throw new Error("Email already exists");
       }
 
       let photoUrl;
@@ -165,8 +194,7 @@ export function registerRoutes(app: Express): Server {
 
           photoUrl = `/uploads/${filename}`;
         } catch (err) {
-          console.error('Error processing image:', err);
-          return res.status(500).json({ error: "Failed to process image" });
+          throw new Error("Failed to process image");
         }
       }
 
@@ -184,9 +212,9 @@ export function registerRoutes(app: Express): Server {
       console.error('Error updating designer:', err);
       res.status(500).json({ error: "Failed to update designer" });
     }
-  });
+  }));
 
-  app.delete("/api/designers/batch", async (req, res) => {
+  app.delete("/api/designers/batch", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
@@ -207,9 +235,41 @@ export function registerRoutes(app: Express): Server {
       console.error('Error deleting designers:', err);
       res.status(500).json({ error: "Failed to delete designers" });
     }
-  });
+  }));
 
-  // List routes
+
+  // List routes with transaction support
+  app.post("/api/lists", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const [list] = await tx
+        .insert(lists)
+        .values({
+          ...req.body,
+          userId: req.user.id,
+        })
+        .returning();
+
+      // If designerIds are provided, add them to the list
+      if (req.body.designerIds?.length) {
+        await tx.insert(listDesigners)
+          .values(
+            req.body.designerIds.map((designerId: number) => ({
+              listId: list.id,
+              designerId,
+            }))
+          );
+      }
+
+      return list;
+    });
+
+    res.json(result);
+  }));
+
   app.get("/api/lists", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -234,27 +294,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/lists", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    try {
-      const [list] = await db
-        .insert(lists)
-        .values({
-          ...req.body,
-          userId: req.user.id,
-        })
-        .returning();
-      res.json(list);
-    } catch (err) {
-      res.status(500).json({ error: "Failed to create list" });
-    }
-  });
-
   // Update list route (modified to handle notes)
-  app.put("/api/lists/:id", async (req, res) => {
+  app.put("/api/lists/:id", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
@@ -319,10 +360,10 @@ export function registerRoutes(app: Express): Server {
       console.error('Error updating list:', err);
       res.status(500).json({ error: "Failed to update list" });
     }
-  });
+  }));
 
   // Delete list route
-  app.delete("/api/lists/:listId", async (req, res) => {
+  app.delete("/api/lists/:listId", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
@@ -354,9 +395,9 @@ export function registerRoutes(app: Express): Server {
       console.error('Error deleting list:', err);
       res.status(500).json({ error: "Failed to delete list" });
     }
-  });
+  }));
 
-  app.post("/api/lists/:listId/designers", async (req, res) => {
+  app.post("/api/lists/:listId/designers", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
@@ -413,7 +454,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error adding designer to list:', err);
       res.status(500).json({ error: "Failed to add designer to list" });
     }
-  });
+  }));
 
 
   // Public list route
@@ -454,6 +495,60 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to fetch list" });
     }
   });
+
+  // Add backup status endpoint
+  app.get("/api/system/backup-status", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin (you may want to add an admin field to your user table)
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    // Get last backup time from pg_stat_archiver
+    const [backupStatus] = await db.execute(sql`
+      SELECT 
+        last_archived_time,
+        last_archived_wal,
+        last_failed_time,
+        last_failed_wal,
+        stats_reset
+      FROM pg_stat_archiver;
+    `);
+
+    res.json(backupStatus);
+  }));
+
+  // Add health check endpoint
+  app.get("/api/system/health", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const [healthStatus] = await db.execute(sql`
+      SELECT * FROM db_health_check;
+    `);
+
+    // Add connection pool status
+    const poolStatus = await db.execute(sql`
+      SELECT count(*) as active_connections 
+      FROM pg_stat_activity 
+      WHERE state = 'active';
+    `);
+
+    res.json({
+      health: healthStatus,
+      connections: poolStatus[0],
+      status: 'healthy'
+    });
+  }));
 
   const httpServer = createServer(app);
   return httpServer;

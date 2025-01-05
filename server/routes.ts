@@ -10,6 +10,7 @@ import path from "path";
 import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
+import { sendListEmail } from "./email";
 
 // Configure multer for memory storage
 const upload = multer({
@@ -548,6 +549,44 @@ export function registerRoutes(app: Express): Server {
       connections: poolStatus[0],
       status: 'healthy'
     });
+  }));
+
+  // Add email endpoint
+  app.post("/api/lists/:id/email", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.id);
+      const { email, subject, summary } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to share this list" });
+      }
+
+      await sendListEmail(list, email, subject, summary);
+      res.json({ message: "Email sent successfully" });
+    } catch (err: any) {
+      console.error('Error sending email:', err);
+      res.status(500).json({ error: err.message || "Failed to send email" });
+    }
   }));
 
   const httpServer = createServer(app);

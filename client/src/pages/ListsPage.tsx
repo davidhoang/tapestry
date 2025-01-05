@@ -247,6 +247,7 @@ interface ViewListDialogProps {
 
 function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDialogProps) {
   const [isPublic, setIsPublic] = useState(list.isPublic || false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const updateList = useUpdateList();
   const { toast } = useToast();
   const origin = window.location.origin;
@@ -281,79 +282,96 @@ function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDi
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{list.name}</DialogTitle>
-          <p className="text-muted-foreground">{list.description}</p>
-        </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2">
-          <div className="space-y-4">
-            {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
-              <Card
-                key={designer.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => onViewDesigner(designer)}
-              >
-                <CardContent className="flex items-start space-x-4 pt-6">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={designer.photoUrl || ''} />
-                    <AvatarFallback>
-                      {designer.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h3 className="font-medium">{designer.name}</h3>
-                    <p className="text-sm text-muted-foreground">{designer.title}</p>
-                    {notes && (
-                      <div className="mt-2 text-sm">
-                        <p className="font-medium">Notes:</p>
-                        <p className="text-muted-foreground">{notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">{list.name}</DialogTitle>
+            <p className="text-muted-foreground">{list.description}</p>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto pr-2">
+            <div className="space-y-4">
+              {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
+                <Card
+                  key={designer.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => onViewDesigner(designer)}
+                >
+                  <CardContent className="flex items-start space-x-4 pt-6">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={designer.photoUrl || ''} />
+                      <AvatarFallback>
+                        {designer.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="font-medium">{designer.name}</h3>
+                      <p className="text-sm text-muted-foreground">{designer.title}</p>
+                      {notes && (
+                        <div className="mt-2 text-sm">
+                          <p className="font-medium">Notes:</p>
+                          <p className="text-muted-foreground">{notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
 
-            <div className="border-t pt-4 mt-4">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="public"
-                    checked={isPublic}
-                    onCheckedChange={handlePublicToggle}
-                  />
-                  <label
-                    htmlFor="public"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Share via URL
-                  </label>
-                </div>
-
-                {isPublic && (
+              <div className="border-t pt-4 mt-4">
+                <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Input
-                      readOnly
-                      value={shareUrl}
-                      className="font-mono text-sm"
+                    <Checkbox
+                      id="public"
+                      checked={isPublic}
+                      onCheckedChange={handlePublicToggle}
                     />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={copyShareUrl}
+                    <label
+                      htmlFor="public"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                      Share via URL
+                    </label>
                   </div>
-                )}
+
+                  {isPublic && (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          readOnly
+                          value={shareUrl}
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={copyShareUrl}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowEmailDialog(true)}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <EmailListDialog
+        list={list}
+        open={showEmailDialog}
+        onOpenChange={setShowEmailDialog}
+      />
+    </>
   );
 }
 
@@ -534,8 +552,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => {
                           const currentNotes = designerNotes[designer.id];
@@ -768,6 +786,115 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
             </form>
           </Form>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add new EmailListDialog component
+interface EmailListDialogProps {
+  list: SelectList;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const form = useForm({
+    defaultValues: {
+      email: "",
+      subject: `${list.name} - Designer List`,
+      summary: list.summary || "",
+    },
+  });
+
+  const onSubmit = async (values: { email: string; subject: string; summary: string }) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/lists/${list.id}/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      toast({
+        title: "Success",
+        description: "List has been emailed successfully",
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Email List</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recipient Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" {...field} placeholder="Email address" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="subject"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subject</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="summary"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Summary</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Add a summary for the email..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Email
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -10,7 +10,6 @@ import path from "path";
 import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
-import { sendListEmail } from "./email";
 
 // Configure multer for memory storage
 const upload = multer({
@@ -54,7 +53,7 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
       // Generic database error
       res.status(500).json({ 
         error: "Database operation failed",
-        message: app.get('env') === 'development' ? error.message : 'Internal server error'
+        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
   };
@@ -69,6 +68,24 @@ export function registerRoutes(app: Express): Server {
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+
+  // Get all unique skills
+  app.get("/api/skills", withErrorHandler(async (_req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT DISTINCT jsonb_array_elements_text(skills) as skill
+        FROM designers
+        WHERE skills IS NOT NULL
+        ORDER BY skill ASC;
+      `);
+
+      const skills = result.rows.map(row => row.skill as string);
+      res.json(skills);
+    } catch (err) {
+      console.error('Error fetching skills:', err);
+      res.status(500).json({ error: "Failed to fetch skills" });
+    }
+  }));
 
   // Designer routes with transaction support
   app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {

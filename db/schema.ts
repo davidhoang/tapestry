@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -84,7 +85,12 @@ export type SelectDesigner = typeof designers.$inferSelect;
 export const insertListSchema = createInsertSchema(lists);
 export const selectListSchema = createSelectSchema(lists);
 export type InsertList = typeof lists.$inferInsert;
-export type SelectList = typeof lists.$inferSelect;
+export type SelectList = typeof lists.$inferSelect & {
+  designers?: Array<{
+    designer: SelectDesigner;
+    notes?: string;
+  }>;
+};
 
 export const insertListDesignerSchema = createInsertSchema(listDesigners);
 export const selectListDesignerSchema = createSelectSchema(listDesigners);

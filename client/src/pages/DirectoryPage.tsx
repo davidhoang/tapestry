@@ -299,7 +299,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
           <DialogTitle>{designer ? 'Edit Designer' : 'Add New Designer'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 overflow-y-auto pr-2">
             <FormField
               control={form.control}
               name="photo"

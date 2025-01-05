@@ -73,9 +73,13 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/skills", withErrorHandler(async (_req, res) => {
     try {
       const result = await db.execute(sql`
-        SELECT DISTINCT jsonb_array_elements_text(skills) as skill
-        FROM designers
-        WHERE skills IS NOT NULL
+        WITH skill_arrays AS (
+          SELECT skills::text[] as skills_array
+          FROM designers
+          WHERE skills IS NOT NULL
+        )
+        SELECT DISTINCT unnest(skills_array) as skill
+        FROM skill_arrays
         ORDER BY skill ASC;
       `);
 

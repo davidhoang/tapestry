@@ -17,13 +17,16 @@ function App() {
 
   // Handle public list routes first
   if (window.location.pathname.startsWith('/lists/')) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <Navigation />
-        <PublicListPage params={{ id: window.location.pathname.split('/')[2] }} />
-        <Toaster />
-      </QueryClientProvider>
-    );
+    const listId = window.location.pathname.split('/')[2];
+    if (listId) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <Navigation />
+          <PublicListPage params={{ id: listId }} />
+          <Toaster />
+        </QueryClientProvider>
+      );
+    }
   }
 
   // For all other routes
@@ -35,36 +38,28 @@ function App() {
     );
   }
 
-  // If user is logged in and tries to access the homepage, redirect to directory
-  if (user && window.location.pathname === '/') {
-    setLocation('/directory');
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="container mx-auto px-4 py-8">
-        <Switch>
-          <Route path="/" component={HomePage} />
-          {user && (
-            <>
-              <Route path="/directory" component={DirectoryPage} />
-              <Route path="/lists" component={ListsPage} />
-              <Route path="/matchmaker" component={MatchmakerPage} />
-            </>
-          )}
-          <Route>
-            {() => (
-              <div className="flex items-center justify-center min-h-[50vh]">
-                <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
-              </div>
+    <QueryClientProvider client={queryClient}>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-4 py-8">
+          <Switch>
+            {!user && <Route path="/" component={HomePage} />}
+            {user ? (
+              <>
+                <Route path="/" component={DirectoryPage} />
+                <Route path="/directory" component={DirectoryPage} />
+                <Route path="/lists" component={ListsPage} />
+                <Route path="/matchmaker" component={MatchmakerPage} />
+              </>
+            ) : (
+              <Route path="*" component={HomePage} />
             )}
-          </Route>
-        </Switch>
-      </main>
-      <Toaster />
-    </div>
+          </Switch>
+        </main>
+        <Toaster />
+      </div>
+    </QueryClientProvider>
   );
 }
 

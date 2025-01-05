@@ -122,7 +122,23 @@ function AddDesignerDialog() {
       if (photoFile) {
         formData.append('photo', photoFile);
       }
-      formData.append('data', JSON.stringify(values));
+
+      // Ensure all required fields are present
+      const designerData = {
+        name: values.name,
+        title: values.title,
+        location: values.location || "",
+        company: values.company || "",
+        level: values.level,
+        website: values.website || "",
+        linkedIn: values.linkedIn || "",
+        email: values.email || "",
+        skills: values.skills || [],
+        notes: values.notes || "",
+        available: values.available
+      };
+
+      formData.append('data', JSON.stringify(designerData));
 
       await createDesigner.mutateAsync(formData);
       toast({
@@ -131,10 +147,11 @@ function AddDesignerDialog() {
       });
       form.reset();
       setPhotoFile(null);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Form submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to create designer profile",
+        description: error.message || "Failed to create designer profile",
         variant: "destructive",
       });
     }

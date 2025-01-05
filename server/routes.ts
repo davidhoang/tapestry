@@ -44,6 +44,7 @@ export function registerRoutes(app: Express): Server {
       });
       res.json(allDesigners);
     } catch (err) {
+      console.error('Error fetching designers:', err);
       res.status(500).json({ error: "Failed to fetch designers" });
     }
   });
@@ -54,6 +55,18 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      if (!req.body.data) {
+        return res.status(400).json({ error: "Designer data is required" });
+      }
+
+      let designerData;
+      try {
+        designerData = JSON.parse(req.body.data);
+      } catch (err) {
+        console.error('Error parsing designer data:', err);
+        return res.status(400).json({ error: "Invalid designer data format" });
+      }
+
       let photoUrl;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
@@ -71,7 +84,6 @@ export function registerRoutes(app: Express): Server {
         photoUrl = `/uploads/${filename}`;
       }
 
-      const designerData = JSON.parse(req.body.data);
       const [designer] = await db
         .insert(designers)
         .values({

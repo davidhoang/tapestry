@@ -11,13 +11,10 @@ export function useCreateDesigner() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (designer: Omit<InsertDesigner, "id" | "userId">) => {
+    mutationFn: async (formData: FormData) => {
       const response = await fetch("/api/designers", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(designer),
+        body: formData,
         credentials: "include",
       });
 

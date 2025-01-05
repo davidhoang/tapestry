@@ -253,6 +253,109 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update list route (modified to handle notes)
+  app.put("/api/lists/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.id);
+      const { name, description, summary, isPublic, designerId, notes } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // If we're updating designer notes
+      if (designerId !== undefined && notes !== undefined) {
+        await db
+          .update(listDesigners)
+          .set({ notes })
+          .where(
+            and(
+              eq(listDesigners.listId, listId),
+              eq(listDesigners.designerId, designerId)
+            )
+          );
+
+        const updatedList = await db.query.lists.findFirst({
+          where: eq(lists.id, listId),
+          with: {
+            designers: {
+              with: {
+                designer: true,
+              },
+            },
+          },
+        });
+
+        return res.json(updatedList);
+      }
+
+      // Otherwise, update list details
+      const [updatedList] = await db
+        .update(lists)
+        .set({
+          ...(name && { name }),
+          ...(description !== undefined && { description }),
+          ...(summary !== undefined && { summary }),
+          ...(isPublic !== undefined && { isPublic }),
+        })
+        .where(eq(lists.id, listId))
+        .returning();
+
+      res.json(updatedList);
+    } catch (err) {
+      console.error('Error updating list:', err);
+      res.status(500).json({ error: "Failed to update list" });
+    }
+  });
+
+  // Delete list route
+  app.delete("/api/lists/:listId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to delete this list" });
+      }
+
+      // Delete the list (list_designers will be automatically deleted due to ON DELETE CASCADE)
+      const [deletedList] = await db
+        .delete(lists)
+        .where(eq(lists.id, listId))
+        .returning();
+
+      res.json({ message: "List deleted successfully", list: deletedList });
+    } catch (err) {
+      console.error('Error deleting list:', err);
+      res.status(500).json({ error: "Failed to delete list" });
+    }
+  });
+
   app.post("/api/lists/:listId/designers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -309,79 +412,6 @@ export function registerRoutes(app: Express): Server {
     } catch (err) {
       console.error('Error adding designer to list:', err);
       res.status(500).json({ error: "Failed to add designer to list" });
-    }
-  });
-
-  // Delete list route
-  app.delete("/api/lists/:listId", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    try {
-      const listId = parseInt(req.params.listId);
-
-      // Verify the list exists and belongs to the user
-      const list = await db.query.lists.findFirst({
-        where: eq(lists.id, listId),
-      });
-
-      if (!list) {
-        return res.status(404).json({ error: "List not found" });
-      }
-
-      if (list.userId !== req.user.id) {
-        return res.status(403).json({ error: "Not authorized to delete this list" });
-      }
-
-      // Delete the list
-      await db.delete(lists).where(eq(lists.id, listId));
-
-      res.json({ message: "List deleted successfully" });
-    } catch (err) {
-      console.error('Error deleting list:', err);
-      res.status(500).json({ error: "Failed to delete list" });
-    }
-  });
-
-  // Update list route (modified to include isPublic)
-  app.put("/api/lists/:id", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    try {
-      const listId = parseInt(req.params.id);
-      const { name, description, isPublic } = req.body;
-
-      // Verify the list exists and belongs to the user
-      const list = await db.query.lists.findFirst({
-        where: eq(lists.id, listId),
-      });
-
-      if (!list) {
-        return res.status(404).json({ error: "List not found" });
-      }
-
-      if (list.userId !== req.user.id) {
-        return res.status(403).json({ error: "Not authorized to modify this list" });
-      }
-
-      // Update the list
-      const [updatedList] = await db
-        .update(lists)
-        .set({ 
-          ...(name && { name }),
-          ...(description !== undefined && { description }),
-          ...(isPublic !== undefined && { isPublic }),
-        })
-        .where(eq(lists.id, listId))
-        .returning();
-
-      res.json(updatedList);
-    } catch (err) {
-      console.error('Error updating list:', err);
-      res.status(500).json({ error: "Failed to update list" });
     }
   });
 

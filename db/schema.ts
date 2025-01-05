@@ -39,7 +39,7 @@ export const lists = pgTable("lists", {
 
 export const listDesigners = pgTable("list_designers", {
   id: serial("id").primaryKey(),
-  listId: integer("list_id").references(() => lists.id),
+  listId: integer("list_id").references(() => lists.id, { onDelete: 'cascade' }),
   designerId: integer("designer_id").references(() => designers.id),
   notes: text("notes"),
   addedAt: timestamp("added_at").defaultNow(),

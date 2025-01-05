@@ -27,10 +27,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Share2, Mail, Pencil, UserPlus } from "lucide-react";
+import { Loader2, Plus, Trash, Share2, Mail, Pencil, UserPlus, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -264,6 +265,40 @@ interface ViewListDialogProps {
 }
 
 function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDialogProps) {
+  const [isPublic, setIsPublic] = useState(list.isPublic || false);
+  const updateList = useUpdateList();
+  const { toast } = useToast();
+  const origin = window.location.origin;
+  const shareUrl = `${origin}/lists/${list.id}`;
+
+  const handlePublicToggle = async (checked: boolean) => {
+    try {
+      await updateList.mutateAsync({
+        id: list.id,
+        isPublic: checked,
+      });
+      setIsPublic(checked);
+      toast({
+        title: "Success",
+        description: checked ? "List is now public" : "List is now private",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update list visibility",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyShareUrl = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: "Success",
+      description: "Share URL copied to clipboard",
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -298,6 +333,41 @@ function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDi
               </CardContent>
             </Card>
           ))}
+
+          <div className="border-t pt-4 mt-4">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="public"
+                  checked={isPublic}
+                  onCheckedChange={handlePublicToggle}
+                />
+                <label
+                  htmlFor="public"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Share via URL
+                </label>
+              </div>
+
+              {isPublic && (
+                <div className="flex items-center space-x-2">
+                  <Input
+                    readOnly
+                    value={shareUrl}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={copyShareUrl}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -344,15 +344,15 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update list route
-  app.put("/api/lists/:listId", async (req, res) => {
+  // Update list route (modified to include isPublic)
+  app.put("/api/lists/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
 
     try {
-      const listId = parseInt(req.params.listId);
-      const { name, description } = req.body;
+      const listId = parseInt(req.params.id);
+      const { name, description, isPublic } = req.body;
 
       // Verify the list exists and belongs to the user
       const list = await db.query.lists.findFirst({
@@ -370,7 +370,11 @@ export function registerRoutes(app: Express): Server {
       // Update the list
       const [updatedList] = await db
         .update(lists)
-        .set({ name, description })
+        .set({ 
+          ...(name && { name }),
+          ...(description !== undefined && { description }),
+          ...(isPublic !== undefined && { isPublic }),
+        })
         .where(eq(lists.id, listId))
         .returning();
 
@@ -378,6 +382,46 @@ export function registerRoutes(app: Express): Server {
     } catch (err) {
       console.error('Error updating list:', err);
       res.status(500).json({ error: "Failed to update list" });
+    }
+  });
+
+
+  // Public list route
+  app.get("/api/lists/:id/public", async (req, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+
+      const [list] = await db
+        .select()
+        .from(lists)
+        .where(
+          and(
+            eq(lists.id, listId),
+            eq(lists.isPublic, true)
+          )
+        )
+        .limit(1);
+
+      if (!list) {
+        return res.status(404).send("List not found or is private");
+      }
+
+      // Get designers for the list
+      const listWithDesigners = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+
+      res.json(listWithDesigners);
+    } catch (err) {
+      console.error('Error fetching public list:', err);
+      res.status(500).json({ error: "Failed to fetch list" });
     }
   });
 

@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { useLists, useCreateList, useDeleteList, useUpdateList, useAddDesignersToList } from "@/hooks/use-lists";
+import {
+  useLists,
+  useCreateList,
+  useDeleteList,
+  useUpdateList,
+  useAddDesignersToList,
+} from "@/hooks/use-lists";
 import { useDesigners } from "@/hooks/use-designers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +57,11 @@ import {
 import { SelectDesigner, SelectList } from "@db/schema";
 import { UserPlus } from "lucide-react";
 
-function DesignerSelect({ onSelect }: { onSelect: (designerId: number) => void }) {
+function DesignerSelect({
+  onSelect,
+}: {
+  onSelect: (designerId: number) => void;
+}) {
   const { data: designers, isLoading } = useDesigners();
 
   if (isLoading) return null;
@@ -66,9 +76,12 @@ function DesignerSelect({ onSelect }: { onSelect: (designerId: number) => void }
           <SelectItem key={designer.id} value={designer.id.toString()}>
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
-                <AvatarImage src={designer.photoUrl || ''} />
+                <AvatarImage src={designer.photoUrl || ""} />
                 <AvatarFallback>
-                  {designer.name.split(' ').map((n: string) => n[0]).join('')}
+                  {designer.name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               {designer.name}
@@ -84,7 +97,8 @@ export default function ListsPage() {
   const { data: lists, isLoading } = useLists();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<SelectList | null>(null);
-  const [selectedDesigner, setSelectedDesigner] = useState<SelectDesigner | null>(null);
+  const [selectedDesigner, setSelectedDesigner] =
+    useState<SelectDesigner | null>(null);
   const [listToEdit, setListToEdit] = useState<SelectList | null>(null);
   const [listToDelete, setListToDelete] = useState<SelectList | null>(null);
   const { toast } = useToast();
@@ -132,15 +146,21 @@ export default function ListsPage() {
                 <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        setListToEdit(list);
-                      }}>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setListToEdit(list);
+                        }}
+                      >
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit List
                       </DropdownMenuItem>
@@ -165,10 +185,16 @@ export default function ListsPage() {
               <CardContent>
                 <div className="flex -space-x-2">
                   {list.designers?.slice(0, 5).map(({ designer }) => (
-                    <Avatar key={designer.id} className="border-2 border-background">
-                      <AvatarImage src={designer.photoUrl || ''} />
+                    <Avatar
+                      key={designer.id}
+                      className="border-2 border-background"
+                    >
+                      <AvatarImage src={designer.photoUrl || ""} />
                       <AvatarFallback>
-                        {designer.name.split(' ').map(n => n[0]).join('')}
+                        {designer.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
                       </AvatarFallback>
                     </Avatar>
                   ))}
@@ -209,13 +235,18 @@ export default function ListsPage() {
         />
       )}
 
-      <AlertDialog open={Boolean(listToDelete)} onOpenChange={(open) => !open && setListToDelete(null)}>
+      <AlertDialog
+        open={Boolean(listToDelete)}
+        onOpenChange={(open) => !open && setListToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this list?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Are you sure you want to delete this list?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the list
-              and remove all designer associations.
+              This action cannot be undone. This will permanently delete the
+              list and remove all designer associations.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,7 +276,12 @@ interface ViewListDialogProps {
   onViewDesigner: (designer: SelectDesigner) => void;
 }
 
-function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDialogProps) {
+function ViewListDialog({
+  list,
+  open,
+  onOpenChange,
+  onViewDesigner,
+}: ViewListDialogProps) {
   const [isPublic, setIsPublic] = useState(list.isPublic || false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const updateList = useUpdateList();
@@ -291,32 +327,45 @@ function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDi
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2">
             <div className="space-y-4">
-              {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
-                <Card
-                  key={designer.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => onViewDesigner(designer)}
-                >
-                  <CardContent className="flex items-start space-x-4 pt-6">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={designer.photoUrl || ''} />
-                      <AvatarFallback>
-                        {designer.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-medium">{designer.name}</h3>
-                      <p className="text-sm text-muted-foreground">{designer.title}</p>
-                      {notes && (
-                        <div className="mt-2 text-sm">
-                          <p className="font-medium">Notes:</p>
-                          <p className="text-muted-foreground">{notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {list.designers?.map(
+                ({
+                  designer,
+                  notes,
+                }: {
+                  designer: SelectDesigner;
+                  notes?: string;
+                }) => (
+                  <Card
+                    key={designer.id}
+                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => onViewDesigner(designer)}
+                  >
+                    <CardContent className="flex items-start space-x-4 pt-6">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={designer.photoUrl || ""} />
+                        <AvatarFallback>
+                          {designer.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <h3 className="font-medium">{designer.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {designer.title}
+                        </p>
+                        {notes && (
+                          <div className="mt-2 text-sm">
+                            <p className="font-medium">Notes:</p>
+                            <p className="text-muted-foreground">{notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ),
+              )}
 
               <div className="border-t pt-4 mt-4">
                 <div className="space-y-4">
@@ -385,7 +434,9 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const updateList = useUpdateList();
   const addDesigner = useAddDesignersToList();
   const { toast } = useToast();
-  const [designerNotes, setDesignerNotes] = useState<Record<number, string>>({});
+  const [designerNotes, setDesignerNotes] = useState<Record<number, string>>(
+    {},
+  );
 
   const form = useForm({
     defaultValues: {
@@ -395,7 +446,11 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     },
   });
 
-  const onSubmit = async (values: { name: string; description: string; summary: string }) => {
+  const onSubmit = async (values: {
+    name: string;
+    description: string;
+    summary: string;
+  }) => {
     try {
       await updateList.mutateAsync({
         id: list.id,
@@ -427,7 +482,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         title: "Success",
         description: "Designer added to list successfully",
       });
-      setDesignerNotes(prev => ({ ...prev, [designerId]: "" }));
+      setDesignerNotes((prev) => ({ ...prev, [designerId]: "" }));
     } catch (error: any) {
       toast({
         title: "Error",
@@ -466,7 +521,10 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="space-y-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="name"
@@ -500,17 +558,17 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                     <FormItem>
                       <FormLabel>Summary</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Add a summary for the public share page and email..." />
+                        <Textarea
+                          {...field}
+                          placeholder="Add a summary for the public share page and email..."
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <div className="flex justify-end space-x-2">
-                  <Button
-                    type="submit"
-                    disabled={updateList.isPending}
-                  >
+                  <Button type="submit" disabled={updateList.isPending}>
                     {updateList.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
@@ -521,7 +579,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
             </Form>
 
             <div className="space-y-4">
-              <h3 className="font-medium">Add Designer</h3>
+              <h3 className="font-medium">Add</h3>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <DesignerSelect onSelect={handleAddDesigner} />
@@ -532,77 +590,100 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
             <div className="space-y-2">
               <h3 className="font-medium">Current Designers</h3>
               <div className="space-y-2">
-                {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
-                  <div
-                    key={designer.id}
-                    className="flex flex-col p-2 rounded-md border"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={designer.photoUrl || ''} />
-                          <AvatarFallback>
-                            {designer.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{designer.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {designer.title}
-                          </p>
+                {list.designers?.map(
+                  ({
+                    designer,
+                    notes,
+                  }: {
+                    designer: SelectDesigner;
+                    notes?: string;
+                  }) => (
+                    <div
+                      key={designer.id}
+                      className="flex flex-col p-2 rounded-md border"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={designer.photoUrl || ""} />
+                            <AvatarFallback>
+                              {designer.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{designer.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {designer.title}
+                            </p>
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const currentNotes = designerNotes[designer.id];
+                            setDesignerNotes((prev) => ({
+                              ...prev,
+                              [designer.id]:
+                                currentNotes === undefined
+                                  ? notes || ""
+                                  : undefined,
+                            }));
+                          }}
+                        >
+                          {designerNotes[designer.id] !== undefined
+                            ? "Cancel"
+                            : notes
+                              ? "Edit Notes"
+                              : "Add Notes"}
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const currentNotes = designerNotes[designer.id];
-                          setDesignerNotes(prev => ({
-                            ...prev,
-                            [designer.id]: currentNotes === undefined ? (notes || "") : undefined
-                          }));
-                        }}
-                      >
-                        {designerNotes[designer.id] !== undefined ? "Cancel" : (notes ? "Edit Notes" : "Add Notes")}
-                      </Button>
+
+                      {designerNotes[designer.id] !== undefined && (
+                        <div className="mt-2 space-y-2">
+                          <Textarea
+                            placeholder="Add notes about this designer..."
+                            value={designerNotes[designer.id]}
+                            onChange={(e) =>
+                              setDesignerNotes((prev) => ({
+                                ...prev,
+                                [designer.id]: e.target.value,
+                              }))
+                            }
+                            className="min-h-[80px]"
+                          />
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                handleUpdateNotes(
+                                  designer.id,
+                                  designerNotes[designer.id] || "",
+                                );
+                                setDesignerNotes((prev) => {
+                                  const newNotes = { ...prev };
+                                  delete newNotes[designer.id];
+                                  return newNotes;
+                                });
+                              }}
+                            >
+                              Save Notes
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {notes && designerNotes[designer.id] === undefined && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {notes}
+                        </p>
+                      )}
                     </div>
-
-                    {designerNotes[designer.id] !== undefined && (
-                      <div className="mt-2 space-y-2">
-                        <Textarea
-                          placeholder="Add notes about this designer..."
-                          value={designerNotes[designer.id]}
-                          onChange={(e) => setDesignerNotes(prev => ({
-                            ...prev,
-                            [designer.id]: e.target.value
-                          }))}
-                          className="min-h-[80px]"
-                        />
-                        <div className="flex justify-end">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              handleUpdateNotes(designer.id, designerNotes[designer.id] || "");
-                              setDesignerNotes(prev => {
-                                const newNotes = { ...prev };
-                                delete newNotes[designer.id];
-                                return newNotes;
-                              });
-                            }}
-                          >
-                            Save Notes
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {notes && designerNotes[designer.id] === undefined && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             </div>
           </div>
@@ -618,7 +699,11 @@ interface ViewDesignerDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function ViewDesignerDialog({ designer, open, onOpenChange }: ViewDesignerDialogProps) {
+function ViewDesignerDialog({
+  designer,
+  open,
+  onOpenChange,
+}: ViewDesignerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
@@ -629,9 +714,12 @@ function ViewDesignerDialog({ designer, open, onOpenChange }: ViewDesignerDialog
           <div className="space-y-6">
             <div className="flex items-center space-x-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={designer.photoUrl || ''} />
+                <AvatarImage src={designer.photoUrl || ""} />
                 <AvatarFallback>
-                  {designer.name.split(' ').map(n => n[0]).join('')}
+                  {designer.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -642,7 +730,9 @@ function ViewDesignerDialog({ designer, open, onOpenChange }: ViewDesignerDialog
             {designer.notes && (
               <div>
                 <h3 className="font-medium mb-2">Notes</h3>
-                <p className="text-sm text-muted-foreground">{designer.notes}</p>
+                <p className="text-sm text-muted-foreground">
+                  {designer.notes}
+                </p>
               </div>
             )}
             {designer.skills && (
@@ -767,16 +857,14 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">Selected Designers</h4>
                     <div className="text-sm text-muted-foreground">
-                      {selectedDesignerIds.length} designer{selectedDesignerIds.length !== 1 ? 's' : ''} selected
+                      {selectedDesignerIds.length} designer
+                      {selectedDesignerIds.length !== 1 ? "s" : ""} selected
                     </div>
                   </div>
                 )}
               </div>
               <div className="flex justify-end space-x-2">
-                <Button
-                  type="submit"
-                  disabled={createList.isPending}
-                >
+                <Button type="submit" disabled={createList.isPending}>
                   {createList.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
@@ -809,13 +897,17 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
     },
   });
 
-  const onSubmit = async (values: { email: string; subject: string; summary: string }) => {
+  const onSubmit = async (values: {
+    email: string;
+    subject: string;
+    summary: string;
+  }) => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/lists/${list.id}/email`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(values),
       });
@@ -855,7 +947,11 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
                 <FormItem>
                   <FormLabel>Recipient Email</FormLabel>
                   <FormControl>
-                    <Input type="email" {...field} placeholder="Email address" />
+                    <Input
+                      type="email"
+                      {...field}
+                      placeholder="Email address"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -881,7 +977,10 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
                 <FormItem>
                   <FormLabel>Summary</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Add a summary for the email..." />
+                    <Textarea
+                      {...field}
+                      placeholder="Add a summary for the email..."
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

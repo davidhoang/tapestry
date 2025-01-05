@@ -251,15 +251,55 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      const listId = parseInt(req.params.listId);
+      const { designerId } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Check if the designer exists
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Check if the designer is already in the list
+      const existingEntry = await db.query.listDesigners.findFirst({
+        where: and(
+          eq(listDesigners.listId, listId),
+          eq(listDesigners.designerId, designerId)
+        ),
+      });
+
+      if (existingEntry) {
+        return res.status(400).json({ error: "Designer already in list" });
+      }
+
+      // Add the designer to the list
       const [listDesigner] = await db
         .insert(listDesigners)
         .values({
-          listId: parseInt(req.params.listId),
-          designerId: req.body.designerId,
+          listId,
+          designerId,
         })
         .returning();
+
       res.json(listDesigner);
     } catch (err) {
+      console.error('Error adding designer to list:', err);
       res.status(500).json({ error: "Failed to add designer to list" });
     }
   });

@@ -2,13 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { SelectList } from "@db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
-import { SelectDesigner } from "@db/schema";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function PublicListPage({ params }: { params: { id: string } }) {
-  const [selectedDesigner, setSelectedDesigner] = useState<SelectDesigner | null>(null);
-  
   const { data: list, isLoading, error } = useQuery<SelectList>({
     queryKey: [`/api/lists/${params.id}/public`],
   });
@@ -37,89 +34,68 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">{list.name}</h1>
-          {list.description && (
-            <p className="mt-2 text-muted-foreground">{list.description}</p>
-          )}
+    <div>
+      {/* Simplified Navigation */}
+      <nav className="border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/">
+            <a className="text-xl font-bold">Design Matchmaker</a>
+          </Link>
+          <div className="space-x-2">
+            <Link href="/">
+              <Button variant="ghost" className="text-sm">Login</Button>
+            </Link>
+            <Link href="/">
+              <Button variant="default" className="text-sm">Register</Button>
+            </Link>
+          </div>
         </div>
+      </nav>
 
-        <div className="grid gap-4">
-          {list.designers?.map(({ designer, notes }) => (
-            <Card
-              key={designer.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setSelectedDesigner(designer)}
-            >
-              <CardContent className="flex items-start space-x-4 pt-6">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={designer.photoUrl || ''} />
-                  <AvatarFallback>
-                    {designer.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-medium">{designer.name}</h3>
-                  <p className="text-sm text-muted-foreground">{designer.title}</p>
-                  {notes && (
-                    <div className="mt-2 text-sm">
-                      <p className="font-medium">Notes:</p>
-                      <p className="text-muted-foreground">{notes}</p>
+      {/* List Content */}
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">{list.name}</h1>
+            {list.description && (
+              <p className="mt-2 text-muted-foreground">{list.description}</p>
+            )}
+          </div>
+
+          <div className="grid gap-4">
+            {list.designers?.map(({ designer, notes }) => (
+              <a
+                key={designer.id}
+                href={designer.linkedIn || '#'}
+                target={designer.linkedIn ? "_blank" : undefined}
+                rel="noopener noreferrer"
+                className={designer.linkedIn ? "cursor-pointer" : "cursor-default"}
+              >
+                <Card className="hover:shadow-lg transition-shadow">
+                  <CardContent className="flex items-start space-x-4 pt-6">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={designer.photoUrl || ''} />
+                      <AvatarFallback>
+                        {designer.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="font-medium">{designer.name}</h3>
+                      <p className="text-sm text-muted-foreground">{designer.title}</p>
+                      {notes && (
+                        <div className="mt-2 text-sm">
+                          <p className="font-medium">Notes:</p>
+                          <p className="text-muted-foreground">{notes}</p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </CardContent>
+                </Card>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
-
-      {selectedDesigner && (
-        <Dialog open={Boolean(selectedDesigner)} onOpenChange={(open) => !open && setSelectedDesigner(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={selectedDesigner.photoUrl || ''} />
-                  <AvatarFallback>
-                    {selectedDesigner.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-xl font-semibold">{selectedDesigner.name}</h2>
-                  <p className="text-muted-foreground">{selectedDesigner.title}</p>
-                </div>
-              </div>
-              {selectedDesigner.notes && (
-                <div>
-                  <h3 className="font-medium mb-2">Notes</h3>
-                  <p className="text-sm text-muted-foreground">{selectedDesigner.notes}</p>
-                </div>
-              )}
-              {selectedDesigner.skills && (
-                <div>
-                  <h3 className="font-medium mb-2">Skills</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDesigner.skills.map((skill, index) => (
-                      <div
-                        key={index}
-                        className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
-                      >
-                        {skill}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

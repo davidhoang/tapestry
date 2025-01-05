@@ -3,13 +3,17 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { designers, lists, listDesigners } from "@db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Designer routes
   app.get("/api/designers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
     try {
       const allDesigners = await db.query.designers.findMany({
         orderBy: desc(designers.createdAt),

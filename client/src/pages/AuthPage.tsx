@@ -17,9 +17,8 @@ import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthFormData = {
-  username: string;
+  email: string;
   password: string;
-  email?: string;
 };
 
 export default function AuthPage() {
@@ -58,7 +57,7 @@ function LoginForm() {
 
   const form = useForm<AuthFormData>({
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -90,12 +89,12 @@ function LoginForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="username"
+          name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input type="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -130,7 +129,6 @@ function RegisterForm() {
 
   const form = useForm<AuthFormData>({
     defaultValues: {
-      username: "",
       email: "",
       password: "",
     },
@@ -161,19 +159,6 @@ function RegisterForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Username</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="email"

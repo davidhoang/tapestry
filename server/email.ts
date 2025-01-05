@@ -54,7 +54,10 @@ export async function sendListEmail(list: SelectList, recipientEmail: string, su
 
   const msg = {
     to: recipientEmail,
-    from: 'noreply@designmatchmaker.com', // Update this with your verified sender
+    from: {
+      email: 'team@proofofconcept.pub',
+      name: 'Design Matchmaker'
+    },
     subject: subject,
     html: html,
   };

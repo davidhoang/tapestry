@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Share2, Mail, Pencil, UserPlus, Copy } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -142,26 +142,6 @@ export default function ListsPage() {
                       }}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit List
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        toast({
-                          title: "Coming Soon",
-                          description: "Email sharing will be available soon!",
-                        });
-                      }}>
-                        <Mail className="mr-2 h-4 w-4" />
-                        Share via Email
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        toast({
-                          title: "Coming Soon",
-                          description: "Link sharing will be available soon!",
-                        });
-                      }}>
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Share via Link
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

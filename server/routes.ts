@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { designers, lists, listDesigners } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, ne, inArray } from "drizzle-orm";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -71,13 +71,21 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid designer data format" });
       }
 
+      // Check if email already exists
+      const existingDesigner = await db.query.designers.findFirst({
+        where: eq(designers.email, designerData.email),
+      });
+
+      if (existingDesigner) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
       let photoUrl;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
         const filepath = path.join(uploadsDir, filename);
 
         try {
-          // Process image with sharp
           await sharp(req.file.buffer)
             .resize(800, 800, {
               fit: 'inside',
@@ -106,6 +114,98 @@ export function registerRoutes(app: Express): Server {
     } catch (err) {
       console.error('Error creating designer:', err);
       res.status(500).json({ error: "Failed to create designer" });
+    }
+  });
+
+  app.put("/api/designers/:id", upload.single('photo'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+
+    try {
+      if (!req.body.data) {
+        return res.status(400).json({ error: "Designer data is required" });
+      }
+
+      let designerData;
+      try {
+        designerData = JSON.parse(req.body.data);
+      } catch (err) {
+        console.error('Error parsing designer data:', err);
+        return res.status(400).json({ error: "Invalid designer data format" });
+      }
+
+      // Check if email already exists for a different designer
+      const existingDesigner = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.email, designerData.email),
+          ne(designers.id, designerId)
+        ),
+      });
+
+      if (existingDesigner) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      let photoUrl;
+      if (req.file) {
+        const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+        const filepath = path.join(uploadsDir, filename);
+
+        try {
+          await sharp(req.file.buffer)
+            .resize(800, 800, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .webp({ quality: 80 })
+            .toFile(filepath);
+
+          photoUrl = `/uploads/${filename}`;
+        } catch (err) {
+          console.error('Error processing image:', err);
+          return res.status(500).json({ error: "Failed to process image" });
+        }
+      }
+
+      const [designer] = await db
+        .update(designers)
+        .set({
+          ...designerData,
+          ...(photoUrl && { photoUrl }),
+        })
+        .where(eq(designers.id, designerId))
+        .returning();
+
+      res.json(designer);
+    } catch (err) {
+      console.error('Error updating designer:', err);
+      res.status(500).json({ error: "Failed to update designer" });
+    }
+  });
+
+  app.delete("/api/designers/batch", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids)) {
+        return res.status(400).json({ error: "Invalid request format" });
+      }
+
+      const result = await db
+        .delete(designers)
+        .where(inArray(designers.id, ids))
+        .returning();
+
+      res.json(result);
+    } catch (err) {
+      console.error('Error deleting designers:', err);
+      res.status(500).json({ error: "Failed to delete designers" });
     }
   });
 

@@ -29,3 +29,52 @@ export function useCreateDesigner() {
     },
   });
 }
+
+export function useUpdateDesigner() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, formData }: { id: number; formData: FormData }) => {
+      const response = await fetch(`/api/designers/${id}`, {
+        method: "PUT",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+    },
+  });
+}
+
+export function useDeleteDesigners() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (designerIds: number[]) => {
+      const response = await fetch("/api/designers/batch", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: designerIds }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+    },
+  });
+}

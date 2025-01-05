@@ -19,7 +19,7 @@ export const designers = pgTable("designers", {
   level: text("level").notNull(),
   website: text("website"),
   linkedIn: text("linkedin"),
-  email: text("email"),
+  email: text("email").unique().notNull(),
   photoUrl: text("photo_url"),
   skills: json("skills").$type<string[]>().notNull(),
   available: boolean("available").default(false),

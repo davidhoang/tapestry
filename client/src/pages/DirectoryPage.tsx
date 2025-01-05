@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useDesigners, useCreateDesigner } from "@/hooks/use-designer";
+import { useDesigners, useCreateDesigner, useUpdateDesigner, useDeleteDesigners } from "@/hooks/use-designer";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import MDEditor from "@uiw/react-md-editor";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SelectDesigner } from "@db/schema";
 
@@ -48,9 +48,12 @@ const EXPERIENCE_LEVELS = [
 
 export default function DirectoryPage() {
   const { data: designers, isLoading } = useDesigners();
+  const deleteDesigners = useDeleteDesigners();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const { toast } = useToast();
 
   const filteredDesigners = designers?.filter((designer) => {
     const matchesSearch = designer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,14 +66,56 @@ export default function DirectoryPage() {
     return matchesSearch && matchesSkills;
   });
 
+  const handleDeleteSelected = async () => {
+    if (!selectedIds.length) return;
+
+    try {
+      await deleteDesigners.mutateAsync(selectedIds);
+      toast({
+        title: "Success",
+        description: "Selected designers have been deleted",
+      });
+      setSelectedIds([]);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete designers",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleDesignerSelection = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) 
+        ? prev.filter(designerId => designerId !== id)
+        : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Designer Directory</h1>
-        <AddDesignerDialog 
-          designer={designerToEdit} 
-          onClose={() => setDesignerToEdit(null)} 
-        />
+        <div className="flex gap-2">
+          {selectedIds.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteSelected}
+              disabled={deleteDesigners.isPending}
+            >
+              {deleteDesigners.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Selected ({selectedIds.length})
+            </Button>
+          )}
+          <AddDesignerDialog 
+            designer={designerToEdit} 
+            onClose={() => setDesignerToEdit(null)} 
+          />
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -92,11 +137,19 @@ export default function DirectoryPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredDesigners?.map((designer) => (
-            <DesignerCard 
-              key={designer.id} 
-              designer={designer}
-              onEdit={setDesignerToEdit}
-            />
+            <div key={designer.id} className="relative">
+              <div className="absolute top-4 left-4 z-10">
+                <Checkbox
+                  checked={selectedIds.includes(designer.id)}
+                  onCheckedChange={() => toggleDesignerSelection(designer.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <DesignerCard 
+                designer={designer}
+                onEdit={setDesignerToEdit}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -112,6 +165,7 @@ interface AddDesignerDialogProps {
 function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   const { toast } = useToast();
   const createDesigner = useCreateDesigner();
+  const updateDesigner = useUpdateDesigner();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -127,7 +181,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
       email: designer?.email ?? "",
       skills: designer?.skills ?? [],
       notes: designer?.notes ?? "",
-      available: designer?.available ?? true,
+      available: designer?.available ?? false,
     },
   });
 
@@ -181,11 +235,19 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
 
       formData.append('data', JSON.stringify(designerData));
 
-      await createDesigner.mutateAsync(formData);
-      toast({
-        title: "Success",
-        description: "Designer profile created successfully",
-      });
+      if (designer) {
+        await updateDesigner.mutateAsync({ id: designer.id, formData });
+        toast({
+          title: "Success",
+          description: "Designer profile updated successfully",
+        });
+      } else {
+        await createDesigner.mutateAsync(formData);
+        toast({
+          title: "Success",
+          description: "Designer profile created successfully",
+        });
+      }
       handleClose();
     } catch (error: any) {
       console.error('Form submission error:', error);
@@ -216,7 +278,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Designer</DialogTitle>
+          <DialogTitle>{designer ? 'Edit Designer' : 'Add New Designer'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -254,6 +316,22 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
               />
               <FormField
                 control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" required {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
@@ -261,6 +339,33 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="level"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Level</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {EXPERIENCE_LEVELS.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -290,36 +395,6 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="level"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Level</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select level" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {EXPERIENCE_LEVELS.map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -409,8 +484,11 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
               <DialogTrigger asChild>
                 <Button variant="outline" onClick={handleClose}>Cancel</Button>
               </DialogTrigger>
-              <Button type="submit" disabled={createDesigner.isPending}>
-                {createDesigner.isPending && (
+              <Button 
+                type="submit" 
+                disabled={createDesigner.isPending || updateDesigner.isPending}
+              >
+                {(createDesigner.isPending || updateDesigner.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 {designer ? 'Update Designer' : 'Create Designer'}

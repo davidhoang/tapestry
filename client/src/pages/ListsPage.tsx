@@ -49,6 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SelectDesigner, SelectList } from "@db/schema";
+import { UserPlus } from "lucide-react";
 
 function DesignerSelect({ onSelect }: { onSelect: (designerId: number) => void }) {
   const { data: designers, isLoading } = useDesigners();
@@ -369,10 +370,11 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     defaultValues: {
       name: list.name,
       description: list.description || "",
+      summary: list.summary || "",
     },
   });
 
-  const onSubmit = async (values: { name: string; description: string }) => {
+  const onSubmit = async (values: { name: string; description: string; summary: string }) => {
     try {
       await updateList.mutateAsync({
         id: list.id,
@@ -447,6 +449,19 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="summary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Summary</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Add a summary for the public share page and email..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="flex justify-end space-x-2">
                 <Button
                   type="submit"
@@ -485,7 +500,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
           <div className="space-y-2">
             <h3 className="font-medium">Current Designers</h3>
             <div className="space-y-2">
-              {list.designers?.map(({ designer }: { designer: SelectDesigner }) => (
+              {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
                 <div
                   key={designer.id}
                   className="flex items-center justify-between p-2 rounded-md border"
@@ -502,6 +517,11 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                       <p className="text-sm text-muted-foreground">
                         {designer.title}
                       </p>
+                      {notes && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Notes: {notes}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

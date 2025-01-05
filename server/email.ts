@@ -16,15 +16,27 @@ export async function sendListEmail(
   // Get the base URL from the environment or use a default
   const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
 
+  function getPhotoUrl(url: string | null): string | null {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Remove any leading slashes to avoid double slashes in the URL
+    const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+    return `${baseUrl}/${cleanUrl}`;
+  }
+
   const designersHtml =
     list.designers
       ?.map(
-        ({ designer, notes }) => `
+        ({ designer, notes }) => {
+          const photoUrl = getPhotoUrl(designer.photoUrl);
+          return `
     <div style="margin-bottom: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: white;">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         ${
-          designer.photoUrl
-            ? `<img src="${designer.photoUrl.startsWith('http') ? designer.photoUrl : `${baseUrl}${designer.photoUrl}`}" 
+          photoUrl
+            ? `<img src="${photoUrl}" 
                    alt="${designer.name}" 
                    style="width: 48px; height: 48px; border-radius: 9999px; margin-right: 16px; object-fit: cover;">`
             : `<div style="width: 48px; height: 48px; border-radius: 9999px; background-color: #e5e7eb; margin-right: 16px; display: flex; align-items: center; justify-content: center; font-weight: 500; color: #6b7280;">${designer.name
@@ -53,7 +65,7 @@ export async function sendListEmail(
           : ""
       }
     </div>
-  `,
+  `}
       )
       .join("") || "";
 
@@ -87,7 +99,7 @@ export async function sendListEmail(
     to: recipientEmail,
     from: {
       email: "david@davidhoang.com",
-      name: "David from Design Matchmaker",
+      name: "Design Matchmaker",
     },
     subject: subject,
     html: html,

@@ -13,8 +13,8 @@ export async function sendListEmail(
   subject: string,
   summary: string,
 ) {
-  // Get the base URL from the environment or use a default
-  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  // Get the base URL from the environment or construct it from the request
+  const baseUrl = process.env.BASE_URL || 'https://design-matchmaker.proofofconcept.pub';
 
   function getPhotoUrl(url: string | null): string | null {
     if (!url) return null;

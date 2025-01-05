@@ -60,7 +60,7 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="grid gap-4">
-            {list.designers?.map(({ designer, notes }) => (
+            {list.designers?.map(({ designer, notes }: { designer: any; notes?: string }) => (
               <a
                 key={designer.id}
                 href={designer.linkedIn || '#'}
@@ -73,7 +73,7 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
                     <Avatar className="w-12 h-12">
                       <AvatarImage src={designer.photoUrl || ''} />
                       <AvatarFallback>
-                        {designer.name.split(' ').map(n => n[0]).join('')}
+                        {designer.name.split(' ').map((n: string) => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
@@ -95,7 +95,7 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
       </div>
 
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-sm p-0">
           <AuthPage />
         </DialogContent>
       </Dialog>

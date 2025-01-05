@@ -27,17 +27,11 @@ export const designers = pgTable("designers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const designerRelations = relations(designers, ({ one }) => ({
-  user: one(users, {
-    fields: [designers.userId],
-    references: [users.id],
-  }),
-}));
-
 export const lists = pgTable("lists", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
+  description: text("description"),
   isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -46,8 +40,16 @@ export const listDesigners = pgTable("list_designers", {
   id: serial("id").primaryKey(),
   listId: integer("list_id").references(() => lists.id),
   designerId: integer("designer_id").references(() => designers.id),
+  notes: text("notes"),
   addedAt: timestamp("added_at").defaultNow(),
 });
+
+export const designerRelations = relations(designers, ({ one }) => ({
+  user: one(users, {
+    fields: [designers.userId],
+    references: [users.id],
+  }),
+}));
 
 export const listRelations = relations(lists, ({ one, many }) => ({
   user: one(users, {

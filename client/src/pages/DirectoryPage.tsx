@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useDesigners, useCreateDesigner, useUpdateDesigner, useDeleteDesigners } from "@/hooks/use-designer";
+import { useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import MDEditor from "@uiw/react-md-editor";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash } from "lucide-react";
+import { Loader2, Plus, Trash, ListPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SelectDesigner } from "@db/schema";
 
@@ -53,6 +55,7 @@ export default function DirectoryPage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showAddToListDialog, setShowAddToListDialog] = useState(false);
   const { toast } = useToast();
 
   const filteredDesigners = designers?.filter((designer) => {
@@ -99,17 +102,26 @@ export default function DirectoryPage() {
         <h1 className="text-3xl font-bold">Designer Directory</h1>
         <div className="flex gap-2">
           {selectedIds.length > 0 && (
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteSelected}
-              disabled={deleteDesigners.isPending}
-            >
-              {deleteDesigners.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              <Trash className="mr-2 h-4 w-4" />
-              Delete Selected ({selectedIds.length})
-            </Button>
+            <>
+              <Button 
+                variant="secondary"
+                onClick={() => setShowAddToListDialog(true)}
+              >
+                <ListPlus className="mr-2 h-4 w-4" />
+                Add to List ({selectedIds.length})
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteSelected}
+                disabled={deleteDesigners.isPending}
+              >
+                {deleteDesigners.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                <Trash className="mr-2 h-4 w-4" />
+                Delete Selected
+              </Button>
+            </>
           )}
           <AddDesignerDialog 
             designer={designerToEdit} 
@@ -153,6 +165,13 @@ export default function DirectoryPage() {
           ))}
         </div>
       )}
+
+      <AddToListDialog
+        open={showAddToListDialog}
+        onOpenChange={setShowAddToListDialog}
+        designerIds={selectedIds}
+        onSuccess={() => setSelectedIds([])}
+      />
     </div>
   );
 }
@@ -218,7 +237,6 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
         formData.append('photo', photoFile);
       }
 
-      // Ensure all required fields are present
       const designerData = {
         name: values.name,
         title: values.title,
@@ -492,6 +510,106 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 {designer ? 'Update Designer' : 'Create Designer'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface AddToListDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  designerIds: number[];
+  onSuccess: () => void;
+}
+
+function AddToListDialog({ open, onOpenChange, designerIds, onSuccess }: AddToListDialogProps) {
+  const createList = useCreateList();
+  const addDesignersToList = useAddDesignersToList();
+  const { toast } = useToast();
+
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  const onSubmit = async (values: { name: string; description: string }) => {
+    try {
+      const list = await createList.mutateAsync(values);
+
+      await Promise.all(
+        designerIds.map(designerId =>
+          addDesignersToList.mutateAsync({
+            listId: list.id,
+            designerId,
+          })
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "List created and designers added successfully",
+      });
+      form.reset();
+      onOpenChange(false);
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create list",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New List</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>List Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="submit"
+                disabled={createList.isPending || addDesignersToList.isPending}
+              >
+                {(createList.isPending || addDesignersToList.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create List with Selected Designers
               </Button>
             </div>
           </form>

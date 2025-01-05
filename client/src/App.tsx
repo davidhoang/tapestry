@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/HomePage";
 import DirectoryPage from "./pages/DirectoryPage";
+import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
 import AuthPage from "./pages/AuthPage";
 import { useUser } from "./hooks/use-user";
@@ -32,6 +33,7 @@ function App() {
         <Switch>
           <Route path="/" component={HomePage} />
           <Route path="/directory" component={DirectoryPage} />
+          <Route path="/lists" component={ListsPage} />
           <Route path="/matchmaker" component={MatchmakerPage} />
           <Route>
             {() => (

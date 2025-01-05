@@ -28,6 +28,12 @@ export default function Navigation() {
               Directory
             </Link>
             <Link
+              href="/lists"
+              className={location === "/lists" ? "text-primary" : "text-foreground/60 hover:text-foreground/80 transition-colors"}
+            >
+              Lists
+            </Link>
+            <Link
               href="/matchmaker"
               className={location === "/matchmaker" ? "text-primary" : "text-foreground/60 hover:text-foreground/80 transition-colors"}
             >

@@ -7,27 +7,55 @@ if (!process.env.SENDGRID_API_KEY) {
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-export async function sendListEmail(list: SelectList, recipientEmail: string, subject: string, summary: string) {
-  const designersHtml = list.designers?.map(({ designer, notes }) => `
-    <div style="margin-bottom: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px;">
+export async function sendListEmail(
+  list: SelectList,
+  recipientEmail: string,
+  subject: string,
+  summary: string,
+) {
+  // Get the base URL from the environment or use a default
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+
+  const designersHtml =
+    list.designers
+      ?.map(
+        ({ designer, notes }) => `
+    <div style="margin-bottom: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: white;">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
-        ${designer.photoUrl ? 
-          `<img src="${designer.photoUrl}" alt="${designer.name}" style="width: 48px; height: 48px; border-radius: 9999px; margin-right: 16px;">` :
-          `<div style="width: 48px; height: 48px; border-radius: 9999px; background-color: #e5e7eb; margin-right: 16px; display: flex; align-items: center; justify-content: center; font-weight: 500;">${designer.name.split(' ').map(n => n[0]).join('')}</div>`
+        ${
+          designer.photoUrl
+            ? `<img src="${designer.photoUrl.startsWith('http') ? designer.photoUrl : `${baseUrl}${designer.photoUrl}`}" 
+                   alt="${designer.name}" 
+                   style="width: 48px; height: 48px; border-radius: 9999px; margin-right: 16px; object-fit: cover;">`
+            : `<div style="width: 48px; height: 48px; border-radius: 9999px; background-color: #e5e7eb; margin-right: 16px; display: flex; align-items: center; justify-content: center; font-weight: 500; color: #6b7280;">${designer.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}</div>`
         }
         <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 500;">${designer.name}</h3>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 500;">
+            ${designer.linkedIn ? 
+              `<a href="${designer.linkedIn}" style="color: #111827; text-decoration: none; hover: text-decoration: underline;">${designer.name}</a>` :
+              designer.name
+            }
+          </h3>
           <p style="margin: 0; font-size: 14px; color: #6b7280;">${designer.title}</p>
         </div>
       </div>
-      ${notes ? `
-        <div style="margin-top: 8px;">
+      ${
+        notes
+          ? `
+        <div style="margin-top: 8px; padding-left: 64px;">
           <p style="margin: 0; font-size: 14px; font-weight: 500;">Notes:</p>
           <p style="margin: 0; font-size: 14px; color: #6b7280;">${notes}</p>
         </div>
-      ` : ''}
+      `
+          : ""
+      }
     </div>
-  `).join('') || '';
+  `,
+      )
+      .join("") || "";
 
   const html = `
     <!DOCTYPE html>
@@ -37,15 +65,18 @@ export async function sendListEmail(list: SelectList, recipientEmail: string, su
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${list.name} - Designer List</title>
       </head>
-      <body style="font-family: system, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; margin: 0; padding: 24px;">
-        <div style="max-width: 600px; margin: 0 auto;">
-          <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">${list.name}</h1>
-          ${summary ? `<p style="margin: 0 0 24px 0; color: #6b7280;">${summary}</p>` : ''}
+      <body style="font-family: system, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; margin: 0; padding: 24px; background-color: #f9fafb;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+          <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #111827;">${list.name}</h1>
+          ${summary ? `<p style="margin: 0 0 24px 0; color: #6b7280;">${summary}</p>` : ""}
           <div style="margin-top: 24px;">
             ${designersHtml}
           </div>
           <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">
-            Shared via Design Matchmaker
+            Shared via <a href="${baseUrl}" style="color: #6b7280; text-decoration: none; font-weight: 500;">Design Matchmaker</a>
+          </p>
+          <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
+            <a href="${baseUrl}/lists/${list.id}" style="color: #6b7280; text-decoration: none;">View this list online</a>
           </p>
         </div>
       </body>
@@ -55,8 +86,8 @@ export async function sendListEmail(list: SelectList, recipientEmail: string, su
   const msg = {
     to: recipientEmail,
     from: {
-      email: 'david@davidhoang.com',
-      name: 'Design Matchmaker'
+      email: "david@davidhoang.com",
+      name: "David from Design Matchmaker",
     },
     subject: subject,
     html: html,
@@ -65,7 +96,7 @@ export async function sendListEmail(list: SelectList, recipientEmail: string, su
   try {
     await sgMail.send(msg);
   } catch (error: any) {
-    console.error('Error sending email:', error);
+    console.error("Error sending email:", error);
     if (error.response) {
       throw new Error(error.response.body.errors[0].message);
     }

@@ -282,71 +282,73 @@ function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl">{list.name}</DialogTitle>
           <p className="text-muted-foreground">{list.description}</p>
         </DialogHeader>
-        <div className="space-y-4">
-          {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
-            <Card
-              key={designer.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => onViewDesigner(designer)}
-            >
-              <CardContent className="flex items-start space-x-4 pt-6">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={designer.photoUrl || ''} />
-                  <AvatarFallback>
-                    {designer.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-medium">{designer.name}</h3>
-                  <p className="text-sm text-muted-foreground">{designer.title}</p>
-                  {notes && (
-                    <div className="mt-2 text-sm">
-                      <p className="font-medium">Notes:</p>
-                      <p className="text-muted-foreground">{notes}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex-1 overflow-y-auto pr-2">
+          <div className="space-y-4">
+            {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
+              <Card
+                key={designer.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => onViewDesigner(designer)}
+              >
+                <CardContent className="flex items-start space-x-4 pt-6">
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={designer.photoUrl || ''} />
+                    <AvatarFallback>
+                      {designer.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="font-medium">{designer.name}</h3>
+                    <p className="text-sm text-muted-foreground">{designer.title}</p>
+                    {notes && (
+                      <div className="mt-2 text-sm">
+                        <p className="font-medium">Notes:</p>
+                        <p className="text-muted-foreground">{notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
 
-          <div className="border-t pt-4 mt-4">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="public"
-                  checked={isPublic}
-                  onCheckedChange={handlePublicToggle}
-                />
-                <label
-                  htmlFor="public"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Share via URL
-                </label>
-              </div>
-
-              {isPublic && (
+            <div className="border-t pt-4 mt-4">
+              <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Input
-                    readOnly
-                    value={shareUrl}
-                    className="font-mono text-sm"
+                  <Checkbox
+                    id="public"
+                    checked={isPublic}
+                    onCheckedChange={handlePublicToggle}
                   />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={copyShareUrl}
+                  <label
+                    htmlFor="public"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                    Share via URL
+                  </label>
                 </div>
-              )}
+
+                {isPublic && (
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      readOnly
+                      value={shareUrl}
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={copyShareUrl}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -439,149 +441,151 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>List Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="summary"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Summary</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} placeholder="Add a summary for the public share page and email..." />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="submit"
-                  disabled={updateList.isPending}
-                >
-                  {updateList.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <div className="flex-1 overflow-y-auto pr-2">
+          <div className="space-y-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>List Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  Save Changes
-                </Button>
-              </div>
-            </form>
-          </Form>
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="summary"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Summary</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Add a summary for the public share page and email..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="submit"
+                    disabled={updateList.isPending}
+                  >
+                    {updateList.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </Form>
 
-          <div className="space-y-4">
-            <h3 className="font-medium">Add Designer</h3>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <DesignerSelect onSelect={handleAddDesigner} />
+            <div className="space-y-4">
+              <h3 className="font-medium">Add Designer</h3>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <DesignerSelect onSelect={handleAddDesigner} />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <h3 className="font-medium">Current Designers</h3>
             <div className="space-y-2">
-              {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
-                <div
-                  key={designer.id}
-                  className="flex flex-col p-2 rounded-md border"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={designer.photoUrl || ''} />
-                        <AvatarFallback>
-                          {designer.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{designer.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {designer.title}
-                        </p>
+              <h3 className="font-medium">Current Designers</h3>
+              <div className="space-y-2">
+                {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
+                  <div
+                    key={designer.id}
+                    className="flex flex-col p-2 rounded-md border"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={designer.photoUrl || ''} />
+                          <AvatarFallback>
+                            {designer.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{designer.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {designer.title}
+                          </p>
+                        </div>
                       </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          const currentNotes = designerNotes[designer.id];
+                          setDesignerNotes(prev => ({
+                            ...prev,
+                            [designer.id]: currentNotes === undefined ? (notes || "") : undefined
+                          }));
+                        }}
+                      >
+                        {designerNotes[designer.id] !== undefined ? "Cancel" : (notes ? "Edit Notes" : "Add Notes")}
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        const currentNotes = designerNotes[designer.id];
-                        setDesignerNotes(prev => ({
-                          ...prev,
-                          [designer.id]: currentNotes === undefined ? (notes || "") : undefined
-                        }));
-                      }}
-                    >
-                      {designerNotes[designer.id] !== undefined ? "Cancel" : (notes ? "Edit Notes" : "Add Notes")}
-                    </Button>
+
+                    {designerNotes[designer.id] !== undefined && (
+                      <div className="mt-2 space-y-2">
+                        <Textarea
+                          placeholder="Add notes about this designer..."
+                          value={designerNotes[designer.id]}
+                          onChange={(e) => setDesignerNotes(prev => ({
+                            ...prev,
+                            [designer.id]: e.target.value
+                          }))}
+                          className="min-h-[80px]"
+                        />
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              handleUpdateNotes(designer.id, designerNotes[designer.id] || "");
+                              setDesignerNotes(prev => {
+                                const newNotes = { ...prev };
+                                delete newNotes[designer.id];
+                                return newNotes;
+                              });
+                            }}
+                          >
+                            Save Notes
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {notes && designerNotes[designer.id] === undefined && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {notes}
+                      </p>
+                    )}
                   </div>
-
-                  {designerNotes[designer.id] !== undefined && (
-                    <div className="mt-2 space-y-2">
-                      <Textarea
-                        placeholder="Add notes about this designer..."
-                        value={designerNotes[designer.id]}
-                        onChange={(e) => setDesignerNotes(prev => ({
-                          ...prev,
-                          [designer.id]: e.target.value
-                        }))}
-                        className="min-h-[80px]"
-                      />
-                      <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            handleUpdateNotes(designer.id, designerNotes[designer.id] || "");
-                            setDesignerNotes(prev => {
-                              const newNotes = { ...prev };
-                              delete newNotes[designer.id];
-                              return newNotes;
-                            });
-                          }}
-                        >
-                          Save Notes
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {notes && designerNotes[designer.id] === undefined && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {notes}
-                    </p>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -599,44 +603,46 @@ interface ViewDesignerDialogProps {
 function ViewDesignerDialog({ designer, open, onOpenChange }: ViewDesignerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Avatar className="w-16 h-16">
-              <AvatarImage src={designer.photoUrl || ''} />
-              <AvatarFallback>
-                {designer.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-xl font-semibold">{designer.name}</h2>
-              <p className="text-muted-foreground">{designer.title}</p>
-            </div>
-          </div>
-          {designer.notes && (
-            <div>
-              <h3 className="font-medium mb-2">Notes</h3>
-              <p className="text-sm text-muted-foreground">{designer.notes}</p>
-            </div>
-          )}
-          {designer.skills && (
-            <div>
-              <h3 className="font-medium mb-2">Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                {designer.skills.map((skill, index) => (
-                  <div
-                    key={index}
-                    className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
-                  >
-                    {skill}
-                  </div>
-                ))}
+        <div className="flex-1 overflow-y-auto pr-2">
+          <div className="space-y-6">
+            <div className="flex items-center space-x-4">
+              <Avatar className="w-16 h-16">
+                <AvatarImage src={designer.photoUrl || ''} />
+                <AvatarFallback>
+                  {designer.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-xl font-semibold">{designer.name}</h2>
+                <p className="text-muted-foreground">{designer.title}</p>
               </div>
             </div>
-          )}
+            {designer.notes && (
+              <div>
+                <h3 className="font-medium mb-2">Notes</h3>
+                <p className="text-sm text-muted-foreground">{designer.notes}</p>
+              </div>
+            )}
+            {designer.skills && (
+              <div>
+                <h3 className="font-medium mb-2">Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {designer.skills.map((skill, index) => (
+                    <div
+                      key={index}
+                      className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                    >
+                      {skill}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -699,67 +705,69 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
           Create List
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Create New List</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="space-y-4">
-              <h3 className="font-medium">Add Designers</h3>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <DesignerSelect onSelect={handleAddDesigner} />
-                </div>
-              </div>
-              {selectedDesignerIds.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Selected Designers</h4>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedDesignerIds.length} designer{selectedDesignerIds.length !== 1 ? 's' : ''} selected
+        <div className="flex-1 overflow-y-auto pr-2">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="space-y-4">
+                <h3 className="font-medium">Add Designers</h3>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <DesignerSelect onSelect={handleAddDesigner} />
                   </div>
                 </div>
-              )}
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="submit"
-                disabled={createList.isPending}
-              >
-                {createList.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {selectedDesignerIds.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Selected Designers</h4>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedDesignerIds.length} designer{selectedDesignerIds.length !== 1 ? 's' : ''} selected
+                    </div>
+                  </div>
                 )}
-                Create List
-              </Button>
-            </div>
-          </form>
-        </Form>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="submit"
+                  disabled={createList.isPending}
+                >
+                  {createList.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Create List
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

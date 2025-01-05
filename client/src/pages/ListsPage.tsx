@@ -50,6 +50,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SelectDesigner, SelectList } from "@db/schema";
 import { UserPlus } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 function DesignerSelect({ onSelect }: { onSelect: (designerId: number) => void }) {
   const { data: designers, isLoading } = useDesigners();
@@ -365,6 +370,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const updateList = useUpdateList();
   const addDesigner = useAddDesignersToList();
   const { toast } = useToast();
+  const [designerNotes, setDesignerNotes] = useState<Record<number, string>>({});
 
   const form = useForm({
     defaultValues: {
@@ -400,15 +406,37 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
       await addDesigner.mutateAsync({
         listId: list.id,
         designerId,
+        notes: designerNotes[designerId],
       });
       toast({
         title: "Success",
         description: "Designer added to list successfully",
       });
+      setDesignerNotes(prev => ({ ...prev, [designerId]: "" }));
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to add designer to list",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateNotes = async (designerId: number, notes: string) => {
+    try {
+      await updateList.mutateAsync({
+        id: list.id,
+        designerId,
+        notes,
+      });
+      toast({
+        title: "Success",
+        description: "Notes updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update notes",
         variant: "destructive",
       });
     }
@@ -482,18 +510,6 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
               <div className="flex-1">
                 <DesignerSelect onSelect={handleAddDesigner} />
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={addDesigner.isPending}
-                onClick={() => {}}
-              >
-                {addDesigner.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <UserPlus className="h-4 w-4" />
-                )}
-              </Button>
             </div>
           </div>
 
@@ -517,13 +533,30 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                       <p className="text-sm text-muted-foreground">
                         {designer.title}
                       </p>
-                      {notes && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Notes: {notes}
-                        </p>
-                      )}
                     </div>
                   </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        {notes ? "Edit Notes" : "Add Notes"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Designer Notes</h4>
+                        <Textarea
+                          placeholder="Add notes about this designer..."
+                          defaultValue={notes || ""}
+                          onChange={(e) => setDesignerNotes(prev => ({
+                            ...prev,
+                            [designer.id]: e.target.value
+                          }))}
+                          onBlur={() => handleUpdateNotes(designer.id, designerNotes[designer.id] || "")}
+                          className="min-h-[100px]"
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               ))}
             </div>

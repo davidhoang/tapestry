@@ -11,7 +11,11 @@ export function useCreateList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: { 
+      name: string; 
+      description?: string; 
+      designerIds?: number[];
+    }) => {
       const response = await fetch("/api/lists", {
         method: "POST",
         headers: {
@@ -25,7 +29,25 @@ export function useCreateList() {
         throw new Error(await response.text());
       }
 
-      return response.json();
+      const list = await response.json();
+
+      // If there are designers to add, add them to the list
+      if (data.designerIds?.length) {
+        await Promise.all(
+          data.designerIds.map((designerId) =>
+            fetch(`/api/lists/${list.id}/designers`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ designerId }),
+              credentials: "include",
+            })
+          )
+        );
+      }
+
+      return list;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lists"] });

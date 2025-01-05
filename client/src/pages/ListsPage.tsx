@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useLists, useCreateList, useDeleteList, useUpdateList } from "@/hooks/use-lists";
+import { useLists, useCreateList, useDeleteList, useUpdateList, useAddDesignersToList } from "@/hooks/use-lists";
+import { useDesigners } from "@/hooks/use-designers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,8 +19,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Share2, Mail, Pencil } from "lucide-react";
+import { Loader2, Plus, Trash, Share2, Mail, Pencil, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,15 +47,44 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SelectDesigner } from "@db/schema";
+import { SelectDesigner, SelectList } from "@db/schema";
+
+function DesignerSelect({ onSelect }: { onSelect: (designerId: number) => void }) {
+  const { data: designers, isLoading } = useDesigners();
+
+  if (isLoading) return null;
+
+  return (
+    <Select onValueChange={(value) => onSelect(parseInt(value))}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select a designer" />
+      </SelectTrigger>
+      <SelectContent>
+        {designers?.map((designer) => (
+          <SelectItem key={designer.id} value={designer.id.toString()}>
+            <div className="flex items-center gap-2">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={designer.photoUrl || ''} />
+                <AvatarFallback>
+                  {designer.name.split(' ').map((n: string) => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              {designer.name}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export default function ListsPage() {
   const { data: lists, isLoading } = useLists();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedList, setSelectedList] = useState<any>(null);
+  const [selectedList, setSelectedList] = useState<SelectList | null>(null);
   const [selectedDesigner, setSelectedDesigner] = useState<SelectDesigner | null>(null);
-  const [listToEdit, setListToEdit] = useState<any>(null);
-  const [listToDelete, setListToDelete] = useState<any>(null);
+  const [listToEdit, setListToEdit] = useState<SelectList | null>(null);
+  const [listToDelete, setListToDelete] = useState<SelectList | null>(null);
   const { toast } = useToast();
   const deleteList = useDeleteList();
 
@@ -84,8 +121,8 @@ export default function ListsPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {lists?.map((list) => (
-            <Card 
-              key={list.id} 
+            <Card
+              key={list.id}
               className="group cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => setSelectedList(list)}
             >
@@ -220,7 +257,7 @@ export default function ListsPage() {
 }
 
 interface ViewListDialogProps {
-  list: any;
+  list: SelectList;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onViewDesigner: (designer: SelectDesigner) => void;
@@ -235,8 +272,8 @@ function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDi
           <p className="text-muted-foreground">{list.description}</p>
         </DialogHeader>
         <div className="space-y-4">
-          {list.designers?.map(({ designer, notes }: { designer: SelectDesigner, notes?: string }) => (
-            <Card 
+          {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
+            <Card
               key={designer.id}
               className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => onViewDesigner(designer)}
@@ -268,13 +305,14 @@ function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDi
 }
 
 interface EditListDialogProps {
-  list: any;
+  list: SelectList;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const updateList = useUpdateList();
+  const addDesigner = useAddDesignersToList();
   const { toast } = useToast();
 
   const form = useForm({
@@ -305,53 +343,122 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     }
   };
 
+  const handleAddDesigner = async (designerId: number) => {
+    try {
+      await addDesigner.mutateAsync({
+        listId: list.id,
+        designerId,
+      });
+      toast({
+        title: "Success",
+        description: "Designer added to list successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add designer to list",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>List Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="submit"
-                disabled={updateList.isPending}
-              >
-                {updateList.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <div className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>List Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-                Save Changes
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="submit"
+                  disabled={updateList.isPending}
+                >
+                  {updateList.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </Form>
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Add Designer</h3>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <DesignerSelect onSelect={handleAddDesigner} />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={addDesigner.isPending}
+                onClick={() => {}}
+              >
+                {addDesigner.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
               </Button>
             </div>
-          </form>
-        </Form>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-medium">Current Designers</h3>
+            <div className="space-y-2">
+              {list.designers?.map(({ designer }: { designer: SelectDesigner }) => (
+                <div
+                  key={designer.id}
+                  className="flex items-center justify-between p-2 rounded-md border"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={designer.photoUrl || ''} />
+                      <AvatarFallback>
+                        {designer.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{designer.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {designer.title}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -383,10 +490,12 @@ function ViewDesignerDialog({ designer, open, onOpenChange }: ViewDesignerDialog
               <p className="text-muted-foreground">{designer.title}</p>
             </div>
           </div>
-          <div>
-            <h3 className="font-medium mb-2">Bio</h3>
-            <p className="text-sm text-muted-foreground">{designer.bio}</p>
-          </div>
+          {designer.notes && (
+            <div>
+              <h3 className="font-medium mb-2">Notes</h3>
+              <p className="text-sm text-muted-foreground">{designer.notes}</p>
+            </div>
+          )}
           {designer.skills && (
             <div>
               <h3 className="font-medium mb-2">Skills</h3>
@@ -415,6 +524,7 @@ interface CreateListDialogProps {
 
 function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
   const createList = useCreateList();
+  const addDesigner = useAddDesignersToList();
   const { toast } = useToast();
 
   const form = useForm({
@@ -424,14 +534,21 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
     },
   });
 
+  const [selectedDesignerIds, setSelectedDesignerIds] = useState<number[]>([]);
+
   const onSubmit = async (values: { name: string; description: string }) => {
     try {
-      await createList.mutateAsync(values);
+      const list = await createList.mutateAsync({
+        ...values,
+        designerIds: selectedDesignerIds,
+      });
+
       toast({
         title: "Success",
         description: "List created successfully",
       });
       form.reset();
+      setSelectedDesignerIds([]);
       onOpenChange(false);
     } catch (error: any) {
       toast({
@@ -439,6 +556,12 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
         description: error.message || "Failed to create list",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleAddDesigner = (designerId: number) => {
+    if (!selectedDesignerIds.includes(designerId)) {
+      setSelectedDesignerIds([...selectedDesignerIds, designerId]);
     }
   };
 
@@ -482,6 +605,22 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
                 </FormItem>
               )}
             />
+            <div className="space-y-4">
+              <h3 className="font-medium">Add Designers</h3>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <DesignerSelect onSelect={handleAddDesigner} />
+                </div>
+              </div>
+              {selectedDesignerIds.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Selected Designers</h4>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedDesignerIds.length} designer{selectedDesignerIds.length !== 1 ? 's' : ''} selected
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end space-x-2">
               <Button
                 type="submit"

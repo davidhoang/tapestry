@@ -84,3 +84,8 @@ export const insertListSchema = createInsertSchema(lists);
 export const selectListSchema = createSelectSchema(lists);
 export type InsertList = typeof lists.$inferInsert;
 export type SelectList = typeof lists.$inferSelect;
+
+export const insertListDesignerSchema = createInsertSchema(listDesigners);
+export const selectListDesignerSchema = createSelectSchema(listDesigners);
+export type InsertListDesigner = typeof listDesigners.$inferInsert;
+export type SelectListDesigner = typeof listDesigners.$inferSelect;

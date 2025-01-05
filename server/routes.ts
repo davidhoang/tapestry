@@ -8,6 +8,7 @@ import multer from "multer";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
+import express from "express";
 
 // Configure multer for memory storage
 const upload = multer({
@@ -31,6 +32,9 @@ export function registerRoutes(app: Express): Server {
   // Ensure uploads directory exists
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
   // Designer routes
   app.get("/api/designers", async (req, res) => {
@@ -72,16 +76,21 @@ export function registerRoutes(app: Express): Server {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
         const filepath = path.join(uploadsDir, filename);
 
-        // Process image with sharp
-        await sharp(req.file.buffer)
-          .resize(800, 800, {
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .webp({ quality: 80 })
-          .toFile(filepath);
+        try {
+          // Process image with sharp
+          await sharp(req.file.buffer)
+            .resize(800, 800, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .webp({ quality: 80 })
+            .toFile(filepath);
 
-        photoUrl = `/uploads/${filename}`;
+          photoUrl = `/uploads/${filename}`;
+        } catch (err) {
+          console.error('Error processing image:', err);
+          return res.status(500).json({ error: "Failed to process image" });
+        }
       }
 
       const [designer] = await db

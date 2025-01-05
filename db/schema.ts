@@ -22,7 +22,7 @@ export const designers = pgTable("designers", {
   email: text("email"),
   photoUrl: text("photo_url"),
   skills: json("skills").$type<string[]>().notNull(),
-  available: boolean("available").default(true),
+  available: boolean("available").default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });

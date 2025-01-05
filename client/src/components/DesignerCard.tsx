@@ -27,40 +27,37 @@ export default function DesignerCard({ designer, onEdit, onAdd }: DesignerCardPr
         className="h-full relative cursor-pointer hover:shadow-md transition-shadow"
         onClick={() => setIsViewModalOpen(true)}
       >
-        {onEdit && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 z-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(designer);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
-        <CardHeader className="space-y-1">
-          <div className="flex items-start gap-4">
+        <CardHeader className="space-y-1 pb-4">
+          <div className="flex items-start gap-4 pt-4 pr-12">
             {designer.photoUrl && (
               <img
                 src={designer.photoUrl}
                 alt={designer.name}
-                className="h-16 w-16 rounded-full object-cover"
+                className="h-16 w-16 rounded-full object-cover bg-muted"
               />
             )}
-            <div className="flex-1">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-semibold">{designer.name}</h3>
-                  <p className="text-sm text-muted-foreground">{designer.title}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold truncate">{designer.name}</h3>
+                  <p className="text-sm text-muted-foreground truncate">{designer.title}</p>
                 </div>
-                {designer.available && (
-                  <Badge variant="secondary">Open to Roles</Badge>
-                )}
               </div>
             </div>
           </div>
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(designer);
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -76,8 +73,12 @@ export default function DesignerCard({ designer, onEdit, onAdd }: DesignerCardPr
                 <Badge key={i} variant="outline">{skill}</Badge>
               ))}
             </div>
+            {designer.available && (
+              <div className="pt-2">
+                <Badge variant="secondary">Open to Roles</Badge>
+              </div>
+            )}
           </div>
-          
         </CardContent>
       </Card>
 
@@ -88,12 +89,18 @@ export default function DesignerCard({ designer, onEdit, onAdd }: DesignerCardPr
           </DialogHeader>
           <div className="space-y-6">
             <div className="flex items-start gap-6">
-              {designer.photoUrl && (
+              {designer.photoUrl ? (
                 <img
                   src={designer.photoUrl}
                   alt={designer.name}
-                  className="h-32 w-32 rounded-full object-cover"
+                  className="h-32 w-32 rounded-full object-cover bg-muted"
                 />
+              ) : (
+                <div className="h-32 w-32 rounded-full bg-muted flex items-center justify-center">
+                  <span className="text-4xl font-bold text-muted-foreground">
+                    {designer.name.charAt(0)}
+                  </span>
+                </div>
               )}
               <div className="flex-1">
                 <div className="flex justify-between items-start">

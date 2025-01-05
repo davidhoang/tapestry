@@ -50,11 +50,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SelectDesigner, SelectList } from "@db/schema";
 import { UserPlus } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 function DesignerSelect({ onSelect }: { onSelect: (designerId: number) => void }) {
   const { data: designers, isLoading } = useDesigners();
@@ -519,44 +514,72 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
               {list.designers?.map(({ designer, notes }: { designer: SelectDesigner; notes?: string }) => (
                 <div
                   key={designer.id}
-                  className="flex items-center justify-between p-2 rounded-md border"
+                  className="flex flex-col p-2 rounded-md border"
                 >
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={designer.photoUrl || ''} />
-                      <AvatarFallback>
-                        {designer.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{designer.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {designer.title}
-                      </p>
-                    </div>
-                  </div>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        {notes ? "Edit Notes" : "Add Notes"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80">
-                      <div className="space-y-2">
-                        <h4 className="font-medium">Designer Notes</h4>
-                        <Textarea
-                          placeholder="Add notes about this designer..."
-                          defaultValue={notes || ""}
-                          onChange={(e) => setDesignerNotes(prev => ({
-                            ...prev,
-                            [designer.id]: e.target.value
-                          }))}
-                          onBlur={() => handleUpdateNotes(designer.id, designerNotes[designer.id] || "")}
-                          className="min-h-[100px]"
-                        />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={designer.photoUrl || ''} />
+                        <AvatarFallback>
+                          {designer.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{designer.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {designer.title}
+                        </p>
                       </div>
-                    </PopoverContent>
-                  </Popover>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        const currentNotes = designerNotes[designer.id];
+                        setDesignerNotes(prev => ({
+                          ...prev,
+                          [designer.id]: currentNotes === undefined ? (notes || "") : undefined
+                        }));
+                      }}
+                    >
+                      {designerNotes[designer.id] !== undefined ? "Cancel" : (notes ? "Edit Notes" : "Add Notes")}
+                    </Button>
+                  </div>
+
+                  {designerNotes[designer.id] !== undefined && (
+                    <div className="mt-2 space-y-2">
+                      <Textarea
+                        placeholder="Add notes about this designer..."
+                        value={designerNotes[designer.id]}
+                        onChange={(e) => setDesignerNotes(prev => ({
+                          ...prev,
+                          [designer.id]: e.target.value
+                        }))}
+                        className="min-h-[80px]"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            handleUpdateNotes(designer.id, designerNotes[designer.id] || "");
+                            setDesignerNotes(prev => {
+                              const newNotes = { ...prev };
+                              delete newNotes[designer.id];
+                              return newNotes;
+                            });
+                          }}
+                        >
+                          Save Notes
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {notes && designerNotes[designer.id] === undefined && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {notes}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

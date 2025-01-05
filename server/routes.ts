@@ -74,16 +74,21 @@ export function registerRoutes(app: Express): Server {
     try {
       const result = await db.execute(sql`
         WITH skill_arrays AS (
-          SELECT skills::text[] as skills_array
-          FROM designers
-          WHERE skills IS NOT NULL
+          SELECT ARRAY(
+            SELECT DISTINCT elem::text
+            FROM designers, jsonb_array_elements(skills) AS elem
+            WHERE skills IS NOT NULL
+            ORDER BY elem::text
+          ) AS skills
         )
-        SELECT DISTINCT unnest(skills_array) as skill
-        FROM skill_arrays
-        ORDER BY skill ASC;
+        SELECT skills FROM skill_arrays;
       `);
 
-      const skills = result.rows.map(row => row.skill as string);
+      // Add logging to check the response format
+      console.log('Skills API Response:', result.rows[0]?.skills);
+
+      // Ensure we return an array, even if empty
+      const skills = result.rows[0]?.skills || [];
       res.json(skills);
     } catch (err) {
       console.error('Error fetching skills:', err);

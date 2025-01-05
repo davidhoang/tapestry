@@ -19,13 +19,21 @@ export default function SkillsInput({ value, onChange }: SkillsInputProps) {
   useEffect(() => {
     fetch('/api/skills')
       .then(res => res.json())
-      .then(data => setAllSkills(data))
-      .catch(console.error);
+      .then(data => {
+        // Ensure we're working with an array
+        const skillsArray = Array.isArray(data) ? data : [];
+        console.log('Fetched skills:', skillsArray);
+        setAllSkills(skillsArray);
+      })
+      .catch(error => {
+        console.error('Error fetching skills:', error);
+        setAllSkills([]);
+      });
   }, []);
 
   // Update suggestions based on input
   useEffect(() => {
-    if (!input.trim()) {
+    if (!input.trim() || !Array.isArray(allSkills)) {
       setSuggestions([]);
       return;
     }

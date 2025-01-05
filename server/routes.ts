@@ -219,9 +219,17 @@ export function registerRoutes(app: Express): Server {
       const userLists = await db.query.lists.findMany({
         where: eq(lists.userId, req.user.id),
         orderBy: desc(lists.createdAt),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
       });
       res.json(userLists);
     } catch (err) {
+      console.error('Error fetching lists:', err);
       res.status(500).json({ error: "Failed to fetch lists" });
     }
   });

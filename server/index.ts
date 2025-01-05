@@ -36,10 +36,17 @@ app.use((req, res, next) => {
   next();
 });
 
-let retries = 5;
-const PORT = 5000;
+const PORTS = [5000, 5001, 5002, 5003, 5004];
+let currentPortIndex = 0;
 
-async function startServer() {
+async function tryStartServer() {
+  if (currentPortIndex >= PORTS.length) {
+    console.error('No available ports found');
+    process.exit(1);
+  }
+
+  const PORT = PORTS[currentPortIndex];
+
   try {
     const server = registerRoutes(app);
 
@@ -56,32 +63,33 @@ async function startServer() {
       serveStatic(app);
     }
 
-    server.on('error', (error: NodeJS.ErrnoException) => {
-      if (error.code === 'EADDRINUSE') {
-        log(`Port ${PORT} is in use, retrying...`);
-        if (retries > 0) {
-          retries--;
-          setTimeout(() => {
-            server.close();
-            server.listen(PORT, "0.0.0.0");
-          }, 1000);
-        } else {
-          log('Could not start server after 5 retries');
-          process.exit(1);
-        }
-      }
-    });
-
-    process.on('SIGTERM', () => {
-      log('SIGTERM signal received: closing HTTP server');
+    // Clean up on process termination
+    const cleanup = () => {
       server.close(() => {
         log('HTTP server closed');
         process.exit(0);
       });
-    });
+    };
 
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`serving on port ${PORT}`);
+    process.on('SIGTERM', cleanup);
+    process.on('SIGINT', cleanup);
+
+    return new Promise((resolve, reject) => {
+      server.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          log(`Port ${PORT} is in use, trying next port...`);
+          server.close();
+          currentPortIndex++;
+          resolve(tryStartServer());
+        } else {
+          reject(error);
+        }
+      });
+
+      server.listen(PORT, "0.0.0.0", () => {
+        log(`Server running on port ${PORT}`);
+        resolve(server);
+      });
     });
 
   } catch (error) {
@@ -90,4 +98,7 @@ async function startServer() {
   }
 }
 
-startServer();
+tryStartServer().catch((error) => {
+  console.error('Fatal error starting server:', error);
+  process.exit(1);
+});

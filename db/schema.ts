@@ -32,7 +32,6 @@ export const lists = pgTable("lists", {
   userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
   description: text("description"),
-  summary: text("summary"),
   isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -21,7 +21,6 @@ function App() {
     if (listId) {
       return (
         <QueryClientProvider client={queryClient}>
-          <Navigation />
           <PublicListPage params={{ id: listId }} />
           <Toaster />
         </QueryClientProvider>

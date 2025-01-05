@@ -99,6 +99,15 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
           <AuthPage />
         </DialogContent>
       </Dialog>
+
+      <a 
+        href="http://www.proofofconcept.pub" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-md text-sm hover:bg-black/90 transition-colors"
+      >
+        A Proof of Concept experiment
+      </a>
     </div>
   );
 }

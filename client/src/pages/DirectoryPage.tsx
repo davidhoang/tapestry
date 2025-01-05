@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDesigners, useCreateDesigner } from "@/hooks/use-designer";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
@@ -50,6 +50,7 @@ export default function DirectoryPage() {
   const { data: designers, isLoading } = useDesigners();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(null);
 
   const filteredDesigners = designers?.filter((designer) => {
     const matchesSearch = designer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,7 +67,10 @@ export default function DirectoryPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Designer Directory</h1>
-        <AddDesignerDialog />
+        <AddDesignerDialog 
+          designer={designerToEdit} 
+          onClose={() => setDesignerToEdit(null)} 
+        />
       </div>
 
       <div className="space-y-4">
@@ -88,7 +92,11 @@ export default function DirectoryPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredDesigners?.map((designer) => (
-            <DesignerCard key={designer.id} designer={designer} />
+            <DesignerCard 
+              key={designer.id} 
+              designer={designer}
+              onEdit={setDesignerToEdit}
+            />
           ))}
         </div>
       )}
@@ -96,25 +104,58 @@ export default function DirectoryPage() {
   );
 }
 
-function AddDesignerDialog() {
+interface AddDesignerDialogProps {
+  designer?: SelectDesigner | null;
+  onClose: () => void;
+}
+
+function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   const { toast } = useToast();
   const createDesigner = useCreateDesigner();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
   const form = useForm({
     defaultValues: {
-      name: "",
-      title: "",
-      location: "",
-      company: "",
-      level: "",
-      website: "",
-      linkedIn: "",
-      email: "",
-      skills: [] as string[],
-      notes: "",
-      available: true,
+      name: designer?.name ?? "",
+      title: designer?.title ?? "",
+      location: designer?.location ?? "",
+      company: designer?.company ?? "",
+      level: designer?.level ?? "",
+      website: designer?.website ?? "",
+      linkedIn: designer?.linkedIn ?? "",
+      email: designer?.email ?? "",
+      skills: designer?.skills ?? [],
+      notes: designer?.notes ?? "",
+      available: designer?.available ?? true,
     },
   });
+
+  useEffect(() => {
+    if (designer) {
+      form.reset({
+        name: designer.name,
+        title: designer.title,
+        location: designer.location,
+        company: designer.company,
+        level: designer.level,
+        website: designer.website,
+        linkedIn: designer.linkedIn,
+        email: designer.email,
+        skills: designer.skills,
+        notes: designer.notes,
+        available: designer.available,
+      });
+      setIsOpen(true);
+    }
+  }, [designer, form]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    form.reset();
+    setPhotoFile(null);
+    onClose();
+  };
 
   const onSubmit = async (values: Omit<SelectDesigner, "id" | "userId" | "createdAt" | "photoUrl">) => {
     try {
@@ -145,8 +186,7 @@ function AddDesignerDialog() {
         title: "Success",
         description: "Designer profile created successfully",
       });
-      form.reset();
-      setPhotoFile(null);
+      handleClose();
     } catch (error: any) {
       console.error('Form submission error:', error);
       toast({
@@ -164,7 +204,10 @@ function AddDesignerDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen || Boolean(designer)} onOpenChange={(open) => {
+      if (!open) handleClose();
+      setIsOpen(open);
+    }}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
@@ -364,13 +407,13 @@ function AddDesignerDialog() {
 
             <div className="flex justify-end space-x-2">
               <DialogTrigger asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" onClick={handleClose}>Cancel</Button>
               </DialogTrigger>
               <Button type="submit" disabled={createDesigner.isPending}>
                 {createDesigner.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Create Designer
+                {designer ? 'Update Designer' : 'Create Designer'}
               </Button>
             </div>
           </form>

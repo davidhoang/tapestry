@@ -4,9 +4,33 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { designers, lists, listDesigners } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
+import multer from "multer";
+import sharp from "sharp";
+import path from "path";
+import fs from "fs/promises";
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG and WebP are allowed.'));
+    }
+  },
+});
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
   // Designer routes
   app.get("/api/designers", async (req, res) => {
@@ -24,21 +48,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/designers", async (req, res) => {
+  app.post("/api/designers", upload.single('photo'), async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
 
     try {
+      let photoUrl;
+      if (req.file) {
+        const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+        const filepath = path.join(uploadsDir, filename);
+
+        // Process image with sharp
+        await sharp(req.file.buffer)
+          .resize(800, 800, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({ quality: 80 })
+          .toFile(filepath);
+
+        photoUrl = `/uploads/${filename}`;
+      }
+
+      const designerData = JSON.parse(req.body.data);
       const [designer] = await db
         .insert(designers)
         .values({
-          ...req.body,
+          ...designerData,
           userId: req.user.id,
+          photoUrl,
         })
         .returning();
+
       res.json(designer);
     } catch (err) {
+      console.error('Error creating designer:', err);
       res.status(500).json({ error: "Failed to create designer" });
     }
   });

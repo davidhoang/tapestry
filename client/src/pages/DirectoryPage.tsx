@@ -19,10 +19,31 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import MDEditor from "@uiw/react-md-editor";
 import { useForm } from "react-hook-form";
 import { Loader2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SelectDesigner } from "@db/schema";
+
+const EXPERIENCE_LEVELS = [
+  "Mid-level",
+  "Senior",
+  "Staff",
+  "Senior Staff",
+  "Principal",
+  "Manager",
+  "Director",
+  "Senior Director",
+  "VP"
+];
 
 export default function DirectoryPage() {
   const { data: designers, isLoading } = useDesigners();
@@ -33,10 +54,10 @@ export default function DirectoryPage() {
     const matchesSearch = designer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          designer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          designer.company?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesSkills = selectedSkills.length === 0 || 
                          selectedSkills.every(skill => designer.skills.includes(skill));
-    
+
     return matchesSearch && matchesSkills;
   });
 
@@ -77,6 +98,7 @@ export default function DirectoryPage() {
 function AddDesignerDialog() {
   const { toast } = useToast();
   const createDesigner = useCreateDesigner();
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const form = useForm({
     defaultValues: {
       name: "",
@@ -90,23 +112,37 @@ function AddDesignerDialog() {
       skills: [] as string[],
       available: true,
       description: "",
+      notes: "",
     },
   });
 
-  const onSubmit = async (values: Omit<SelectDesigner, "id" | "userId" | "createdAt">) => {
+  const onSubmit = async (values: Omit<SelectDesigner, "id" | "userId" | "createdAt" | "photoUrl">) => {
     try {
-      await createDesigner.mutateAsync(values);
+      const formData = new FormData();
+      if (photoFile) {
+        formData.append('photo', photoFile);
+      }
+      formData.append('data', JSON.stringify(values));
+
+      await createDesigner.mutateAsync(formData);
       toast({
         title: "Success",
         description: "Designer profile created successfully",
       });
       form.reset();
+      setPhotoFile(null);
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to create designer profile",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setPhotoFile(e.target.files[0]);
     }
   };
 
@@ -124,6 +160,24 @@ function AddDesignerDialog() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="photo"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Photo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -182,6 +236,82 @@ function AddDesignerDialog() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="level"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Level</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {EXPERIENCE_LEVELS.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="available"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel>Open to Roles</FormLabel>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="url" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="linkedIn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>LinkedIn URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="url" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="skills"
@@ -192,6 +322,37 @@ function AddDesignerDialog() {
                     <SkillsInput
                       value={field.value}
                       onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <MDEditor
+                      value={field.value}
+                      onChange={(value) => field.onChange(value || '')}
                     />
                   </FormControl>
                   <FormMessage />

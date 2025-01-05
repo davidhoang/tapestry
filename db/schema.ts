@@ -20,11 +20,20 @@ export const designers = pgTable("designers", {
   website: text("website"),
   linkedIn: text("linkedin"),
   email: text("email"),
+  photoUrl: text("photo_url"),
   skills: json("skills").$type<string[]>().notNull(),
   available: boolean("available").default(true),
   description: text("description"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const designerRelations = relations(designers, ({ one }) => ({
+  user: one(users, {
+    fields: [designers.userId],
+    references: [users.id],
+  }),
+}));
 
 export const lists = pgTable("lists", {
   id: serial("id").primaryKey(),
@@ -41,13 +50,6 @@ export const listDesigners = pgTable("list_designers", {
   designerId: integer("designer_id").references(() => designers.id),
   addedAt: timestamp("added_at").defaultNow(),
 });
-
-export const designerRelations = relations(designers, ({ one }) => ({
-  user: one(users, {
-    fields: [designers.userId],
-    references: [users.id],
-  }),
-}));
 
 export const listRelations = relations(lists, ({ one, many }) => ({
   user: one(users, {

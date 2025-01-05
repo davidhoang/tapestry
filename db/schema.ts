@@ -23,7 +23,6 @@ export const designers = pgTable("designers", {
   photoUrl: text("photo_url"),
   skills: json("skills").$type<string[]>().notNull(),
   available: boolean("available").default(true),
-  description: text("description"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -39,7 +38,6 @@ export const lists = pgTable("lists", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
-  description: text("description"),
   isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

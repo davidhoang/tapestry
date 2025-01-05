@@ -312,6 +312,75 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Delete list route
+  app.delete("/api/lists/:listId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to delete this list" });
+      }
+
+      // Delete the list
+      await db.delete(lists).where(eq(lists.id, listId));
+
+      res.json({ message: "List deleted successfully" });
+    } catch (err) {
+      console.error('Error deleting list:', err);
+      res.status(500).json({ error: "Failed to delete list" });
+    }
+  });
+
+  // Update list route
+  app.put("/api/lists/:listId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const { name, description } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Update the list
+      const [updatedList] = await db
+        .update(lists)
+        .set({ name, description })
+        .where(eq(lists.id, listId))
+        .returning();
+
+      res.json(updatedList);
+    } catch (err) {
+      console.error('Error updating list:', err);
+      res.status(500).json({ error: "Failed to update list" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

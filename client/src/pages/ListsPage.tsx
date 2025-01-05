@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLists, useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
+import { useLists, useCreateList, useDeleteList, useUpdateList } from "@/hooks/use-lists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -35,7 +45,30 @@ export default function ListsPage() {
   const { data: lists, isLoading } = useLists();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<any>(null);
+  const [selectedDesigner, setSelectedDesigner] = useState<SelectDesigner | null>(null);
+  const [listToEdit, setListToEdit] = useState<any>(null);
+  const [listToDelete, setListToDelete] = useState<any>(null);
   const { toast } = useToast();
+  const deleteList = useDeleteList();
+
+  const handleDeleteList = async () => {
+    if (!listToDelete) return;
+
+    try {
+      await deleteList.mutateAsync(listToDelete.id);
+      toast({
+        title: "Success",
+        description: "List deleted successfully",
+      });
+      setListToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete list",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -67,7 +100,13 @@ export default function ListsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation();
-                        // TODO: Implement share via email
+                        setListToEdit(list);
+                      }}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit List
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
                         toast({
                           title: "Coming Soon",
                           description: "Email sharing will be available soon!",
@@ -78,7 +117,6 @@ export default function ListsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation();
-                        // TODO: Implement share via link
                         toast({
                           title: "Coming Soon",
                           description: "Link sharing will be available soon!",
@@ -91,11 +129,7 @@ export default function ListsPage() {
                         className="text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          // TODO: Implement delete
-                          toast({
-                            title: "Coming Soon",
-                            description: "Delete functionality will be available soon!",
-                          });
+                          setListToDelete(list);
                         }}
                       >
                         <Trash className="mr-2 h-4 w-4" />
@@ -136,8 +170,51 @@ export default function ListsPage() {
           list={selectedList}
           open={Boolean(selectedList)}
           onOpenChange={(open) => !open && setSelectedList(null)}
+          onViewDesigner={setSelectedDesigner}
         />
       )}
+
+      {listToEdit && (
+        <EditListDialog
+          list={listToEdit}
+          open={Boolean(listToEdit)}
+          onOpenChange={(open) => !open && setListToEdit(null)}
+        />
+      )}
+
+      {selectedDesigner && (
+        <ViewDesignerDialog
+          designer={selectedDesigner}
+          open={Boolean(selectedDesigner)}
+          onOpenChange={(open) => !open && setSelectedDesigner(null)}
+        />
+      )}
+
+      <AlertDialog open={Boolean(listToDelete)} onOpenChange={(open) => !open && setListToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this list?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the list
+              and remove all designer associations.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteList}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteList.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash className="mr-2 h-4 w-4" />
+              )}
+              Delete List
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -146,9 +223,10 @@ interface ViewListDialogProps {
   list: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onViewDesigner: (designer: SelectDesigner) => void;
 }
 
-function ViewListDialog({ list, open, onOpenChange }: ViewListDialogProps) {
+function ViewListDialog({ list, open, onOpenChange, onViewDesigner }: ViewListDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -158,7 +236,11 @@ function ViewListDialog({ list, open, onOpenChange }: ViewListDialogProps) {
         </DialogHeader>
         <div className="space-y-4">
           {list.designers?.map(({ designer, notes }: { designer: SelectDesigner, notes?: string }) => (
-            <Card key={designer.id}>
+            <Card 
+              key={designer.id}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => onViewDesigner(designer)}
+            >
               <CardContent className="flex items-start space-x-4 pt-6">
                 <Avatar className="w-12 h-12">
                   <AvatarImage src={designer.photoUrl || ''} />
@@ -179,6 +261,147 @@ function ViewListDialog({ list, open, onOpenChange }: ViewListDialogProps) {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface EditListDialogProps {
+  list: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
+  const updateList = useUpdateList();
+  const { toast } = useToast();
+
+  const form = useForm({
+    defaultValues: {
+      name: list.name,
+      description: list.description || "",
+    },
+  });
+
+  const onSubmit = async (values: { name: string; description: string }) => {
+    try {
+      await updateList.mutateAsync({
+        id: list.id,
+        ...values,
+      });
+      toast({
+        title: "Success",
+        description: "List updated successfully",
+      });
+      form.reset();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update list",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit List</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>List Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="submit"
+                disabled={updateList.isPending}
+              >
+                {updateList.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ViewDesignerDialogProps {
+  designer: SelectDesigner;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function ViewDesignerDialog({ designer, open, onOpenChange }: ViewDesignerDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Avatar className="w-16 h-16">
+              <AvatarImage src={designer.photoUrl || ''} />
+              <AvatarFallback>
+                {designer.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-xl font-semibold">{designer.name}</h2>
+              <p className="text-muted-foreground">{designer.title}</p>
+            </div>
+          </div>
+          <div>
+            <h3 className="font-medium mb-2">Bio</h3>
+            <p className="text-sm text-muted-foreground">{designer.bio}</p>
+          </div>
+          {designer.skills && (
+            <div>
+              <h3 className="font-medium mb-2">Skills</h3>
+              <div className="flex flex-wrap gap-2">
+                {designer.skills.map((skill, index) => (
+                  <div
+                    key={index}
+                    className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                  >
+                    {skill}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

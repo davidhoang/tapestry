@@ -33,6 +33,54 @@ export function useCreateList() {
   });
 }
 
+export function useUpdateList() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { id: number; name: string; description?: string }) => {
+      const response = await fetch(`/api/lists/${data.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+    },
+  });
+}
+
+export function useDeleteList() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (listId: number) => {
+      const response = await fetch(`/api/lists/${listId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+    },
+  });
+}
+
 export function useAddDesignersToList() {
   const queryClient = useQueryClient();
 

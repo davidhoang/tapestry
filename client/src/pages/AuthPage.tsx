@@ -22,18 +22,23 @@ type AuthFormData = {
 };
 
 export default function AuthPage() {
+  // Get container class based on whether component is rendered in modal
+  const containerClass = window.location.pathname.startsWith('/lists/') 
+    ? "w-full" 
+    : "container flex items-center justify-center min-h-screen";
+
   return (
-    <div className="container flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Design Matchmaker</CardTitle>
-          <CardDescription className="text-center">
+    <div className={containerClass}>
+      <Card className="w-full shadow-none border-0">
+        <CardHeader className="space-y-1 py-3">
+          <CardTitle className="text-xl text-center">Design Matchmaker</CardTitle>
+          <CardDescription className="text-center text-sm">
             Connect with top design talent
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2">
+        <CardContent className="pb-3">
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-3">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
@@ -86,7 +91,7 @@ function LoginForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
         <FormField
           control={form.control}
           name="email"
@@ -158,7 +163,7 @@ function RegisterForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
         <FormField
           control={form.control}
           name="email"

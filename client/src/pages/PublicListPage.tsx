@@ -95,7 +95,7 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
       </div>
 
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="max-w-sm p-0">
+        <DialogContent className="max-w-sm p-0 h-auto overflow-visible">
           <AuthPage />
         </DialogContent>
       </Dialog>

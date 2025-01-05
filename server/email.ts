@@ -55,7 +55,7 @@ export async function sendListEmail(list: SelectList, recipientEmail: string, su
   const msg = {
     to: recipientEmail,
     from: {
-      email: 'team@proofofconcept.pub',
+      email: 'david@davidhoang.com',
       name: 'Design Matchmaker'
     },
     subject: subject,

@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { SelectList } from "@db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
 export default function PublicListPage({ params }: { params: { id: string } }) {
@@ -35,24 +34,14 @@ export default function PublicListPage({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      {/* Simplified Navigation */}
-      <nav className="border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center">
           <Link href="/">
             <a className="text-xl font-bold">Design Matchmaker</a>
           </Link>
-          <div className="space-x-2">
-            <Link href="/">
-              <Button variant="ghost" className="text-sm">Login</Button>
-            </Link>
-            <Link href="/">
-              <Button variant="default" className="text-sm">Register</Button>
-            </Link>
-          </div>
         </div>
-      </nav>
+      </header>
 
-      {/* List Content */}
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
           <div>

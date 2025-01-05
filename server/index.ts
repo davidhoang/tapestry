@@ -16,11 +16,22 @@ if (app.get("env") === "production") {
         "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       },
     },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: { policy: "credentialless" },
   }));
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Parse JSON with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Cache control for static assets
+app.use((req, res, next) => {
+  if (req.url.startsWith('/assets/')) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+  }
+  next();
+});
 
 // Set up authentication
 setupAuth(app);

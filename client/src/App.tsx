@@ -15,32 +15,45 @@ import { Loader2 } from "lucide-react";
 function App() {
   const { user, isLoading } = useUser();
 
+  // Handle public list routes first
+  if (window.location.pathname.startsWith('/lists/')) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <PublicListPage params={{ id: window.location.pathname.split('/')[2] }} />
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
+
+  // For all other routes, handle auth flow
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {user && <Navigation />}
-      <main className={`${user ? 'container mx-auto px-4 py-8' : ''}`}>
+      <Navigation />
+      <main className="container mx-auto px-4 py-8">
         <Switch>
-          {!user ? (
-            <>
-              <Route path="/lists/:id" component={PublicListPage} />
-              <Route component={AuthPage} />
-            </>
-          ) : (
-            <>
-              <Route path="/" component={HomePage} />
-              <Route path="/directory" component={DirectoryPage} />
-              <Route path="/lists" component={ListsPage} />
-              <Route path="/lists/:id" component={PublicListPage} />
-              <Route path="/matchmaker" component={MatchmakerPage} />
-              <Route>
-                {() => (
-                  <div className="flex items-center justify-center min-h-[50vh]">
-                    <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
-                  </div>
-                )}
-              </Route>
-            </>
-          )}
+          <Route path="/" component={HomePage} />
+          <Route path="/directory" component={DirectoryPage} />
+          <Route path="/lists" component={ListsPage} />
+          <Route path="/matchmaker" component={MatchmakerPage} />
+          <Route>
+            {() => (
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
+              </div>
+            )}
+          </Route>
         </Switch>
       </main>
       <Toaster />

@@ -37,7 +37,7 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
     try {
       await handler(req, res);
     } catch (error: any) {
-      console.error('Database operation failed:', error);
+      console.error('Operation failed:', error);
 
       // Check for specific database errors
       if (error.code === '23505') { // Unique violation
@@ -54,9 +54,17 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
         });
       }
 
-      // Generic database error
+      // Image processing error
+      if (error.message === 'Failed to process image') {
+        return res.status(400).json({ 
+          error: "Failed to process image",
+          details: "Please make sure you're uploading a valid image file"
+        });
+      }
+
+      // Generic error
       res.status(500).json({ 
-        error: "Database operation failed",
+        error: "Operation failed",
         message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
@@ -79,8 +87,8 @@ export function registerRoutes(app: Express): Server {
       const result = await db.execute(sql`
         WITH skill_arrays AS (
           SELECT ARRAY(
-            SELECT DISTINCT elem::text
-            FROM designers, jsonb_array_elements(skills) AS elem
+            SELECT DISTINCT jsonb_array_elements_text(skills::jsonb)
+            FROM designers
             WHERE skills IS NOT NULL
             ORDER BY 1
           ) AS skills

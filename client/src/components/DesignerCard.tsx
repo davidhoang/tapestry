@@ -16,6 +16,7 @@ interface DesignerCardProps {
   designer: SelectDesigner;
   onEdit?: (designer: SelectDesigner) => void;
   onAdd?: (designer: SelectDesigner) => void;
+  onSkillClick?: (skill: string) => void;
 }
 
 export default function DesignerCard({ designer, onEdit, onAdd }: DesignerCardProps) {

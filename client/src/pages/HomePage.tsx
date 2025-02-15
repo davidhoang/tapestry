@@ -12,7 +12,7 @@ export default function HomePage() {
           DH Talent Collective
         </h1>
         <p className="text-lg text-muted-foreground max-w-prose mx-auto">
-          This project is a <a href="http://www.proofofconcept.pub" target="blank>Proof of Concept</a> experiment by David Hoang.
+          This project is a <a href="http://www.proofofconcept.pub" target="_blank">Proof of Concept</a> experiment by David Hoang.
         </p>
         <div className="flex justify-center gap-4">
           <Button asChild size="lg">

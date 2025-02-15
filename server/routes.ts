@@ -69,10 +69,6 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
   };
 };
 
-// Initialize object storage client once
-const storage = new Client({
-  bucketId: process.env.REPLIT_OBJECT_STORE_BUCKET_NAME || "my-bucket",
-});
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -589,7 +585,8 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/images/:filename', async (req, res) => {
     const filename = req.params.filename;
     try {
-      const file = await storage.get(filename);
+      const objectStorage = new Client();
+      const file = await objectStorage.getObject(filename);
       if (!file) {
         throw new Error('File not found');
       }
@@ -610,10 +607,13 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
   const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
 
   try {
+    // Create a fresh storage client for each request
+    const objectStorage = new Client();
+
     // Delete old file if it exists
     if (oldFilename) {
       try {
-        await storage.delete(oldFilename);
+        await objectStorage.deleteObject(oldFilename);
       } catch (err) {
         console.error('Failed to delete old image:', err);
       }
@@ -631,9 +631,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
       .toBuffer();
 
     // Upload to object storage using correct method
-    await storage.put(filename, processedBuffer, {
-      contentType: 'image/webp'
-    });
+    await objectStorage.createObject(filename, processedBuffer);
 
     return `/api/images/${filename}`;
   } catch (err) {

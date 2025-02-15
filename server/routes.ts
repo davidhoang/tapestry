@@ -177,7 +177,7 @@ export function registerRoutes(app: Express): Server {
             processedSize: processedBuffer.length
           });
 
-          await storage.upload(filename, processedBuffer, {
+          await storage.put(filename, processedBuffer, {
             contentType: 'image/webp'
           });
 
@@ -296,7 +296,7 @@ export function registerRoutes(app: Express): Server {
               throw new Error('Image processing failed');
             });
 
-          await storage.upload(filename, processedBuffer, {
+          await storage.put(filename, processedBuffer, {
             contentType: 'image/webp'
           });
 

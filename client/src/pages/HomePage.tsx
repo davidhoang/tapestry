@@ -4,7 +4,8 @@ import { Link } from "wouter";
 export default function HomePage() {
   return (
     <div className="space-y-16">
-      <section className="py-16 text-center space-y-6">
+      <section className="hero py-16 text-center space-y-6 bg-[url('/path-to-placeholder-image.jpg')]
+                 bg-cover bg-center bg-no-repeat">
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
           DH Talent Collective
         </h1>
@@ -19,9 +20,6 @@ export default function HomePage() {
             ) : (
               <Link href="/auth">Browse Directory</Link>
             )}
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/matchmaker">Try AI Matchmaker</Link>
           </Button>
         </div>
       </section>

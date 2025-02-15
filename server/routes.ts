@@ -79,10 +79,10 @@ export function registerRoutes(app: Express): Server {
       const result = await db.execute(sql`
         WITH skill_arrays AS (
           SELECT ARRAY(
-            SELECT DISTINCT elem::text
-            FROM designers, jsonb_array_elements(skills) AS elem
+            SELECT DISTINCT jsonb_array_elements_text(skills)
+            FROM designers
             WHERE skills IS NOT NULL
-            ORDER BY elem::text
+            ORDER BY 1
           ) AS skills
         )
         SELECT skills FROM skill_arrays;
@@ -133,13 +133,31 @@ export function registerRoutes(app: Express): Server {
         const storage = new Client();
 
         try {
-          const processedBuffer = await sharp(req.file.buffer)
+          // Validate image buffer
+          if (!req.file?.buffer) {
+            throw new Error("No image data received");
+          }
+
+          // Add error handling and logging for image processing
+          console.log('Processing image:', {
+            originalSize: req.file.buffer.length,
+            mimetype: req.file.mimetype
+          });
+
+          const processedBuffer = await sharp(req.file.buffer, {
+            failOnError: true,
+            limitInputPixels: 50000000 // ~50MP limit
+          })
             .resize(800, 800, {
               fit: 'inside',
               withoutEnlargement: true
             })
             .webp({ quality: 80 })
             .toBuffer();
+
+          console.log('Image processed successfully:', {
+            processedSize: processedBuffer.length
+          });
 
           await storage.upload(filename, processedBuffer, {
             contentType: 'image/webp'

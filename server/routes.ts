@@ -177,7 +177,8 @@ export function registerRoutes(app: Express): Server {
             processedSize: processedBuffer.length
           });
 
-          await storage.putObject(filename, processedBuffer, {
+          // Upload to object storage using correct method
+          await storage.put(filename, processedBuffer, {
             contentType: 'image/webp'
           });
 
@@ -269,10 +270,12 @@ export function registerRoutes(app: Express): Server {
 
           if (existingDesigner?.photoUrl) {
             const oldFilename = existingDesigner.photoUrl.split('/').pop();
-            try {
-              await storage.delete(oldFilename);
-            } catch (err) {
-              console.error('Failed to delete old image:', err);
+            if (oldFilename) {
+              try {
+                await storage.delete(oldFilename);
+              } catch (err) {
+                console.error('Failed to delete old image:', err);
+              }
             }
           }
 
@@ -296,7 +299,8 @@ export function registerRoutes(app: Express): Server {
               throw new Error('Image processing failed');
             });
 
-          await storage.putObject(filename, processedBuffer, {
+          // Upload to object storage using correct method
+          await storage.put(filename, processedBuffer, {
             contentType: 'image/webp'
           });
 
@@ -697,12 +701,12 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
-  // Add route to serve images from Object Storage
+  // Update the route to serve images from Object Storage
   app.get('/api/images/:filename', async (req, res) => {
     const filename = req.params.filename;
     const storage = new Client();
     try {
-      const file = await storage.get(filename);
+      const file = await storage.getObject(filename);
       res.contentType('image/webp'); // Or other appropriate content type
       res.send(file);
     } catch (error) {

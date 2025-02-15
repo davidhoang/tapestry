@@ -11,6 +11,9 @@ import path from "path";
 import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
+// Add import for Object Storage
+import { ObjectStorage } from "@replit/database";
+
 
 // Configure multer for memory storage
 const upload = multer({
@@ -63,12 +66,12 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Ensure uploads directory exists
+  // Ensure uploads directory exists (no longer used for serving files)
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
-  // Serve uploaded files
-  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+  // Serve uploaded files (removed - now served from Object Storage)
+  //app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
   // Get all unique skills
   app.get("/api/skills", withErrorHandler(async (_req, res) => {
@@ -128,6 +131,7 @@ export function registerRoutes(app: Express): Server {
       let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+        const storage = new ObjectStorage();
 
         try {
           const processedBuffer = await sharp(req.file.buffer)
@@ -138,7 +142,11 @@ export function registerRoutes(app: Express): Server {
             .webp({ quality: 80 })
             .toBuffer();
 
-          photoUrl = `/uploads/${filename}`;
+          await storage.upload(filename, processedBuffer, {
+            contentType: 'image/webp'
+          });
+
+          photoUrl = `/api/images/${filename}`;
           photoData = `data:image/webp;base64,${processedBuffer.toString('base64')}`;
         } catch (err) {
           throw new Error("Failed to process image");
@@ -212,7 +220,7 @@ export function registerRoutes(app: Express): Server {
       let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const filepath = path.join(uploadsDir, filename);
+        const storage = new ObjectStorage();
 
         try {
           const processedBuffer = await sharp(req.file.buffer)
@@ -223,7 +231,11 @@ export function registerRoutes(app: Express): Server {
             .webp({ quality: 80 })
             .toBuffer();
 
-          photoUrl = `/uploads/${filename}`;
+          await storage.upload(filename, processedBuffer, {
+            contentType: 'image/webp'
+          });
+
+          photoUrl = `/api/images/${filename}`;
           photoData = `data:image/webp;base64,${processedBuffer.toString('base64')}`;
         } catch (err) {
           throw new Error("Failed to process image");
@@ -620,6 +632,21 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: err.message || "Failed to send email" });
     }
   }));
+
+  // Add route to serve images from Object Storage
+  app.get('/api/images/:filename', async (req, res) => {
+    const filename = req.params.filename;
+    const storage = new ObjectStorage();
+    try {
+      const file = await storage.get(filename);
+      res.contentType('image/webp'); // Or other appropriate content type
+      res.send(file);
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      res.status(404).send("Image not found");
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

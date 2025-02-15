@@ -125,20 +125,21 @@ export function registerRoutes(app: Express): Server {
       }
 
       let photoUrl;
+      let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const filepath = path.join(uploadsDir, filename);
 
         try {
-          await sharp(req.file.buffer)
+          const processedBuffer = await sharp(req.file.buffer)
             .resize(800, 800, {
               fit: 'inside',
               withoutEnlargement: true
             })
             .webp({ quality: 80 })
-            .toFile(filepath);
+            .toBuffer();
 
           photoUrl = `/uploads/${filename}`;
+          photoData = `data:image/webp;base64,${processedBuffer.toString('base64')}`;
         } catch (err) {
           throw new Error("Failed to process image");
         }
@@ -150,6 +151,7 @@ export function registerRoutes(app: Express): Server {
           ...designerData,
           userId: req.user.id,
           photoUrl,
+          photoData,
         })
         .returning();
 
@@ -207,20 +209,22 @@ export function registerRoutes(app: Express): Server {
       }
 
       let photoUrl;
+      let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
         const filepath = path.join(uploadsDir, filename);
 
         try {
-          await sharp(req.file.buffer)
+          const processedBuffer = await sharp(req.file.buffer)
             .resize(800, 800, {
               fit: 'inside',
               withoutEnlargement: true
             })
             .webp({ quality: 80 })
-            .toFile(filepath);
+            .toBuffer();
 
           photoUrl = `/uploads/${filename}`;
+          photoData = `data:image/webp;base64,${processedBuffer.toString('base64')}`;
         } catch (err) {
           throw new Error("Failed to process image");
         }
@@ -231,6 +235,7 @@ export function registerRoutes(app: Express): Server {
         .set({
           ...designerData,
           ...(photoUrl && { photoUrl }),
+          ...(photoData && { photoData }),
         })
         .where(eq(designers.id, designerId))
         .returning();

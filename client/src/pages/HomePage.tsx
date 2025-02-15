@@ -5,7 +5,7 @@ export default function HomePage() {
   return (
     <div className="space-y-16">
       <section className="hero py-32 text-center space-y-6 relative">
-        <div className="absolute inset-0 bg-[url('/images/hero-bg.jpg')] 
+        <div className="absolute inset-0 bg-[url('/images/img-hero.png')] 
           bg-cover bg-center bg-no-repeat opacity-30"></div>
         <div className="relative">
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">

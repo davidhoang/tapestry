@@ -79,8 +79,8 @@ export function registerRoutes(app: Express): Server {
       const result = await db.execute(sql`
         WITH skill_arrays AS (
           SELECT ARRAY(
-            SELECT DISTINCT jsonb_array_elements_text(skills)
-            FROM designers
+            SELECT DISTINCT elem::text
+            FROM designers, jsonb_array_elements(skills) AS elem
             WHERE skills IS NOT NULL
             ORDER BY 1
           ) AS skills
@@ -151,7 +151,7 @@ export function registerRoutes(app: Express): Server {
           });
 
           const processedBuffer = await sharp(req.file.buffer, {
-            failOnError: true,
+            failOnError: false, // Don't fail on corrupted images
             limitInputPixels: 50000000 // ~50MP limit
           })
             .resize(800, 800, {
@@ -159,7 +159,11 @@ export function registerRoutes(app: Express): Server {
               withoutEnlargement: true
             })
             .webp({ quality: 80 })
-            .toBuffer();
+            .toBuffer()
+            .catch(err => {
+              console.error('Sharp processing error:', err);
+              throw new Error('Image processing failed');
+            });
 
           console.log('Image processed successfully:', {
             processedSize: processedBuffer.length

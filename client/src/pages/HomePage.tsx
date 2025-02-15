@@ -4,9 +4,11 @@ import { Link } from "wouter";
 export default function HomePage() {
   return (
     <div className="space-y-16">
-      <section className="hero py-16 text-center space-y-6 bg-[url('/path-to-placeholder-image.jpg')]
-                 bg-cover bg-center bg-no-repeat">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+      <section className="hero py-32 text-center space-y-6 relative">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497366216548-37526070297c')] 
+          bg-cover bg-center bg-no-repeat opacity-20"></div>
+        <div className="relative">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
           DH Talent Collective
         </h1>
         <p className="text-lg text-muted-foreground max-w-prose mx-auto">
@@ -21,6 +23,7 @@ export default function HomePage() {
               <Link href="/auth">Browse Directory</Link>
             )}
           </Button>
+        </div>
         </div>
       </section>
 

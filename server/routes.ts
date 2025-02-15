@@ -12,7 +12,7 @@ import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
 // Add import for Object Storage
-import { ObjectStorage } from "@replit/database";
+import { ObjectStorage } from "@replit/object-storage";
 
 
 // Configure multer for memory storage

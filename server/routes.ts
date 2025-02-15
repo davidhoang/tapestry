@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { designers, lists, listDesigners } from "@db/schema";
 import { eq, desc, and, ne, inArray } from "drizzle-orm";
+import { sendListEmail } from "./email";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";

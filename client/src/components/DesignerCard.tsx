@@ -19,7 +19,7 @@ interface DesignerCardProps {
   onSkillClick?: (skill: string) => void;
 }
 
-export default function DesignerCard({ designer, onEdit, onAdd }: DesignerCardProps) {
+export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: DesignerCardProps) {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   return (

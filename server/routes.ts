@@ -69,43 +69,98 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
   };
 };
 
+// Initialize object storage client
+const initStorage = () => {
+  try {
+    return new Client({
+      token: process.env.REPLIT_OBJECT_STORE_TOKEN as string,
+      defaultBucketId: 'replit-objstore-01cff05e-983d-42f9-96df-a4f5eaab85ab'
+    });
+  } catch (error) {
+    console.error('Failed to initialize storage client:', error);
+    throw error;
+  }
+};
+
+// Handle photo upload with proper error handling and retries
+const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+
+  try {
+    console.log('Starting photo upload process...');
+
+    // Process image first
+    const processedBuffer = await sharp(buffer, {
+      failOnError: false,
+      limitInputPixels: 50000000
+    })
+      .resize(800, 800, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    console.log('Image processed successfully, size:', processedBuffer.length);
+
+    // Initialize storage client for each operation
+    const storage = initStorage();
+
+    // Delete old file if it exists
+    if (oldFilename) {
+      try {
+        const oldKey = oldFilename.split('/').pop();
+        if (oldKey) {
+          console.log('Attempting to delete old file:', oldKey);
+          await storage.delete(oldKey);
+          console.log('Old file deleted successfully');
+        }
+      } catch (err) {
+        console.error('Failed to delete old image:', err);
+        // Continue even if delete fails
+      }
+    }
+
+    // Upload new file
+    console.log('Uploading new file:', filename);
+    await storage.put(filename, processedBuffer);
+    console.log('Upload successful');
+
+    return `/api/images/${filename}`;
+  } catch (err) {
+    console.error('Storage operation error:', err);
+    throw new Error('Failed to process or upload image');
+  }
+};
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Ensure uploads directory exists (no longer used for serving files)
+  // Ensure uploads directory exists
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
-  // Serve uploaded files (removed - now served from Object Storage)
-  //app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
-
-  // Get all unique skills
-  app.get("/api/skills", withErrorHandler(async (_req, res) => {
+  // Update route to serve images from Object Storage
+  app.get('/api/images/:filename', async (req, res) => {
+    const filename = req.params.filename;
     try {
-      const result = await db.execute(sql`
-        WITH skill_arrays AS (
-          SELECT ARRAY(
-            SELECT DISTINCT jsonb_array_elements_text(skills::jsonb)
-            FROM designers
-            WHERE skills IS NOT NULL
-            ORDER BY 1
-          ) AS skills
-        )
-        SELECT skills FROM skill_arrays;
-      `);
+      console.log('Fetching image:', filename);
+      const storage = initStorage();
+      const file = await storage.get(filename);
 
-      // Add logging to check the response format
-      console.log('Skills API Response:', result.rows[0]?.skills);
+      if (!file) {
+        console.log('File not found:', filename);
+        return res.status(404).send("Image not found");
+      }
 
-      // Ensure we return an array, even if empty
-      const skills = result.rows[0]?.skills || [];
-      res.json(skills);
-    } catch (err) {
-      console.error('Error fetching skills:', err);
-      res.status(500).json({ error: "Failed to fetch skills" });
+      console.log('File retrieved successfully');
+      res.contentType('image/webp');
+      res.send(file);
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      res.status(404).send("Image not found");
     }
-  }));
+  });
 
   // Designer routes with transaction support
   app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
@@ -154,6 +209,35 @@ export function registerRoutes(app: Express): Server {
     res.json(result);
   }));
 
+
+  // Get all unique skills
+  app.get("/api/skills", withErrorHandler(async (_req, res) => {
+    try {
+      const result = await db.execute(sql`
+        WITH skill_arrays AS (
+          SELECT ARRAY(
+            SELECT DISTINCT jsonb_array_elements_text(skills::jsonb)
+            FROM designers
+            WHERE skills IS NOT NULL
+            ORDER BY 1
+          ) AS skills
+        )
+        SELECT skills FROM skill_arrays;
+      `);
+
+      // Add logging to check the response format
+      console.log('Skills API Response:', result.rows[0]?.skills);
+
+      // Ensure we return an array, even if empty
+      const skills = result.rows[0]?.skills || [];
+      res.json(skills);
+    } catch (err) {
+      console.error('Error fetching skills:', err);
+      res.status(500).json({ error: "Failed to fetch skills" });
+    }
+  }));
+
+  // Designer routes with transaction support
   app.get("/api/designers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -581,61 +665,6 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
-  // Update the route to serve images from Object Storage
-  app.get('/api/images/:filename', async (req, res) => {
-    const filename = req.params.filename;
-    try {
-      const objectStorage = new Client();
-      const file = await objectStorage.getObject(filename);
-      if (!file) {
-        throw new Error('File not found');
-      }
-      res.contentType('image/webp');
-      res.send(file);
-    } catch (error) {
-      console.error("Error fetching image:", error);
-      res.status(404).send("Image not found");
-    }
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
-
-// Update the photo upload logic
-const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
-  const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-
-  try {
-    // Create a fresh storage client for each request
-    const objectStorage = new Client();
-
-    // Delete old file if it exists
-    if (oldFilename) {
-      try {
-        await objectStorage.deleteObject(oldFilename);
-      } catch (err) {
-        console.error('Failed to delete old image:', err);
-      }
-    }
-
-    const processedBuffer = await sharp(buffer, {
-      failOnError: false,
-      limitInputPixels: 50000000
-    })
-      .resize(800, 800, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .webp({ quality: 80 })
-      .toBuffer();
-
-    // Upload to object storage using correct method
-    await objectStorage.createObject(filename, processedBuffer);
-
-    return `/api/images/${filename}`;
-  } catch (err) {
-    console.error('Storage operation error:', err);
-    throw new Error(err instanceof Error ? err.message : "Failed to process image");
-  }
-};

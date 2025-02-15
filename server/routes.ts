@@ -130,7 +130,13 @@ export function registerRoutes(app: Express): Server {
       let photoUrl;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const storage = new Client();
+        let storage;
+        try {
+          storage = new Client();
+        } catch (err) {
+          console.error('Failed to initialize storage client:', err);
+          throw new Error('Storage initialization failed');
+        }
 
         try {
           // Validate image buffer
@@ -234,7 +240,13 @@ export function registerRoutes(app: Express): Server {
       let photoUrl;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const storage = new Client();
+        let storage;
+        try {
+          storage = new Client();
+        } catch (err) {
+          console.error('Failed to initialize storage client:', err);
+          throw new Error('Storage initialization failed');
+        }
 
         try {
           // Get existing designer to clean up old image

@@ -21,9 +21,9 @@ export async function sendListEmail(
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    // Remove any leading slashes to avoid double slashes in the URL
-    const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-    return `${baseUrl}/${cleanUrl}`;
+    // Always use absolute URLs for email images
+    const absoluteUrl = baseUrl + (url.startsWith('/') ? url : `/${url}`);
+    return absoluteUrl;
   }
 
   const designersHtml =

@@ -25,11 +25,11 @@ export default function AuthPage() {
   // Get container class based on whether component is rendered in modal
   const containerClass = window.location.pathname.startsWith('/lists/') 
     ? "w-full" 
-    : "container flex items-center justify-center min-h-screen";
+    : "container py-4";
 
   return (
     <div className={containerClass}>
-      <Card className="w-full shadow-none border-0">
+      <Card className="w-full shadow-none border-0 max-w-md mx-auto">
         <CardHeader className="space-y-1 py-3">
           <CardTitle className="text-xl text-center">Design Matchmaker</CardTitle>
           <CardDescription className="text-center text-sm">

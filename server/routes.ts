@@ -183,7 +183,8 @@ export function registerRoutes(app: Express): Server {
 
           photoUrl = `/api/images/${filename}`;
         } catch (err) {
-          throw new Error("Failed to process image");
+          console.error('Storage upload error:', err);
+          throw new Error(err instanceof Error ? err.message : "Failed to upload image");
         }
       }
 
@@ -301,7 +302,8 @@ export function registerRoutes(app: Express): Server {
 
           photoUrl = `/api/images/${filename}`;
         } catch (err) {
-          throw new Error("Failed to process image");
+          console.error('Storage upload error:', err);
+          throw new Error(err instanceof Error ? err.message : "Failed to upload image");
         }
       }
 

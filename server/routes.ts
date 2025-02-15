@@ -71,7 +71,7 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 
 // Initialize object storage client once
 const storage = new Client({
-  bucket: process.env.REPLIT_OBJECT_STORE_BUCKET_NAME || "my-bucket",
+  bucketId: process.env.REPLIT_OBJECT_STORE_BUCKET_NAME || "my-bucket",
 });
 
 export function registerRoutes(app: Express): Server {
@@ -139,51 +139,8 @@ export function registerRoutes(app: Express): Server {
       }
 
       let photoUrl;
-      if (req.file) {
-        const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-
-        try {
-          // Validate image buffer
-          if (!req.file?.buffer) {
-            throw new Error("No image data received");
-          }
-
-          console.log('Processing image:', {
-            originalSize: req.file.buffer.length,
-            mimetype: req.file.mimetype
-          });
-
-          const processedBuffer = await sharp(req.file.buffer, {
-            failOnError: false,
-            limitInputPixels: 50000000 // ~50MP limit
-          })
-            .resize(800, 800, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .webp({ quality: 80 })
-            .toBuffer()
-            .catch(err => {
-              console.error('Sharp processing error:', err);
-              throw new Error('Image processing failed');
-            });
-
-          console.log('Image processed successfully:', {
-            processedSize: processedBuffer.length
-          });
-
-          // Upload to object storage using correct method
-          await storage.write(
-            filename,
-            processedBuffer,
-            { contentType: 'image/webp' }
-          );
-
-          photoUrl = `/api/images/${filename}`;
-        } catch (err) {
-          console.error('Storage upload error:', err);
-          throw new Error(err instanceof Error ? err.message : "Failed to upload image");
-        }
+      if (req.file?.buffer) {
+        photoUrl = await handlePhotoUpload(req.file.buffer);
       }
 
       const [designer] = await tx
@@ -225,61 +182,16 @@ export function registerRoutes(app: Express): Server {
     const designerId = parseInt(req.params.id);
 
     let photoUrl;
-    if (req.file) {
-      const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+    if (req.file?.buffer) {
+      // Get existing designer to clean up old image
+      const existingDesigner = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
 
-      try {
-        // Get existing designer to clean up old image
-        const existingDesigner = await db.query.designers.findFirst({
-          where: eq(designers.id, designerId),
-        });
-
-        if (existingDesigner?.photoUrl) {
-          const oldFilename = existingDesigner.photoUrl.split('/').pop();
-          if (oldFilename) {
-            try {
-              await storage.delete(oldFilename);
-            } catch (err) {
-              console.error('Failed to delete old image:', err);
-            }
-          }
-        }
-
-        // Validate image buffer
-        if (!req.file?.buffer) {
-          throw new Error("No image data received");
-        }
-
-        const processedBuffer = await sharp(req.file.buffer, {
-          failOnError: false,
-          limitInputPixels: 50000000 // ~50MP limit
-        })
-          .resize(800, 800, {
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .webp({ quality: 80 })
-          .toBuffer()
-          .catch(err => {
-            console.error('Sharp processing error:', err);
-            throw new Error('Image processing failed');
-          });
-
-        // Upload to object storage using correct method
-        await storage.write(
-          filename,
-          processedBuffer,
-          { contentType: 'image/webp' }
-        );
-
-        photoUrl = `/api/images/${filename}`;
-      } catch (err) {
-        console.error('Storage upload error:', err);
-        throw new Error(err instanceof Error ? err.message : "Failed to upload image");
-      }
+      const oldFilename = existingDesigner?.photoUrl?.split('/').pop();
+      photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
     }
 
-    // Rest of the update logic
     let designerData;
     try {
       designerData = JSON.parse(req.body.data);
@@ -677,7 +589,7 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/images/:filename', async (req, res) => {
     const filename = req.params.filename;
     try {
-      const file = await storage.read(filename);
+      const file = await storage.getObject(filename);
       if (!file) {
         throw new Error('File not found');
       }
@@ -692,3 +604,40 @@ export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+// Update the photo upload logic
+const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+
+  try {
+    // Delete old file if it exists
+    if (oldFilename) {
+      try {
+        await storage.deleteObject(oldFilename);
+      } catch (err) {
+        console.error('Failed to delete old image:', err);
+      }
+    }
+
+    const processedBuffer = await sharp(buffer, {
+      failOnError: false,
+      limitInputPixels: 50000000
+    })
+      .resize(800, 800, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    // Upload to object storage using correct method
+    await storage.createObject(filename, processedBuffer, {
+      contentType: 'image/webp'
+    });
+
+    return `/api/images/${filename}`;
+  } catch (err) {
+    console.error('Storage operation error:', err);
+    throw new Error(err instanceof Error ? err.message : "Failed to process image");
+  }
+};

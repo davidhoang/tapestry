@@ -70,7 +70,17 @@ export default function DesignerCard({ designer, onEdit, onAdd }: DesignerCardPr
             </div>
             <div className="flex flex-wrap gap-2">
               {designer.skills.map((skill, i) => (
-                <Badge key={i} variant="outline">{skill}</Badge>
+                <Badge 
+                  key={i} 
+                  variant="outline" 
+                  className="cursor-pointer hover:bg-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSkillClick?.(skill);
+                  }}
+                >
+                  {skill}
+                </Badge>
               ))}
             </div>
             {designer.available && (

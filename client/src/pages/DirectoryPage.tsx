@@ -160,6 +160,7 @@ export default function DirectoryPage() {
               <DesignerCard 
                 designer={designer}
                 onEdit={setDesignerToEdit}
+                onSkillClick={(skill) => setSelectedSkills([skill])}
               />
             </div>
           ))}

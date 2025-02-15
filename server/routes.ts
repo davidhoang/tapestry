@@ -219,6 +219,20 @@ export function registerRoutes(app: Express): Server {
         const storage = new Client();
 
         try {
+          // Get existing designer to clean up old image
+          const existingDesigner = await db.query.designers.findFirst({
+            where: eq(designers.id, designerId),
+          });
+
+          if (existingDesigner?.photoUrl) {
+            const oldFilename = existingDesigner.photoUrl.split('/').pop();
+            try {
+              await storage.delete(oldFilename);
+            } catch (err) {
+              console.error('Failed to delete old image:', err);
+            }
+          }
+
           const processedBuffer = await sharp(req.file.buffer)
             .resize(800, 800, {
               fit: 'inside',

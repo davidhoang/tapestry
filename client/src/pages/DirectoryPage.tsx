@@ -97,7 +97,7 @@ export default function DirectoryPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-h-full overflow-y-auto pb-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Designer Directory</h1>
         <div className="flex gap-2">

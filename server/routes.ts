@@ -589,7 +589,7 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/images/:filename', async (req, res) => {
     const filename = req.params.filename;
     try {
-      const file = await storage.getObject(filename);
+      const file = await storage.get(filename);
       if (!file) {
         throw new Error('File not found');
       }
@@ -613,7 +613,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
     // Delete old file if it exists
     if (oldFilename) {
       try {
-        await storage.deleteObject(oldFilename);
+        await storage.delete(oldFilename);
       } catch (err) {
         console.error('Failed to delete old image:', err);
       }
@@ -631,7 +631,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
       .toBuffer();
 
     // Upload to object storage using correct method
-    await storage.createObject(filename, processedBuffer, {
+    await storage.put(filename, processedBuffer, {
       contentType: 'image/webp'
     });
 

@@ -275,13 +275,25 @@ export function registerRoutes(app: Express): Server {
             }
           }
 
-          const processedBuffer = await sharp(req.file.buffer)
+          // Validate image buffer
+          if (!req.file?.buffer) {
+            throw new Error("No image data received");
+          }
+
+          const processedBuffer = await sharp(req.file.buffer, {
+            failOnError: false,
+            limitInputPixels: 50000000 // ~50MP limit
+          })
             .resize(800, 800, {
               fit: 'inside',
               withoutEnlargement: true
             })
             .webp({ quality: 80 })
-            .toBuffer();
+            .toBuffer()
+            .catch(err => {
+              console.error('Sharp processing error:', err);
+              throw new Error('Image processing failed');
+            });
 
           await storage.upload(filename, processedBuffer, {
             contentType: 'image/webp'

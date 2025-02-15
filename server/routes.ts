@@ -12,7 +12,7 @@ import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
 // Add import for Object Storage
-import { ObjectStorage } from "@replit/object-storage";
+import { Client } from "@replit/object-storage";
 
 
 // Configure multer for memory storage
@@ -131,7 +131,7 @@ export function registerRoutes(app: Express): Server {
       let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const storage = new ObjectStorage();
+        const storage = new Client();
 
         try {
           const processedBuffer = await sharp(req.file.buffer)
@@ -220,7 +220,7 @@ export function registerRoutes(app: Express): Server {
       let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
-        const storage = new ObjectStorage();
+        const storage = new Client();
 
         try {
           const processedBuffer = await sharp(req.file.buffer)
@@ -636,7 +636,7 @@ export function registerRoutes(app: Express): Server {
   // Add route to serve images from Object Storage
   app.get('/api/images/:filename', async (req, res) => {
     const filename = req.params.filename;
-    const storage = new ObjectStorage();
+    const storage = new Client();
     try {
       const file = await storage.get(filename);
       res.contentType('image/webp'); // Or other appropriate content type

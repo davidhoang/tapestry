@@ -128,7 +128,6 @@ export function registerRoutes(app: Express): Server {
       }
 
       let photoUrl;
-      let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
         const storage = new Client();
@@ -147,7 +146,6 @@ export function registerRoutes(app: Express): Server {
           });
 
           photoUrl = `/api/images/${filename}`;
-          photoData = `data:image/webp;base64,${processedBuffer.toString('base64')}`;
         } catch (err) {
           throw new Error("Failed to process image");
         }
@@ -159,7 +157,6 @@ export function registerRoutes(app: Express): Server {
           ...designerData,
           userId: req.user.id,
           photoUrl,
-          photoData,
         })
         .returning();
 
@@ -217,7 +214,6 @@ export function registerRoutes(app: Express): Server {
       }
 
       let photoUrl;
-      let photoData;
       if (req.file) {
         const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
         const storage = new Client();
@@ -236,7 +232,6 @@ export function registerRoutes(app: Express): Server {
           });
 
           photoUrl = `/api/images/${filename}`;
-          photoData = `data:image/webp;base64,${processedBuffer.toString('base64')}`;
         } catch (err) {
           throw new Error("Failed to process image");
         }
@@ -247,7 +242,6 @@ export function registerRoutes(app: Express): Server {
         .set({
           ...designerData,
           ...(photoUrl && { photoUrl }),
-          ...(photoData && { photoData }),
         })
         .where(eq(designers.id, designerId))
         .returning();

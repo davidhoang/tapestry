@@ -6,7 +6,7 @@ export default function HomePage() {
     <div className="space-y-16">
       <section className="py-16 text-center space-y-6">
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-          Curated talent matching for designers
+          Connecting the best designers.
         </h1>
         <p className="text-lg text-muted-foreground max-w-prose mx-auto">
           Connect with top design talent through our AI-powered matchmaking

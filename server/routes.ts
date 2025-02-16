@@ -69,10 +69,13 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
   };
 };
 
-// Initialize object storage client
+// Initialize object storage client with proper configuration
 const initStorage = () => {
   try {
-    const storage = new Client();
+    const storage = new Client({
+      bucketId: process.env.REPLIT_OBJSTORE_ID || "",
+      ephemeral: false,
+    });
     return storage;
   } catch (error) {
     console.error('Failed to initialize storage client:', error);
@@ -110,7 +113,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
         const oldKey = oldFilename.split('/').pop();
         if (oldKey) {
           console.log('Attempting to delete old file:', oldKey);
-          await storage.delete(oldKey);
+          await storage.delete(oldKey).catch(console.error);
           console.log('Old file deleted successfully');
         }
       } catch (err) {
@@ -121,7 +124,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
 
     // Upload new file
     console.log('Uploading new file:', filename);
-    await storage.put(filename, processedBuffer);
+    await storage.putObject(filename, processedBuffer);
     console.log('Upload successful');
 
     return `/api/images/${filename}`;
@@ -144,7 +147,7 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Fetching image:', filename);
       const storage = initStorage();
-      const file = await storage.get(filename);
+      const file = await storage.getObject(filename);
 
       if (!file) {
         console.log('File not found:', filename);

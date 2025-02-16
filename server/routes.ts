@@ -11,7 +11,6 @@ import path from "path";
 import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
-import { Client } from "@replit/object-storage";
 
 // Configure multer for memory storage
 const upload = multer({
@@ -69,34 +68,18 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
   };
 };
 
-// Initialize object storage client with proper configuration
-const initStorage = () => {
-  const bucketId = "replit-objstore-01cff05e-983d-42f9-96df-a4f5eaab85ab";
-
-  try {
-    console.log('Initializing storage client with bucket:', bucketId);
-    const storage = new Client({ bucketId });
-
-    // Verify the client is properly initialized
-    if (!storage) {
-      throw new Error("Failed to initialize storage client");
-    }
-
-    return storage;
-  } catch (error) {
-    console.error('Failed to initialize storage client:', error);
-    throw error;
-  }
-};
-
-// Handle photo upload with proper error handling and retries
+// Handle photo upload with proper error handling and optimization
 const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  await fs.mkdir(uploadsDir, { recursive: true });
+
   const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+  const filepath = path.join(uploadsDir, filename);
 
   try {
     console.log('Starting photo upload process...');
 
-    // Process image first
+    // Process image
     const processedBuffer = await sharp(buffer, {
       failOnError: false,
       limitInputPixels: 50000000
@@ -110,69 +93,38 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
 
     console.log('Image processed successfully, size:', processedBuffer.length);
 
-    // Initialize storage client for each operation
-    const storage = initStorage();
-
     // Delete old file if it exists
     if (oldFilename) {
       try {
-        const oldKey = oldFilename.split('/').pop();
-        if (oldKey) {
-          console.log('Attempting to delete old file:', oldKey);
-          await storage.deleteObject(oldKey);
-          console.log('Old file deleted successfully');
-        }
+        const oldPath = path.join(uploadsDir, oldFilename.split('/').pop() || '');
+        await fs.unlink(oldPath);
+        console.log('Old file deleted successfully');
       } catch (err) {
         console.error('Failed to delete old image:', err);
         // Continue even if delete fails
       }
     }
 
-    // Upload new file
-    console.log('Uploading new file:', filename);
-    try {
-      await storage.putObject(filename, processedBuffer);
-      console.log('Upload successful');
-    } catch (e) {
-      console.error('Failed to upload file:', e);
-      throw new Error('Failed to upload image');
-    }
+    // Save new file
+    await fs.writeFile(filepath, processedBuffer);
+    console.log('File saved successfully');
 
-    return `/api/images/${filename}`;
+    return `/uploads/${filename}`;
   } catch (err) {
-    console.error('Storage operation error:', err);
-    throw new Error('Failed to process or upload image');
+    console.error('File operation error:', err);
+    throw new Error('Failed to process or save image');
   }
 };
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Ensure uploads directory exists
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-  fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
-
-  // Update route to serve images from Object Storage
-  app.get('/api/images/:filename', async (req, res) => {
-    const filename = req.params.filename;
-    try {
-      console.log('Fetching image:', filename);
-      const storage = initStorage();
-      const file = await storage.getObject(filename);
-
-      if (!file) {
-        console.log('File not found:', filename);
-        return res.status(404).send("Image not found");
-      }
-
-      console.log('File retrieved successfully');
-      res.contentType('image/webp');
-      res.send(file);
-    } catch (error) {
-      console.error("Error fetching image:", error);
-      res.status(404).send("Image not found");
-    }
-  });
+  // Serve static files with caching headers
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads'), {
+    maxAge: '1d', // Cache for 1 day
+    etag: true,
+    lastModified: true
+  }));
 
   // Designer routes with transaction support
   app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
@@ -543,6 +495,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to add designer to list" });
     }
   }));
+
 
 
   // Public list route

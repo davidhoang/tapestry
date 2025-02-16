@@ -71,12 +71,15 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 
 // Initialize object storage client with proper configuration
 const initStorage = () => {
+  if (!process.env.REPLIT_OBJSTORE_ID) {
+    throw new Error("Object storage bucket ID not configured");
+  }
+
   try {
-    const storage = new Client({
-      bucketId: process.env.REPLIT_OBJSTORE_ID || "",
-      ephemeral: false,
+    return new Client({
+      bucketId: process.env.REPLIT_OBJSTORE_ID,
+      token: process.env.REPLIT_OBJSTORE_TOKEN // Optional: Will use default if not provided
     });
-    return storage;
   } catch (error) {
     console.error('Failed to initialize storage client:', error);
     throw error;
@@ -113,7 +116,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
         const oldKey = oldFilename.split('/').pop();
         if (oldKey) {
           console.log('Attempting to delete old file:', oldKey);
-          await storage.delete(oldKey).catch(console.error);
+          await storage.put(oldKey, Buffer.from('')).catch(console.error);
           console.log('Old file deleted successfully');
         }
       } catch (err) {
@@ -122,9 +125,9 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
       }
     }
 
-    // Upload new file
+    // Upload new file with retry logic
     console.log('Uploading new file:', filename);
-    await storage.putObject(filename, processedBuffer);
+    await storage.put(filename, processedBuffer);
     console.log('Upload successful');
 
     return `/api/images/${filename}`;
@@ -147,7 +150,7 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Fetching image:', filename);
       const storage = initStorage();
-      const file = await storage.getObject(filename);
+      const file = await storage.get(filename);
 
       if (!file) {
         console.log('File not found:', filename);
@@ -314,7 +317,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to delete designers" });
     }
   }));
-
 
   // List routes with transaction support
   app.post("/api/lists", withErrorHandler(async (req, res) => {

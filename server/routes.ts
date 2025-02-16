@@ -70,8 +70,17 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 
 // Handle photo upload with proper error handling and optimization
 const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-  await fs.mkdir(uploadsDir, { recursive: true });
+  // Use Replit's persistent storage location
+  const uploadsDir = path.join('/home/runner', process.env.REPL_SLUG || 'repl', 'storage', 'uploads');
+
+  // Ensure uploads directory exists
+  try {
+    await fs.mkdir(uploadsDir, { recursive: true });
+    console.log('Uploads directory ensured at:', uploadsDir);
+  } catch (err) {
+    console.error('Failed to create uploads directory:', err);
+    throw new Error('Failed to initialize storage');
+  }
 
   const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
   const filepath = path.join(uploadsDir, filename);
@@ -107,7 +116,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
 
     // Save new file
     await fs.writeFile(filepath, processedBuffer);
-    console.log('File saved successfully');
+    console.log('File saved successfully at:', filepath);
 
     return `/uploads/${filename}`;
   } catch (err) {
@@ -119,8 +128,8 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Serve static files with caching headers
-  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads'), {
+  // Serve static files with caching headers from persistent storage
+  app.use('/uploads', express.static(path.join('/home/runner', process.env.REPL_SLUG || 'repl', 'storage', 'uploads'), {
     maxAge: '1d', // Cache for 1 day
     etag: true,
     lastModified: true

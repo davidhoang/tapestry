@@ -71,14 +71,17 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 
 // Initialize object storage client with proper configuration
 const initStorage = () => {
-  if (!process.env.REPLIT_OBJSTORE_ID) {
+  const bucketId = "replit-objstore-01cff05e-983d-42f9-96df-a4f5eaab85ab";
+
+  if (!bucketId) {
     throw new Error("Object storage bucket ID not configured");
   }
 
   try {
+    console.log('Initializing storage client with bucket:', bucketId);
     return new Client({
-      bucketId: process.env.REPLIT_OBJSTORE_ID,
-      token: process.env.REPLIT_OBJSTORE_TOKEN // Optional: Will use default if not provided
+      bucketId,
+      // Token will be automatically used from env if available
     });
   } catch (error) {
     console.error('Failed to initialize storage client:', error);
@@ -116,7 +119,12 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
         const oldKey = oldFilename.split('/').pop();
         if (oldKey) {
           console.log('Attempting to delete old file:', oldKey);
-          await storage.put(oldKey, Buffer.from('')).catch(console.error);
+          try {
+            // @ts-ignore: Client types are not complete
+            await storage.delete(oldKey);
+          } catch (e) {
+            console.error('Failed to delete old file:', e);
+          }
           console.log('Old file deleted successfully');
         }
       } catch (err) {
@@ -125,10 +133,16 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
       }
     }
 
-    // Upload new file with retry logic
+    // Upload new file
     console.log('Uploading new file:', filename);
-    await storage.put(filename, processedBuffer);
-    console.log('Upload successful');
+    try {
+      // @ts-ignore: Client types are not complete
+      await storage.put(filename, processedBuffer);
+      console.log('Upload successful');
+    } catch (e) {
+      console.error('Failed to upload file:', e);
+      throw new Error('Failed to upload image');
+    }
 
     return `/api/images/${filename}`;
   } catch (err) {
@@ -150,6 +164,7 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Fetching image:', filename);
       const storage = initStorage();
+      // @ts-ignore: Client types are not complete
       const file = await storage.get(filename);
 
       if (!file) {

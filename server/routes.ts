@@ -72,10 +72,8 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 // Initialize object storage client
 const initStorage = () => {
   try {
-    return new Client({
-      token: process.env.REPLIT_OBJECT_STORE_TOKEN as string,
-      defaultBucketId: 'replit-objstore-01cff05e-983d-42f9-96df-a4f5eaab85ab'
-    });
+    const storage = new Client();
+    return storage;
   } catch (error) {
     console.error('Failed to initialize storage client:', error);
     throw error;

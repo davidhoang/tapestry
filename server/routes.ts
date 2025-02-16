@@ -79,10 +79,16 @@ const initStorage = () => {
 
   try {
     console.log('Initializing storage client with bucket:', bucketId);
-    return new Client({
+    const storage = new Client({
       bucketId,
-      // Token will be automatically used from env if available
     });
+
+    // Verify the client is properly initialized
+    if (!storage) {
+      throw new Error("Failed to initialize storage client");
+    }
+
+    return storage;
   } catch (error) {
     console.error('Failed to initialize storage client:', error);
     throw error;
@@ -119,12 +125,8 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
         const oldKey = oldFilename.split('/').pop();
         if (oldKey) {
           console.log('Attempting to delete old file:', oldKey);
-          try {
-            // @ts-ignore: Client types are not complete
-            await storage.delete(oldKey);
-          } catch (e) {
-            console.error('Failed to delete old file:', e);
-          }
+          // @ts-ignore: Method 'delete' exists on type Client
+          await storage.delete(oldKey);
           console.log('Old file deleted successfully');
         }
       } catch (err) {
@@ -136,7 +138,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
     // Upload new file
     console.log('Uploading new file:', filename);
     try {
-      // @ts-ignore: Client types are not complete
+      // @ts-ignore: Method 'put' exists on type Client
       await storage.put(filename, processedBuffer);
       console.log('Upload successful');
     } catch (e) {

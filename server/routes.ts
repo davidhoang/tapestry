@@ -119,8 +119,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
         const oldKey = oldFilename.split('/').pop();
         if (oldKey) {
           console.log('Attempting to delete old file:', oldKey);
-          // @ts-ignore: Method exists on type
-          await storage.delete(oldKey);
+          await storage.deleteObject(oldKey);
           console.log('Old file deleted successfully');
         }
       } catch (err) {
@@ -132,8 +131,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
     // Upload new file
     console.log('Uploading new file:', filename);
     try {
-      // @ts-ignore: Method exists on type
-      await storage.put(filename, processedBuffer);
+      await storage.putObject(filename, processedBuffer);
       console.log('Upload successful');
     } catch (e) {
       console.error('Failed to upload file:', e);
@@ -160,8 +158,7 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Fetching image:', filename);
       const storage = initStorage();
-      // @ts-ignore: Client types are not complete
-      const file = await storage.get(filename);
+      const file = await storage.getObject(filename);
 
       if (!file) {
         console.log('File not found:', filename);

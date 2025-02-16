@@ -73,15 +73,9 @@ const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
 const initStorage = () => {
   const bucketId = "replit-objstore-01cff05e-983d-42f9-96df-a4f5eaab85ab";
 
-  if (!bucketId) {
-    throw new Error("Object storage bucket ID not configured");
-  }
-
   try {
     console.log('Initializing storage client with bucket:', bucketId);
-    const storage = new Client({
-      bucketId,
-    });
+    const storage = new Client({ bucketId });
 
     // Verify the client is properly initialized
     if (!storage) {
@@ -125,7 +119,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
         const oldKey = oldFilename.split('/').pop();
         if (oldKey) {
           console.log('Attempting to delete old file:', oldKey);
-          // @ts-ignore: Method 'delete' exists on type Client
+          // @ts-ignore: Method exists on type
           await storage.delete(oldKey);
           console.log('Old file deleted successfully');
         }
@@ -138,7 +132,7 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
     // Upload new file
     console.log('Uploading new file:', filename);
     try {
-      // @ts-ignore: Method 'put' exists on type Client
+      // @ts-ignore: Method exists on type
       await storage.put(filename, processedBuffer);
       console.log('Upload successful');
     } catch (e) {

@@ -66,14 +66,9 @@ export default function Navigation() {
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => setShowAuthDialog(true)}>
-                Sign in
+              <Button variant="ghost" asChild>
+                <Link href="/auth">Sign in</Link>
               </Button>
-              <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-                <DialogContent className="max-w-sm p-0">
-                  <AuthPage />
-                </DialogContent>
-              </Dialog>
             </>
           )}
         </div>

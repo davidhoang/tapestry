@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -20,7 +19,7 @@ export default function Navigation() {
   const [location] = useLocation();
   const { user, logout } = useUser();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  
+
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 max-w-screen-2xl items-center px-4">
@@ -67,21 +66,14 @@ export default function Navigation() {
             </DropdownMenu>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                className="font-medium"
-                onClick={() => setShowAuthDialog(true)}
-              >
+              <Button variant="ghost" onClick={() => setShowAuthDialog(true)}>
                 Sign in
               </Button>
-              
-              {showAuthDialog && (
-                <Dialog open={true} onOpenChange={setShowAuthDialog}>
-                  <DialogContent className="max-w-md p-0 overflow-hidden">
-                    <AuthPage />
-                  </DialogContent>
-                </Dialog>
-              )}
+              <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+                <DialogContent className="max-w-sm p-0">
+                  <AuthPage />
+                </DialogContent>
+              </Dialog>
             </>
           )}
         </div>

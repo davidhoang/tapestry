@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { designers, lists, listDesigners, users } from "@db/schema";
+import { designers, lists, listDesigners } from "@db/schema";
 import { eq, desc, and, ne, inArray } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import multer from "multer";
@@ -11,18 +11,6 @@ import path from "path";
 import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
-import { randomBytes } from "crypto";
-import { scrypt } from "crypto";
-import { promisify } from "util";
-
-const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-};
 
 // Configure multer for memory storage
 const upload = multer({
@@ -139,62 +127,6 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
-
-  // Firebase auth endpoint
-  app.post("/api/auth/firebase", withErrorHandler(async (req, res) => {
-    try {
-      const { firebaseUid, email, displayName, photoURL } = req.body;
-      
-      if (!firebaseUid || !email) {
-        return res.status(400).json({ error: "Firebase UID and email are required" });
-      }
-      
-      // Check if user exists
-      const userResult = await db.execute(
-        sql`SELECT * FROM users WHERE email = ${email} LIMIT 1`
-      );
-      let user = userResult.rows[0];
-      
-      if (!user) {
-        // Create a new user with a random password
-        const randomPassword = randomBytes(16).toString('hex');
-        const hashedPassword = await crypto.hash(randomPassword);
-        
-        // Insert the new user
-        const insertResult = await db.execute(
-          sql`INSERT INTO users (email, password, firebase_uid) 
-              VALUES (${email}, ${hashedPassword}, ${firebaseUid}) 
-              RETURNING *`
-        );
-        user = insertResult.rows[0];
-      } else if (!user.firebase_uid) {
-        // Update existing user with Firebase UID if they don't have one
-        const updateResult = await db.execute(
-          sql`UPDATE users 
-              SET firebase_uid = ${firebaseUid} 
-              WHERE id = ${user.id} 
-              RETURNING *`
-        );
-        user = updateResult.rows[0];
-      }
-      
-      // Log the user in
-      req.login(user, (err: Error) => {
-        if (err) {
-          console.error("Login error:", err);
-          return res.status(500).json({ error: "Failed to log in user" });
-        }
-        
-        return res.json({
-          message: "Firebase authentication successful",
-          user: { id: user.id, email: user.email }
-        });
-      });
-    } catch (error: any) {
-      console.error("Firebase auth error:", error);
-      res.status(500).json({ error: "Authentication failed" });
-    }
-  }));
 
   // Serve static files with caching headers from persistent storage
   app.use('/uploads', express.static(path.join('/home/runner', process.env.REPL_SLUG || 'repl', 'storage', 'uploads'), {

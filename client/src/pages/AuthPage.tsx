@@ -31,7 +31,7 @@ export default function AuthPage() {
     <div className={containerClass}>
       <Card className="w-full shadow-none border-0 max-w-md mx-auto">
         <CardHeader className="space-y-1 py-3">
-          <CardTitle className="text-xl text-center">DH Talent Collective</CardTitle>
+          <CardTitle className="text-xl text-center">Design Matchmaker</CardTitle>
           <CardDescription className="text-center text-sm">
             Connect with top design talent
           </CardDescription>
@@ -76,11 +76,6 @@ function LoginForm() {
           title: "Error",
           description: result.message,
           variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "You have been successfully logged in",
         });
       }
     } catch (error) {
@@ -153,11 +148,6 @@ function RegisterForm() {
           title: "Error",
           description: result.message,
           variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Your account has been created successfully",
         });
       }
     } catch (error) {

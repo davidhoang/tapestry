@@ -4,8 +4,8 @@ import { Link } from "wouter";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-y-auto">
-      <section className="flex-1 py-32 text-center space-y-6 relative">
+    <div className="fixed inset-0 flex flex-col overflow-y-auto">
+      <section className="flex-none py-32 text-center space-y-6 relative">
         <div className="absolute inset-0 bg-[url('/images/img-hero.png')] 
           bg-cover bg-center bg-no-repeat opacity-30"></div>
         <div className="relative">

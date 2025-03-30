@@ -70,7 +70,7 @@ export default function Navigation() {
                 Sign in
               </Button>
               <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-                <DialogContent className="max-w-sm p-0">
+                <DialogContent className="max-w-sm p-0 overflow-hidden">
                   <AuthPage />
                 </DialogContent>
               </Dialog>

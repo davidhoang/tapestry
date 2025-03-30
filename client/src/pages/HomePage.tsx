@@ -1,8 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useUser } from "@/hooks/use-user";
 
 export default function HomePage() {
+  const { user } = useUser();
+  
   return (
     <div className="fixed inset-0 flex flex-col overflow-y-auto">
       <section className="flex-none py-32 text-center space-y-6 relative">
@@ -17,10 +20,10 @@ export default function HomePage() {
           </p>
           <div className="flex justify-center gap-4">
             <Button asChild size="lg">
-              {typeof isAuthenticated !== "undefined" ? (
+              {user ? (
                 <Link href="/directory">Browse Directory</Link>
               ) : (
-                <Link href="/auth">Browse Directory</Link>
+                <Link href="/">Browse Directory</Link>
               )}
             </Button>
           </div>

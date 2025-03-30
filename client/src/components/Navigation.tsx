@@ -66,11 +66,15 @@ export default function Navigation() {
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => setShowAuthDialog(true)}>
+              <Button 
+                variant="outline" 
+                className="font-medium"
+                onClick={() => setShowAuthDialog(true)}
+              >
                 Sign in
               </Button>
               <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-                <DialogContent className="max-w-sm p-0 overflow-hidden">
+                <DialogContent className="max-w-md p-0 overflow-hidden">
                   <AuthPage />
                 </DialogContent>
               </Dialog>

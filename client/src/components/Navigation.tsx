@@ -67,19 +67,21 @@ export default function Navigation() {
             </DropdownMenu>
           ) : (
             <>
-              <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="font-medium"
-                  >
-                    Sign in
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md p-0 overflow-hidden">
-                  <AuthPage />
-                </DialogContent>
-              </Dialog>
+              <Button 
+                variant="outline" 
+                className="font-medium"
+                onClick={() => setShowAuthDialog(true)}
+              >
+                Sign in
+              </Button>
+              
+              {showAuthDialog && (
+                <Dialog open={true} onOpenChange={setShowAuthDialog}>
+                  <DialogContent className="max-w-md p-0 overflow-hidden">
+                    <AuthPage />
+                  </DialogContent>
+                </Dialog>
+              )}
             </>
           )}
         </div>

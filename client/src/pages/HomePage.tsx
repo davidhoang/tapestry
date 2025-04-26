@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useUser } from "../hooks/use-user";
 
 export default function HomePage() {
+  const { user } = useUser();
   return (
     <div className="space-y-16">
       <section className="hero py-32 text-center space-y-6 relative">
@@ -9,14 +11,14 @@ export default function HomePage() {
           bg-cover bg-center bg-no-repeat opacity-30"></div>
         <div className="relative">
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-          DH Talent Collective
+          Design Big Board
         </h1>
         <p className="text-lg text-muted-foreground max-w-prose mx-auto">
           This project is a <a href="http://www.proofofconcept.pub" target="_blank">Proof of Concept</a> experiment by David Hoang.
         </p>
         <div className="flex justify-center gap-4">
           <Button asChild size="lg">
-            {typeof isAuthenticated !== "undefined" ? (
+            {user ? (
               <Link href="/directory">Browse Directory</Link>
             ) : (
               <Link href="/auth">Browse Directory</Link>

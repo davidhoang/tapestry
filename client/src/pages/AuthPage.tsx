@@ -31,7 +31,7 @@ export default function AuthPage() {
     <div className={containerClass}>
       <Card className="w-full shadow-none border-0 max-w-md mx-auto">
         <CardHeader className="space-y-1 py-3">
-          <CardTitle className="text-xl text-center">Design Matchmaker</CardTitle>
+          <CardTitle className="text-xl text-center">Design Big Board</CardTitle>
           <CardDescription className="text-center text-sm">
             Connect with top design talent
           </CardDescription>

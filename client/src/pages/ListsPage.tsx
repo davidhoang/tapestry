@@ -126,7 +126,7 @@ export default function ListsPage() {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Designer Lists</h1>
+        <h1 className="text-3xl font-bold">Design Big Board Lists</h1>
         <CreateListDialog open={isOpen} onOpenChange={setIsOpen} />
       </div>
 

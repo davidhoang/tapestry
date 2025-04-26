@@ -85,7 +85,7 @@ export async function sendListEmail(
             ${designersHtml}
           </div>
           <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">
-            Shared via <a href="${baseUrl}" style="color: #6b7280; text-decoration: none; font-weight: 500;">Design Matchmaker</a>
+            Shared via <a href="${baseUrl}" style="color: #6b7280; text-decoration: none; font-weight: 500;">Design Big Board</a>
           </p>
           <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
             <a href="${baseUrl}/lists/${list.id}" style="color: #6b7280; text-decoration: none;">View this list online</a>
@@ -99,7 +99,7 @@ export async function sendListEmail(
     to: recipientEmail,
     from: {
       email: "david@davidhoang.com",
-      name: "Design Matchmaker",
+      name: "Design Big Board",
     },
     subject: subject,
     html: html,

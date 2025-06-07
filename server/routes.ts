@@ -106,7 +106,10 @@ const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
     }
 
     // Upload to Object Storage
-    await objectStorage.uploadFromBytes(filename, processedBuffer);
+    const uploadResult = await objectStorage.uploadFromBytes(filename, processedBuffer);
+    if (uploadResult.error) {
+      throw new Error(`Upload failed: ${uploadResult.error.message}`);
+    }
     
     console.log('File uploaded successfully to Object Storage:', filename);
 

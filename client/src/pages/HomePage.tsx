@@ -11,7 +11,7 @@ export default function HomePage() {
           bg-cover bg-center bg-no-repeat opacity-30"></div>
         <div className="relative">
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-          Design Big Board
+          Design Talent Match
         </h1>
         <p className="text-lg text-muted-foreground max-w-prose mx-auto">
           This project is a <a href="http://www.proofofconcept.pub" target="_blank">Proof of Concept</a> experiment by David Hoang.

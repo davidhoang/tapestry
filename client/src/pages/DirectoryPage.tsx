@@ -99,7 +99,7 @@ export default function DirectoryPage() {
   return (
     <div className="space-y-8 min-h-full overflow-y-auto pb-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Design Big Board Directory</h1>
+        <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
         <div className="flex gap-2">
           {selectedIds.length > 0 && (
             <>

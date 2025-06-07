@@ -53,7 +53,7 @@ export default function MatchmakerPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Design Big Board AI Matching</h1>
+        <h1 className="text-3xl font-bold mb-2">Design Talent Match AI</h1>
         <p className="text-muted-foreground">
           Let our AI find the perfect designer match based on your requirements.
         </p>

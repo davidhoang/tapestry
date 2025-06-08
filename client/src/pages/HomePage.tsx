@@ -1,13 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useUser } from "../hooks/use-user";
+import Navigation from "../components/Navigation";
 
 export default function HomePage() {
   const { user } = useUser();
   return (
     <>
-      {/* Full-width hero that extends behind navigation */}
-      <section className="hero relative min-h-screen w-screen ml-[calc(50%-50vw)] flex items-center justify-center overflow-hidden">
+      {/* Full-width hero with navigation overlay */}
+      <section className="hero relative min-h-screen w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -20,8 +21,13 @@ export default function HomePage() {
         {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
         
-        {/* Content */}
-        <div className="relative z-10 text-center space-y-8 px-4 max-w-4xl mx-auto">
+        {/* Navigation overlay */}
+        <div className="relative z-20">
+          <Navigation />
+        </div>
+        
+        {/* Hero Content */}
+        <div className="relative z-10 flex-1 flex items-center justify-center text-center space-y-8 px-4 max-w-4xl mx-auto">
           <div className="space-y-4">
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
               Design Talent Match

@@ -3,6 +3,7 @@ import { useDesigners, useCreateDesigner, useUpdateDesigner, useDeleteDesigners 
 import { useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
+import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,7 +98,9 @@ export default function DirectoryPage() {
   };
 
   return (
-    <div className="space-y-8 min-h-full overflow-y-auto pb-8">
+    <div>
+      <Navigation />
+      <div className="container mx-auto px-4 py-8 space-y-8 min-h-full overflow-y-auto pb-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
         <div className="flex gap-2">
@@ -173,6 +176,7 @@ export default function DirectoryPage() {
         designerIds={selectedIds}
         onSuccess={() => setSelectedIds([])}
       />
+      </div>
     </div>
   );
 }

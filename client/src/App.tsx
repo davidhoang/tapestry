@@ -40,8 +40,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="min-h-[calc(100vh-56px)]">
+        <main className="min-h-screen">
           <Switch>
             {!user && <Route path="/" component={HomePage} />}
             {user ? (

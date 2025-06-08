@@ -145,13 +145,13 @@ export default function DirectoryPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex gap-4">
+        <div className="space-y-6">
+          <div className="space-y-2">
             <Input
-              placeholder="Search designers..."
+              placeholder="Search designers by name, title, or company..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="w-full text-lg py-3 px-4 bg-white border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg shadow-sm"
             />
           </div>
           

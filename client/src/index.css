@@ -27,7 +27,7 @@
 .w-md-editor.w-md-editor-dark .w-md-editor-text,
 .w-md-editor.w-md-editor-dark .w-md-editor-text-textarea {
   background-color: white !important;
-  color: #1a202c !important;
+  color: #0f172a !important;
 }
 
 .w-md-editor-bar,
@@ -55,12 +55,12 @@
 .w-md-editor-preview,
 .w-md-editor.w-md-editor-dark .w-md-editor-preview {
   background-color: white !important;
-  color: #1a202c !important;
+  color: #0f172a !important;
 }
 
 .w-md-editor-preview *,
 .w-md-editor.w-md-editor-dark .w-md-editor-preview * {
-  color: #1a202c !important;
+  color: #0f172a !important;
   background-color: transparent !important;
 }
 
@@ -76,7 +76,7 @@
 .w-md-editor.w-md-editor-dark .w-md-editor-preview p,
 .w-md-editor.w-md-editor-dark .w-md-editor-preview div,
 .w-md-editor.w-md-editor-dark .w-md-editor-preview span {
-  color: #1a202c !important;
+  color: #0f172a !important;
   background-color: transparent !important;
 }
 
@@ -89,12 +89,12 @@
 .w-md-editor-markdown,
 .w-md-editor-markdown-color {
   background-color: transparent !important;
-  color: #1a202c !important;
+  color: #0f172a !important;
 }
 
 .w-md-editor-markdown *,
 .w-md-editor-markdown-color * {
-  color: #1a202c !important;
+  color: #0f172a !important;
   background-color: transparent !important;
 }
 
@@ -106,6 +106,6 @@
 .w-md-editor-markdown span,
 .w-md-editor-markdown code,
 .w-md-editor-markdown pre {
-  color: #1a202c !important;
+  color: #0f172a !important;
   background-color: transparent !important;
 }

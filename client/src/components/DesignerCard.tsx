@@ -146,7 +146,7 @@ export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: 
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Notes</h3>
                 <div className="prose prose-sm max-w-none">
-                  <MDEditor.Markdown source={designer.notes} />
+                  <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
                 </div>
               </div>
             )}

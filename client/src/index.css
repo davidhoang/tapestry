@@ -12,44 +12,56 @@
   }
 }
 
-/* Markdown Editor Light Mode Styles */
-.w-md-editor {
+/* Markdown Editor Light Mode Styles - Force Override */
+.w-md-editor,
+.w-md-editor.w-md-editor-dark {
   background-color: white !important;
   border: 1px solid #e2e8f0 !important;
+  color-scheme: light !important;
 }
 
 .w-md-editor-text-container,
 .w-md-editor-text,
-.w-md-editor-text-textarea {
+.w-md-editor-text-textarea,
+.w-md-editor.w-md-editor-dark .w-md-editor-text-container,
+.w-md-editor.w-md-editor-dark .w-md-editor-text,
+.w-md-editor.w-md-editor-dark .w-md-editor-text-textarea {
   background-color: white !important;
   color: #1a202c !important;
 }
 
-.w-md-editor-bar {
+.w-md-editor-bar,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar {
   background-color: #f8fafc !important;
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.w-md-editor-bar svg {
+.w-md-editor-bar svg,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar svg {
   color: #4a5568 !important;
 }
 
-.w-md-editor-bar button {
+.w-md-editor-bar button,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar button {
   color: #4a5568 !important;
   background-color: transparent !important;
 }
 
-.w-md-editor-bar button:hover {
+.w-md-editor-bar button:hover,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar button:hover {
   background-color: #e2e8f0 !important;
 }
 
-.w-md-editor-preview {
+.w-md-editor-preview,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview {
   background-color: white !important;
   color: #1a202c !important;
 }
 
-.w-md-editor-preview * {
+.w-md-editor-preview *,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview * {
   color: #1a202c !important;
+  background-color: transparent !important;
 }
 
 .w-md-editor-preview ul,
@@ -57,11 +69,19 @@
 .w-md-editor-preview li,
 .w-md-editor-preview p,
 .w-md-editor-preview div,
-.w-md-editor-preview span {
+.w-md-editor-preview span,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview ul,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview ol,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview li,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview p,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview div,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview span {
   color: #1a202c !important;
+  background-color: transparent !important;
 }
 
-.w-md-editor-focus {
+.w-md-editor-focus,
+.w-md-editor.w-md-editor-dark.w-md-editor-focus {
   border-color: #3182ce !important;
 }
 
@@ -72,7 +92,8 @@
   color: #1a202c !important;
 }
 
-.w-md-editor-markdown * {
+.w-md-editor-markdown *,
+.w-md-editor-markdown-color * {
   color: #1a202c !important;
   background-color: transparent !important;
 }

@@ -508,6 +508,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                     <MDEditor
                       value={field.value}
                       onChange={(value) => field.onChange(value || '')}
+                      data-color-mode="light"
                     />
                   </FormControl>
                   <FormMessage />

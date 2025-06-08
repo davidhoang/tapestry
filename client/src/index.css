@@ -64,3 +64,27 @@
 .w-md-editor-focus {
   border-color: #3182ce !important;
 }
+
+/* Markdown Renderer Light Mode Styles */
+.w-md-editor-markdown,
+.w-md-editor-markdown-color {
+  background-color: transparent !important;
+  color: #1a202c !important;
+}
+
+.w-md-editor-markdown * {
+  color: #1a202c !important;
+  background-color: transparent !important;
+}
+
+.w-md-editor-markdown ul,
+.w-md-editor-markdown ol,
+.w-md-editor-markdown li,
+.w-md-editor-markdown p,
+.w-md-editor-markdown div,
+.w-md-editor-markdown span,
+.w-md-editor-markdown code,
+.w-md-editor-markdown pre {
+  color: #1a202c !important;
+  background-color: transparent !important;
+}

@@ -40,16 +40,13 @@ export default function HomePage() {
               A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
             </p>
             
-            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+            <div className="flex justify-center pt-4">
               <Button asChild size="lg" className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6">
                 {user ? (
                   <Link href="/directory">Browse Directory</Link>
                 ) : (
                   <Link href="/auth">Browse Directory</Link>
                 )}
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-black text-lg px-8 py-6">
-                <Link href="/matchmaker">AI Matching</Link>
               </Button>
             </div>
           </div>

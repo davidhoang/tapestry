@@ -129,7 +129,7 @@ export default function ListsPage() {
       <Navigation />
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Design Talent Match Lists</h1>
+          <h1 className="text-3xl font-bold">Lists</h1>
           <CreateListDialog open={isOpen} onOpenChange={setIsOpen} />
         </div>
 

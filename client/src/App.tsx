@@ -41,7 +41,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background">
         <Navigation />
-        <main className="container mx-auto px-4 py-8 h-[calc(100vh-56px)] overflow-y-auto">
+        <main className="min-h-[calc(100vh-56px)]">
           <Switch>
             {!user && <Route path="/" component={HomePage} />}
             {user ? (

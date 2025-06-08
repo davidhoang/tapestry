@@ -41,12 +41,6 @@ export default function Navigation() {
               >
                 Lists
               </Link>
-              <Link
-                href="/matchmaker"
-                className={location === "/matchmaker" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
-              >
-                AI Matchmaker
-              </Link>
             </div>
           )}
         </div>

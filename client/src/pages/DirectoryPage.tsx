@@ -156,7 +156,7 @@ export default function DirectoryPage() {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Filter by Skills:</label>
+            <label className="text-sm font-medium">Search by skill</label>
             <SkillsInput
               value={selectedSkills}
               onChange={setSelectedSkills}

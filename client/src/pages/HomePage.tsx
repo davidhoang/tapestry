@@ -53,31 +53,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Content sections with proper container */}
-      <div className="container mx-auto px-4 py-16 space-y-16">
-        <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="rounded-lg border bg-card p-8 space-y-4">
-            <h3 className="text-xl font-semibold">AI-powered matching</h3>
-            <p className="text-muted-foreground">
-              Our intelligent system matches you with designers based on your
-              specific needs and preferences.
-            </p>
-          </div>
-          <div className="rounded-lg border bg-card p-8 space-y-4">
-            <h3 className="text-xl font-semibold">Curated Lists</h3>
-            <p className="text-muted-foreground">
-              Designer lists are curated by experienced hiring managers.
-            </p>
-          </div>
-          <div className="rounded-lg border bg-card p-8 space-y-4">
-            <h3 className="text-xl font-semibold">Detailed profiles</h3>
-            <p className="text-muted-foreground">
-              Access a community of verified design professionals with detailed
-              profiles.
-            </p>
-          </div>
-        </section>
-      </div>
+
     </>
   );
 }

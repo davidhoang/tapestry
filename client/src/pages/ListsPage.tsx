@@ -125,19 +125,21 @@ export default function ListsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Design Talent Match Lists</h1>
-        <CreateListDialog open={isOpen} onOpenChange={setIsOpen} />
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div>
+      <Navigation />
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Design Talent Match Lists</h1>
+          <CreateListDialog open={isOpen} onOpenChange={setIsOpen} />
         </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {lists?.map((list) => (
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {lists?.map((list) => (
             <Card
               key={list.id}
               className="group cursor-pointer hover:shadow-lg transition-shadow"
@@ -266,6 +268,7 @@ export default function ListsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }

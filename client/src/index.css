@@ -48,6 +48,19 @@
   color: #1a202c !important;
 }
 
+.w-md-editor-preview * {
+  color: #1a202c !important;
+}
+
+.w-md-editor-preview ul,
+.w-md-editor-preview ol,
+.w-md-editor-preview li,
+.w-md-editor-preview p,
+.w-md-editor-preview div,
+.w-md-editor-preview span {
+  color: #1a202c !important;
+}
+
 .w-md-editor-focus {
   border-color: #3182ce !important;
 }

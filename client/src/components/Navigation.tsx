@@ -21,7 +21,7 @@ export default function Navigation() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   return (
-    <nav className="border-b border-white/20 bg-transparent">
+    <nav className="border-b border-white/20 bg-black">
       <div className="container flex h-14 max-w-screen-2xl items-center px-4">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">

@@ -11,3 +11,43 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Markdown Editor Light Mode Styles */
+.w-md-editor {
+  background-color: white !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.w-md-editor-text-container,
+.w-md-editor-text,
+.w-md-editor-text-textarea {
+  background-color: white !important;
+  color: #1a202c !important;
+}
+
+.w-md-editor-bar {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.w-md-editor-bar svg {
+  color: #4a5568 !important;
+}
+
+.w-md-editor-bar button {
+  color: #4a5568 !important;
+  background-color: transparent !important;
+}
+
+.w-md-editor-bar button:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.w-md-editor-preview {
+  background-color: white !important;
+  color: #1a202c !important;
+}
+
+.w-md-editor-focus {
+  border-color: #3182ce !important;
+}

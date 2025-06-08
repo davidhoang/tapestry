@@ -63,16 +63,18 @@ export default function DirectoryPage() {
     const matchesSearch = designer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          designer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          designer.company?.toLowerCase().includes(searchTerm.toLowerCase());
-
+    
     const matchesSkills = selectedSkills.length === 0 || 
-                         selectedSkills.every(skill => designer.skills.includes(skill));
-
+                         selectedSkills.some(skill => 
+                           designer.skills.some(designerSkill => 
+                             designerSkill.toLowerCase().includes(skill.toLowerCase())
+                           )
+                         );
+    
     return matchesSearch && matchesSkills;
-  });
+  }) || [];
 
   const handleDeleteSelected = async () => {
-    if (!selectedIds.length) return;
-
     try {
       await deleteDesigners.mutateAsync(selectedIds);
       toast({
@@ -100,82 +102,109 @@ export default function DirectoryPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 py-8 space-y-8 min-h-full overflow-y-auto pb-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
-        <div className="flex gap-2">
-          {selectedIds.length > 0 && (
-            <>
-              <Button 
-                variant="secondary"
-                onClick={() => setShowAddToListDialog(true)}
-              >
-                <ListPlus className="mr-2 h-4 w-4" />
-                Add to List ({selectedIds.length})
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleDeleteSelected}
-                disabled={deleteDesigners.isPending}
-              >
-                {deleteDesigners.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                <Trash className="mr-2 h-4 w-4" />
-                Delete Selected
-              </Button>
-            </>
-          )}
-          <AddDesignerDialog 
-            designer={designerToEdit} 
-            onClose={() => setDesignerToEdit(null)} 
-          />
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
+          <div className="flex gap-2">
+            {selectedIds.length > 0 && (
+              <>
+                <Button 
+                  variant="secondary"
+                  onClick={() => setShowAddToListDialog(true)}
+                >
+                  <ListPlus className="mr-2 h-4 w-4" />
+                  Add to List ({selectedIds.length})
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteSelected}
+                  disabled={deleteDesigners.isPending}
+                >
+                  {deleteDesigners.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete Selected ({selectedIds.length})
+                </Button>
+              </>
+            )}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Designer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Designer</DialogTitle>
+                </DialogHeader>
+                <AddDesignerDialog designer={null} onClose={() => {}} />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-4">
-        <Input
-          placeholder="Search designers..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <SkillsInput
-          value={selectedSkills}
-          onChange={setSelectedSkills}
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <Input
+              placeholder="Search designers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Filter by Skills:</label>
+            <SkillsInput
+              value={selectedSkills}
+              onChange={setSelectedSkills}
+            />
+          </div>
         </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDesigners?.map((designer) => (
-            <div key={designer.id} className="relative">
-              <div className="absolute top-4 left-4 z-10">
-                <Checkbox
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredDesigners.map((designer) => (
+              <div key={designer.id} className="relative">
+                <input
+                  type="checkbox"
                   checked={selectedIds.includes(designer.id)}
-                  onCheckedChange={() => toggleDesignerSelection(designer.id)}
-                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleDesignerSelection(designer.id)}
+                  className="absolute top-2 left-2 z-10"
+                />
+                <DesignerCard 
+                  designer={designer} 
+                  onEdit={setDesignerToEdit}
                 />
               </div>
-              <DesignerCard 
-                designer={designer}
-                onEdit={setDesignerToEdit}
-                onSkillClick={(skill) => setSelectedSkills([skill])}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      <AddToListDialog
-        open={showAddToListDialog}
-        onOpenChange={setShowAddToListDialog}
-        designerIds={selectedIds}
-        onSuccess={() => setSelectedIds([])}
-      />
+        <Dialog open={!!designerToEdit} onOpenChange={(open) => !open && setDesignerToEdit(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Designer</DialogTitle>
+            </DialogHeader>
+            <AddDesignerDialog 
+              designer={designerToEdit} 
+              onClose={() => setDesignerToEdit(null)} 
+            />
+          </DialogContent>
+        </Dialog>
+
+        <AddToListDialog
+          open={showAddToListDialog}
+          onOpenChange={setShowAddToListDialog}
+          designerIds={selectedIds}
+          onSuccess={() => setSelectedIds([])}
+        />
       </div>
     </div>
   );
@@ -195,17 +224,17 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
 
   const form = useForm({
     defaultValues: {
-      name: designer?.name ?? "",
-      title: designer?.title ?? "",
-      location: designer?.location ?? "",
-      company: designer?.company ?? "",
-      level: designer?.level ?? "",
-      website: designer?.website ?? "",
-      linkedIn: designer?.linkedIn ?? "",
-      email: designer?.email ?? "",
-      skills: designer?.skills ?? [],
-      notes: designer?.notes ?? "",
-      available: designer?.available ?? false,
+      name: designer?.name || "",
+      email: designer?.email || "",
+      title: designer?.title || "",
+      location: designer?.location || "",
+      company: designer?.company || "",
+      level: designer?.level || "",
+      website: designer?.website || "",
+      linkedIn: designer?.linkedIn || "",
+      skills: designer?.skills || [],
+      notes: designer?.notes || "",
+      available: designer?.available || false,
     },
   });
 
@@ -213,18 +242,17 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
     if (designer) {
       form.reset({
         name: designer.name,
+        email: designer.email || "",
         title: designer.title,
-        location: designer.location,
-        company: designer.company,
+        location: designer.location || "",
+        company: designer.company || "",
         level: designer.level,
-        website: designer.website,
-        linkedIn: designer.linkedIn,
-        email: designer.email,
-        skills: designer.skills,
-        notes: designer.notes,
-        available: designer.available,
+        website: designer.website || "",
+        linkedIn: designer.linkedIn || "",
+        skills: designer.skills || [],
+        notes: designer.notes || "",
+        available: designer.available || false,
       });
-      setIsOpen(true);
     }
   }, [designer, form]);
 
@@ -235,7 +263,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
     onClose();
   };
 
-  const onSubmit = async (values: Omit<SelectDesigner, "id" | "userId" | "createdAt" | "photoUrl">) => {
+  const onSubmit = async (values: any) => {
     try {
       const formData = new FormData();
       if (photoFile) {
@@ -283,45 +311,43 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
+    if (e.target.files && e.target.files[0]) {
       setPhotoFile(e.target.files[0]);
     }
   };
 
+  useEffect(() => {
+    setIsOpen(!!designer);
+    if (designer) {
+      setIsOpen(true);
+    } else {
+      handleClose();
+      setIsOpen(false);
+    }
+  }, [designer]);
+
   return (
-    <Dialog open={isOpen || Boolean(designer)} onOpenChange={(open) => {
-      if (!open) handleClose();
-      setIsOpen(open);
-    }}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Designer
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{designer ? 'Edit Designer' : 'Add New Designer'}</DialogTitle>
-        </DialogHeader>
+    <Dialog open={isOpen}>
+      <DialogContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto">
-            <FormField
-              control={form.control}
-              name="photo"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Photo</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+              <label htmlFor="photo" className="block text-sm font-medium mb-2">
+                Photo
+              </label>
+              <input
+                type="file"
+                id="photo"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-full file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -344,7 +370,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" required {...field} />
+                      <Input {...field} type="email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

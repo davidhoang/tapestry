@@ -7,6 +7,7 @@ import {
   useAddDesignersToList,
 } from "@/hooks/use-lists";
 import { useDesigners } from "@/hooks/use-designers";
+import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

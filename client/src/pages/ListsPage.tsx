@@ -328,6 +328,9 @@ function ViewListDialog({
           <DialogHeader>
             <DialogTitle className="text-2xl">{list.name}</DialogTitle>
             <p className="text-muted-foreground">{list.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
+            </p>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-2">
             <div className="space-y-4">

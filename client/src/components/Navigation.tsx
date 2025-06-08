@@ -21,29 +21,29 @@ export default function Navigation() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="border-b border-white/20 bg-transparent">
       <div className="container flex h-14 max-w-screen-2xl items-center px-4">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold">Design Talent Match</span>
+            <span className="font-bold text-white">Design Talent Match</span>
           </Link>
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
               <Link
                 href="/directory"
-                className={location === "/directory" ? "text-primary" : "text-foreground/60 hover:text-foreground/80 transition-colors"}
+                className={location === "/directory" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
               >
                 Directory
               </Link>
               <Link
                 href="/lists"
-                className={location === "/lists" ? "text-primary" : "text-foreground/60 hover:text-foreground/80 transition-colors"}
+                className={location === "/lists" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
               >
                 Lists
               </Link>
               <Link
                 href="/matchmaker"
-                className={location === "/matchmaker" ? "text-primary" : "text-foreground/60 hover:text-foreground/80 transition-colors"}
+                className={location === "/matchmaker" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
               >
                 AI Matchmaker
               </Link>
@@ -54,7 +54,7 @@ export default function Navigation() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
                   <UserCircle className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -66,7 +66,7 @@ export default function Navigation() {
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => setShowAuthDialog(true)}>
+              <Button variant="ghost" onClick={() => setShowAuthDialog(true)} className="text-white hover:bg-white/10">
                 Sign in
               </Button>
               <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>

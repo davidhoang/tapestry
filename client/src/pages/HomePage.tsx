@@ -28,17 +28,19 @@ export default function HomePage() {
         
         {/* Hero Content */}
         <div className="relative z-10 flex-1 flex items-center justify-center text-center space-y-8 px-4 max-w-4xl mx-auto">
-          <div className="space-y-4">
+          <div className="space-y-6">
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
               Design Talent Match
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
               Connect with exceptional design talent through intelligent matching
             </p>
-          </div>
-          
-          <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
+            
+            <p className="text-sm text-white/70 text-center">
+              A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
+            </p>
+            
+            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
               <Button asChild size="lg" className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6">
                 {user ? (
                   <Link href="/directory">Browse Directory</Link>
@@ -50,10 +52,6 @@ export default function HomePage() {
                 <Link href="/matchmaker">AI Matching</Link>
               </Button>
             </div>
-            
-            <p className="text-sm text-white/70 text-center">
-              A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
-            </p>
           </div>
         </div>
       </section>

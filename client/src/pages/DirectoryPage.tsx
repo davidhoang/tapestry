@@ -135,11 +135,13 @@ export default function DirectoryPage() {
                   Add Designer
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+              <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>Add New Designer</DialogTitle>
                 </DialogHeader>
-                <AddDesignerDialog designer={null} onClose={() => {}} />
+                <div className="flex-1 overflow-y-auto pr-2">
+                  <AddDesignerDialog designer={null} onClose={() => {}} />
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -188,14 +190,16 @@ export default function DirectoryPage() {
         )}
 
         <Dialog open={!!designerToEdit} onOpenChange={(open) => !open && setDesignerToEdit(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit Designer</DialogTitle>
             </DialogHeader>
-            <AddDesignerDialog 
-              designer={designerToEdit} 
-              onClose={() => setDesignerToEdit(null)} 
-            />
+            <div className="flex-1 overflow-y-auto pr-2">
+              <AddDesignerDialog 
+                designer={designerToEdit} 
+                onClose={() => setDesignerToEdit(null)} 
+              />
+            </div>
           </DialogContent>
         </Dialog>
 

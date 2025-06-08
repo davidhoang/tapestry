@@ -37,7 +37,7 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button asChild size="lg" className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6">
                 {user ? (
@@ -51,7 +51,7 @@ export default function HomePage() {
               </Button>
             </div>
             
-            <p className="text-sm text-white/70 mt-6">
+            <p className="text-sm text-white/70 text-center">
               A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
             </p>
           </div>

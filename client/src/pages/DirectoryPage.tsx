@@ -331,58 +331,56 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   }, [designer]);
 
   return (
-    <Dialog open={isOpen}>
-      <DialogContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-              <label htmlFor="photo" className="block text-sm font-medium mb-2">
-                Photo
-              </label>
-              <input
-                type="file"
-                id="photo"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-            </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div>
+          <label htmlFor="photo" className="block text-sm font-medium mb-2">
+            Photo
+          </label>
+          <input
+            type="file"
+            id="photo"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            className="block w-full text-sm text-gray-500
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-full file:border-0
+              file:text-sm file:font-semibold
+              file:bg-blue-50 file:text-blue-700
+              hover:file:bg-blue-100"
+          />
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input {...field} type="email" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="title"
@@ -534,9 +532,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
             />
 
             <div className="flex justify-end space-x-2">
-              <DialogTrigger asChild>
-                <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              </DialogTrigger>
+              <Button variant="outline" onClick={handleClose}>Cancel</Button>
               <Button 
                 type="submit" 
                 disabled={createDesigner.isPending || updateDesigner.isPending}
@@ -549,8 +545,6 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
   );
 }
 

@@ -2,13 +2,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, Pencil } from "lucide-react";
+import { Globe, Linkedin, Mail, Pencil, X } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useState } from "react";
 
@@ -94,90 +95,139 @@ export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: 
       </Card>
 
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
+        <DialogContent className="fixed inset-0 m-12 max-w-none max-h-none w-auto h-auto overflow-hidden bg-background border-0 shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Designer Profile</DialogTitle>
+            <DialogDescription>
+              View detailed information about {designer.name}, including their skills, experience, and contact details.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6">
-            <div className="flex items-start gap-6">
-              {designer.photoUrl ? (
-                <img
-                  src={designer.photoUrl}
-                  alt={designer.name}
-                  className="h-32 w-32 rounded-full object-cover bg-muted"
-                />
-              ) : (
-                <div className="h-32 w-32 rounded-full bg-muted flex items-center justify-center">
-                  <span className="text-4xl font-bold text-muted-foreground">
-                    {designer.name.charAt(0)}
-                  </span>
+          
+          {/* Close Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-6 right-6 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90 rounded-full"
+            onClick={() => setIsViewModalOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
+
+          <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            {/* Cover Photo Section */}
+            <div className="relative h-80 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 overflow-hidden">
+              {/* Gradient overlay for better text contrast */}
+              <div className="absolute inset-0 bg-black/20" />
+              
+              {/* Profile Photo - positioned to overlap cover */}
+              <div className="absolute bottom-0 left-12 transform translate-y-1/2">
+                {designer.photoUrl ? (
+                  <img
+                    src={designer.photoUrl}
+                    alt={designer.name}
+                    className="h-40 w-40 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+                  />
+                ) : (
+                  <div className="h-40 w-40 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                    <span className="text-6xl font-bold text-muted-foreground">
+                      {designer.name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Available badge positioned on cover */}
+              {designer.available && (
+                <div className="absolute top-6 left-6">
+                  <Badge variant="secondary" className="text-lg px-6 py-2 bg-green-500 text-white border-0 shadow-lg">
+                    Open to Roles
+                  </Badge>
                 </div>
               )}
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-2xl font-bold">{designer.name}</h2>
-                    <p className="text-lg text-muted-foreground">{designer.title}</p>
-                  </div>
-                  {designer.available && (
-                    <Badge variant="secondary" className="text-base px-4 py-1">Open to Roles</Badge>
-                  )}
-                </div>
-                <div className="mt-4 flex items-center space-x-2 text-muted-foreground">
-                  <span>{designer.level}</span>
+            </div>
+
+            {/* Content Section */}
+            <div className="px-12 pt-24 pb-12 space-y-12">
+              {/* Name and Title */}
+              <div className="space-y-4">
+                <h1 className="text-6xl font-bold leading-tight tracking-tight">{designer.name}</h1>
+                <p className="text-3xl text-muted-foreground font-light">{designer.title}</p>
+                
+                {/* Company and Location */}
+                <div className="flex items-center space-x-3 text-xl text-muted-foreground">
+                  <span className="font-medium">{designer.level}</span>
                   <span>•</span>
                   <span>{designer.company}</span>
                   <span>•</span>
                   <span>{designer.location}</span>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                {designer.skills.map((skill, i) => (
-                  <Badge key={i} variant="outline" className="text-base px-3 py-1">{skill}</Badge>
-                ))}
-              </div>
-            </div>
-
-            {designer.notes && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Notes</h3>
-                <div className="prose prose-sm max-w-none">
-                  <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
+              {/* Skills Section */}
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold">Skills & Expertise</h2>
+                <div className="flex flex-wrap gap-3">
+                  {designer.skills.map((skill, i) => (
+                    <Badge 
+                      key={i} 
+                      variant="outline" 
+                      className="text-lg px-6 py-3 border-2 hover:bg-secondary/50 transition-colors cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSkillClick?.(skill);
+                      }}
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-            )}
 
-            <div className="flex space-x-2">
-              {designer.website && (
-                <Button variant="outline" size="icon" asChild>
-                  <a href={designer.website} target="_blank" rel="noopener noreferrer">
-                    <Globe className="h-4 w-4" />
-                  </a>
-                </Button>
+              {/* Notes Section */}
+              {designer.notes && (
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold">About</h2>
+                  <div className="prose prose-xl max-w-none prose-headings:font-bold prose-p:text-xl prose-p:leading-relaxed">
+                    <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
+                  </div>
+                </div>
               )}
-              {designer.linkedIn && (
-                <Button variant="outline" size="icon" asChild>
-                  <a href={designer.linkedIn} target="_blank" rel="noopener noreferrer">
-                    <Linkedin className="h-4 w-4" />
-                  </a>
-                </Button>
-              )}
-              {designer.email && (
-                <Button variant="outline" size="icon" asChild>
-                  <a href={`mailto:${designer.email}`}>
-                    <Mail className="h-4 w-4" />
-                  </a>
-                </Button>
-              )}
-              {onAdd && (
-                <Button className="ml-auto" onClick={() => onAdd(designer)}>
-                  Add to List
-                </Button>
-              )}
+
+              {/* Contact Section */}
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold">Get in Touch</h2>
+                <div className="flex flex-wrap gap-4">
+                  {designer.website && (
+                    <Button variant="outline" size="lg" className="text-lg px-8 py-6" asChild>
+                      <a href={designer.website} target="_blank" rel="noopener noreferrer">
+                        <Globe className="h-5 w-5 mr-3" />
+                        Website
+                      </a>
+                    </Button>
+                  )}
+                  {designer.linkedIn && (
+                    <Button variant="outline" size="lg" className="text-lg px-8 py-6" asChild>
+                      <a href={designer.linkedIn} target="_blank" rel="noopener noreferrer">
+                        <Linkedin className="h-5 w-5 mr-3" />
+                        LinkedIn
+                      </a>
+                    </Button>
+                  )}
+                  {designer.email && (
+                    <Button variant="outline" size="lg" className="text-lg px-8 py-6" asChild>
+                      <a href={`mailto:${designer.email}`}>
+                        <Mail className="h-5 w-5 mr-3" />
+                        Email
+                      </a>
+                    </Button>
+                  )}
+                  {onAdd && (
+                    <Button size="lg" className="text-lg px-8 py-6 ml-auto" onClick={() => onAdd(designer)}>
+                      Add to List
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>

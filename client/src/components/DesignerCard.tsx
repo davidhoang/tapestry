@@ -33,7 +33,7 @@ export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: 
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0">
-                  <h3 className="text-lg font-semibold truncate">{designer.name}</h3>
+                  <h3 className="text-lg designer-name truncate">{designer.name}</h3>
                   <p className="text-sm text-muted-foreground truncate">{designer.title}</p>
                 </div>
               </div>

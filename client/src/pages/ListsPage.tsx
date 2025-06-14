@@ -581,7 +581,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative w-full">
+      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-2xl max-h-[85vh] overflow-hidden flex flex-col relative w-full">
         <DialogHeader>
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
@@ -817,7 +817,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         </div>
         
         {/* Floating Footer */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between">
+        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between rounded-b-lg">
           <div className="flex-1">
             {hasChanges && (
               <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2 inline-block">

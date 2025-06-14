@@ -8,8 +8,9 @@ import DirectoryPage from "./pages/DirectoryPage";
 import DesignerDetailsPage from "./pages/DesignerDetailsPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
-import PublicListPage from "./pages/PublicListPage";
 import ComponentsPage from "./pages/ComponentsPage";
+import PublicListPage from "./pages/PublicListPage";
+import AdminPage from "./pages/AdminPage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 

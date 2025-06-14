@@ -54,9 +54,18 @@ export default function Navigation() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/components">Components</Link>
+                  <Link href="/components">
+                    <a className="flex items-center w-full">Components</a>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => logout()}>
+                {user.isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                      <a className="flex items-center w-full">Database Admin</a>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={logout}>
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>

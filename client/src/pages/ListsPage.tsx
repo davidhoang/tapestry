@@ -581,11 +581,11 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-4xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col relative">
-        <DialogHeader>
+      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-4xl w-[95vw] max-h-[85vh] overflow-hidden flex flex-col relative !p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2 pb-20">
+        <div className="flex-1 overflow-y-auto px-6 pb-20">
           <div className="space-y-6">
             <Form {...form}>
               <form

@@ -71,6 +71,16 @@
   button, .button, nav, .nav, .menu, input, textarea, select, .form-control, .badge {
     @apply font-sans;
   }
+
+  /* Override muted-foreground for better readability */
+  .text-muted-foreground {
+    color: hsl(240 5% 45%) !important;
+  }
+
+  /* Darker variant for secondary text */
+  .text-secondary-foreground {
+    color: hsl(240 6% 40%) !important;
+  }
 }
 
 /* Custom scrollbar styles */

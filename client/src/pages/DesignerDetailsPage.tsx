@@ -77,21 +77,25 @@ export default function DesignerDetailsPage() {
           </div>
         )}
         
-        {/* Profile Photo - positioned to overlap cover */}
-        <div className="absolute bottom-0 left-8 transform translate-y-1/2">
-          {designer.photoUrl ? (
-            <img
-              src={designer.photoUrl}
-              alt={designer.name}
-              className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
-            />
-          ) : (
-            <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
-              <span className="text-4xl font-bold text-muted-foreground">
-                {designer.name.charAt(0)}
-              </span>
+        {/* Profile Photo - positioned to overlap cover and align with content */}
+        <div className="absolute bottom-0 transform translate-y-1/2">
+          <div className="container mx-auto px-8">
+            <div className="max-w-4xl mx-auto">
+              {designer.photoUrl ? (
+                <img
+                  src={designer.photoUrl}
+                  alt={designer.name}
+                  className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+                />
+              ) : (
+                <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                  <span className="text-4xl font-bold text-muted-foreground">
+                    {designer.name.charAt(0)}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 

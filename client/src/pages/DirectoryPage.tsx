@@ -398,7 +398,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
@@ -427,7 +427,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Title <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -440,7 +440,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
                 name="level"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Level</FormLabel>
+                    <FormLabel>Level <span className="text-red-500">*</span></FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}

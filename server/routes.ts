@@ -164,13 +164,15 @@ export function registerRoutes(app: Express): Server {
         throw new Error("Invalid designer data format");
       }
 
-      // Check if email already exists within transaction
-      const existingDesigner = await tx.query.designers.findFirst({
-        where: eq(designers.email, designerData.email),
-      });
+      // Check if email already exists within transaction (only if email is provided)
+      if (designerData.email && designerData.email.trim()) {
+        const existingDesigner = await tx.query.designers.findFirst({
+          where: eq(designers.email, designerData.email.trim()),
+        });
 
-      if (existingDesigner) {
-        throw new Error("A designer with this email address already exists. Please use a different email address.");
+        if (existingDesigner) {
+          throw new Error("A designer with this email address already exists. Please use a different email address.");
+        }
       }
 
       let photoUrl;
@@ -231,7 +233,14 @@ export function registerRoutes(app: Express): Server {
       const allDesigners = await db.query.designers.findMany({
         orderBy: desc(designers.createdAt),
       });
-      res.json(allDesigners);
+      
+      // Filter out designers with incomplete basic information
+      const completeDesigners = allDesigners.filter(designer => 
+        designer.name && designer.name.trim() && 
+        designer.title && designer.title.trim()
+      );
+      
+      res.json(completeDesigners);
     } catch (err) {
       console.error('Error fetching designers:', err);
       res.status(500).json({ error: "Failed to fetch designers" });

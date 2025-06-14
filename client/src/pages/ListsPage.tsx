@@ -60,35 +60,58 @@ import { UserPlus } from "lucide-react";
 
 function DesignerSelect({
   onSelect,
+  excludeDesignerIds = [],
 }: {
   onSelect: (designerId: number) => void;
+  excludeDesignerIds?: number[];
 }) {
   const { data: designers, isLoading } = useDesigners();
+  const [selectedValue, setSelectedValue] = useState<string | undefined>(undefined);
 
   if (isLoading) return null;
 
+  const availableDesigners = designers?.filter(
+    designer => !excludeDesignerIds.includes(designer.id)
+  ) || [];
+
+  const handleSelect = (value: string) => {
+    onSelect(parseInt(value));
+    setSelectedValue(undefined); // Reset selection after adding
+  };
+
   return (
-    <Select onValueChange={(value) => onSelect(parseInt(value))}>
-      <SelectTrigger>
-        <SelectValue placeholder="Select a designer" />
+    <Select value={selectedValue} onValueChange={handleSelect}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Select a designer to add" />
       </SelectTrigger>
-      <SelectContent>
-        {designers?.map((designer) => (
-          <SelectItem key={designer.id} value={designer.id.toString()}>
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={designer.photoUrl || ""} />
-                <AvatarFallback>
-                  {designer.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              {designer.name}
-            </div>
-          </SelectItem>
-        ))}
+      <SelectContent className="max-h-[200px] overflow-y-auto">
+        {availableDesigners.length === 0 ? (
+          <div className="p-2 text-sm text-muted-foreground text-center">
+            No designers available to add
+          </div>
+        ) : (
+          availableDesigners.map((designer) => (
+            <SelectItem key={designer.id} value={designer.id.toString()}>
+              <div className="flex items-center gap-3 w-full min-w-0">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage src={designer.photoUrl || ""} />
+                  <AvatarFallback className="text-xs">
+                    {designer.name
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{designer.name}</div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    {designer.title} {designer.company && `• ${designer.company}`}
+                  </div>
+                </div>
+              </div>
+            </SelectItem>
+          ))
+        )}
       </SelectContent>
     </Select>
   );
@@ -519,6 +542,32 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     }
   };
 
+  const handleRemoveDesigner = async (designerId: number) => {
+    try {
+      const response = await fetch(`/api/lists/${list.id}/designers/${designerId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to remove designer');
+      }
+      
+      toast({
+        title: "Success",
+        description: "Designer removed from list successfully",
+      });
+      
+      // Refresh the page to update the list
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove designer from list",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col">
@@ -589,7 +638,10 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
               <h3 className="font-medium">Add</h3>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <DesignerSelect onSelect={handleAddDesigner} />
+                  <DesignerSelect 
+                    onSelect={handleAddDesigner}
+                    excludeDesignerIds={list.designers?.map(d => d.designer.id) || []}
+                  />
                 </div>
               </div>
             </div>
@@ -610,8 +662,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                       className="flex flex-col p-2 rounded-md border"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Avatar className="h-10 w-10 flex-shrink-0">
                             <AvatarImage src={designer.photoUrl || ""} />
                             <AvatarFallback>
                               {designer.name
@@ -620,33 +672,43 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                                 .join("")}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium">{designer.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {designer.title}
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{designer.name}</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {designer.title} {designer.company && `• ${designer.company}`}
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const currentNotes = designerNotes[designer.id];
-                            setDesignerNotes((prev) => ({
-                              ...prev,
-                              [designer.id]:
-                                currentNotes === undefined
-                                  ? notes || ""
-                                  : undefined,
-                            }));
-                          }}
-                        >
-                          {designerNotes[designer.id] !== undefined
-                            ? "Cancel"
-                            : notes
-                              ? "Edit Notes"
-                              : "Add Notes"}
-                        </Button>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const currentNotes = designerNotes[designer.id];
+                              setDesignerNotes((prev) => ({
+                                ...prev,
+                                [designer.id]:
+                                  currentNotes === undefined
+                                    ? notes || ""
+                                    : undefined,
+                              }));
+                            }}
+                          >
+                            {designerNotes[designer.id] !== undefined
+                              ? "Cancel"
+                              : notes
+                                ? "Edit Notes"
+                                : "Add Notes"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRemoveDesigner(designer.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
                       </div>
 
                       {designerNotes[designer.id] !== undefined && (

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/HomePage";
 import DirectoryPage from "./pages/DirectoryPage";
+import DesignerDetailsPage from "./pages/DesignerDetailsPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
 import PublicListPage from "./pages/PublicListPage";
@@ -48,6 +49,7 @@ function App() {
               <>
                 <Route path="/" component={DirectoryPage} />
                 <Route path="/directory" component={DirectoryPage} />
+                <Route path="/designer/:id" component={DesignerDetailsPage} />
                 <Route path="/lists" component={ListsPage} />
                 <Route path="/matchmaker" component={MatchmakerPage} />
                 <Route path="/components" component={ComponentsPage} />

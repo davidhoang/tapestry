@@ -2,16 +2,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, Pencil, X } from "lucide-react";
-import MDEditor from "@uiw/react-md-editor";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { useState } from "react";
+import { Pencil } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface DesignerCardProps {
   designer: SelectDesigner;
@@ -21,13 +13,13 @@ interface DesignerCardProps {
 }
 
 export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: DesignerCardProps) {
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   return (
     <>
       <Card 
         className="h-full relative cursor-pointer hover:shadow-md transition-shadow"
-        onClick={() => setIsViewModalOpen(true)}
+        onClick={() => setLocation(`/designer/${designer.id}`)}
       >
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4 pr-12">
@@ -93,145 +85,6 @@ export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: 
           </div>
         </CardContent>
       </Card>
-
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="fixed inset-12 max-w-none max-h-none w-auto h-auto overflow-hidden bg-background border-0 shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Designer Profile</DialogTitle>
-            <DialogDescription>
-              View detailed information about {designer.name}, including their skills, experience, and contact details.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {/* Close Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-6 right-6 z-20 bg-background/80 backdrop-blur-sm hover:bg-background/90 rounded-full"
-            onClick={() => setIsViewModalOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-
-          <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            {/* Cover Photo Section */}
-            <div className="relative h-48 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 overflow-hidden">
-              {/* Gradient overlay for better text contrast */}
-              <div className="absolute inset-0 bg-black/20" />
-              
-              {/* Profile Photo - positioned to overlap cover */}
-              <div className="absolute bottom-0 left-8 transform translate-y-1/2">
-                {designer.photoUrl ? (
-                  <img
-                    src={designer.photoUrl}
-                    alt={designer.name}
-                    className="h-24 w-24 rounded-xl object-cover bg-background border-4 border-background shadow-xl"
-                  />
-                ) : (
-                  <div className="h-24 w-24 rounded-xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
-                    <span className="text-3xl font-bold text-muted-foreground">
-                      {designer.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Available badge positioned on cover */}
-              {designer.available && (
-                <div className="absolute top-4 left-4">
-                  <Badge variant="secondary" className="text-sm px-4 py-1 bg-green-500 text-white border-0 shadow-lg">
-                    Open to Roles
-                  </Badge>
-                </div>
-              )}
-            </div>
-
-            {/* Content Section */}
-            <div className="px-8 pt-16 pb-8 space-y-8">
-              {/* Name and Title */}
-              <div className="space-y-2">
-                <h1 className="text-4xl font-bold leading-tight tracking-tight">{designer.name}</h1>
-                <p className="text-xl text-muted-foreground font-light">{designer.title}</p>
-                
-                {/* Company and Location */}
-                <div className="flex items-center space-x-2 text-base text-muted-foreground">
-                  <span className="font-medium">{designer.level}</span>
-                  <span>•</span>
-                  <span>{designer.company}</span>
-                  <span>•</span>
-                  <span>{designer.location}</span>
-                </div>
-              </div>
-
-              {/* Skills Section */}
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold">Skills & Expertise</h2>
-                <div className="flex flex-wrap gap-2">
-                  {designer.skills.map((skill, i) => (
-                    <Badge 
-                      key={i} 
-                      variant="outline" 
-                      className="text-sm px-4 py-2 border-2 hover:bg-secondary/50 transition-colors cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSkillClick?.(skill);
-                      }}
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes Section */}
-              {designer.notes && (
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold">About</h2>
-                  <div className="prose prose-base max-w-none prose-headings:font-bold prose-p:text-base prose-p:leading-relaxed">
-                    <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
-                  </div>
-                </div>
-              )}
-
-              {/* Contact Section */}
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold">Get in Touch</h2>
-                <div className="flex flex-wrap gap-3">
-                  {designer.website && (
-                    <Button variant="outline" size="default" className="text-sm px-6 py-2" asChild>
-                      <a href={designer.website} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-4 w-4 mr-2" />
-                        Website
-                      </a>
-                    </Button>
-                  )}
-                  {designer.linkedIn && (
-                    <Button variant="outline" size="default" className="text-sm px-6 py-2" asChild>
-                      <a href={designer.linkedIn} target="_blank" rel="noopener noreferrer">
-                        <Linkedin className="h-4 w-4 mr-2" />
-                        LinkedIn
-                      </a>
-                    </Button>
-                  )}
-                  {designer.email && (
-                    <Button variant="outline" size="default" className="text-sm px-6 py-2" asChild>
-                      <a href={`mailto:${designer.email}`}>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Email
-                      </a>
-                    </Button>
-                  )}
-                  {onAdd && (
-                    <Button size="default" className="text-sm px-6 py-2 ml-auto" onClick={() => onAdd(designer)}>
-                      Add to List
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

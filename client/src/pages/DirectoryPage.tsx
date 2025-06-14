@@ -339,9 +339,10 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
       handleClose();
     } catch (error: any) {
       console.error('Form submission error:', error);
+      const errorMessage = error.message || error.response?.data?.message || "Failed to create designer profile";
       toast({
         title: "Error",
-        description: error.message || "Failed to create designer profile",
+        description: errorMessage,
         variant: "destructive",
       });
     }

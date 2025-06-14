@@ -170,7 +170,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (existingDesigner) {
-        throw new Error("Email already exists");
+        throw new Error("A designer with this email address already exists. Please use a different email address.");
       }
 
       let photoUrl;

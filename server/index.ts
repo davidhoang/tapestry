@@ -69,7 +69,15 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Register API routes BEFORE Vite middleware
     const server = registerRoutes(app);
+
+    // Add Vite middleware after API routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -77,12 +85,6 @@ app.use((req, res, next) => {
       console.error(`Error ${status}:`, err);
       res.status(status).json({ message });
     });
-
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
 
     const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {

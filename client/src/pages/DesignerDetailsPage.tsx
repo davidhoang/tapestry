@@ -10,15 +10,7 @@ export default function DesignerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   
-  console.log("DesignerDetailsPage - ID from params:", id);
-  const parsedId = parseInt(id || "0");
-  console.log("DesignerDetailsPage - Parsed ID:", parsedId);
-  
-  const { data: designer, isLoading, error } = useDesigner(parsedId);
-  
-  console.log("DesignerDetailsPage - Data:", designer);
-  console.log("DesignerDetailsPage - Loading:", isLoading);
-  console.log("DesignerDetailsPage - Error:", error);
+  const { data: designer, isLoading, error } = useDesigner(parseInt(id || "0"));
 
   if (isLoading) {
     return (

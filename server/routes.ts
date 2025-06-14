@@ -246,6 +246,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/designers/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const designerId = parseInt(req.params.id);
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+      
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+      
+      res.json(designer);
+    } catch (err) {
+      console.error('Error fetching designer:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
   app.put("/api/designers/:id", upload.single('photo'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");

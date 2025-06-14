@@ -77,31 +77,28 @@ export default function DesignerDetailsPage() {
           </div>
         )}
         
-        {/* Profile Photo - positioned to overlap cover and content */}
-        <div className="absolute bottom-0 left-0 right-0 transform translate-y-1/2">
-          <div className="container mx-auto px-8">
-            <div className="max-w-4xl mx-auto">
-              {designer.photoUrl ? (
-                <img
-                  src={designer.photoUrl}
-                  alt={designer.name}
-                  className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
-                />
-              ) : (
-                <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
-                  <span className="text-4xl font-bold text-muted-foreground">
-                    {designer.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Content Section */}
-      <div className="container mx-auto px-8 pt-20 pb-12">
+      <div className="container mx-auto px-8 pt-8 pb-12">
         <div className="max-w-4xl mx-auto space-y-12">
+          {/* Profile Photo */}
+          <div className="flex justify-start">
+            {designer.photoUrl ? (
+              <img
+                src={designer.photoUrl}
+                alt={designer.name}
+                className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+              />
+            ) : (
+              <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                <span className="text-4xl font-bold text-muted-foreground">
+                  {designer.name.charAt(0)}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Name and Title */}
           <div className="space-y-4">
             <h1 className="text-5xl font-bold leading-tight tracking-tight">{designer.name}</h1>

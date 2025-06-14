@@ -332,6 +332,9 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
           title: "Success",
           description: "Designer profile created successfully",
         });
+        // Close modal immediately after successful creation
+        handleClose();
+        return;
       }
       handleClose();
     } catch (error: any) {

@@ -53,6 +53,9 @@ export default function Navigation() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/components">Components</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => logout()}>
                   Logout
                 </DropdownMenuItem>

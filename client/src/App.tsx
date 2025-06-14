@@ -8,6 +8,7 @@ import DirectoryPage from "./pages/DirectoryPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
 import PublicListPage from "./pages/PublicListPage";
+import ComponentsPage from "./pages/ComponentsPage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 
@@ -49,6 +50,7 @@ function App() {
                 <Route path="/directory" component={DirectoryPage} />
                 <Route path="/lists" component={ListsPage} />
                 <Route path="/matchmaker" component={MatchmakerPage} />
+                <Route path="/components" component={ComponentsPage} />
               </>
             ) : (
               <Route path="*" component={HomePage} />

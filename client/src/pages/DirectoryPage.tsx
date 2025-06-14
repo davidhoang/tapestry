@@ -224,7 +224,6 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   const createDesigner = useCreateDesigner();
   const updateDesigner = useUpdateDesigner();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -261,7 +260,6 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   }, [designer, form]);
 
   const handleClose = () => {
-    setIsOpen(false);
     form.reset();
     setPhotoFile(null);
     onClose();
@@ -319,16 +317,6 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
       setPhotoFile(e.target.files[0]);
     }
   };
-
-  useEffect(() => {
-    setIsOpen(!!designer);
-    if (designer) {
-      setIsOpen(true);
-    } else {
-      handleClose();
-      setIsOpen(false);
-    }
-  }, [designer]);
 
   return (
     <Form {...form}>

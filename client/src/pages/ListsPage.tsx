@@ -581,7 +581,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-2xl max-h-[85vh] overflow-hidden flex flex-col relative w-full">
+      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-4xl w-[90vw] max-h-[85vh] overflow-hidden flex flex-col relative">
         <DialogHeader>
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>

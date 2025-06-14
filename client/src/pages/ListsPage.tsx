@@ -6,6 +6,7 @@ import {
   useUpdateList,
   useAddDesignersToList,
 } from "@/hooks/use-lists";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designers";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -464,6 +465,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const updateList = useUpdateList();
   const addDesigner = useAddDesignersToList();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [designerNotes, setDesignerNotes] = useState<Record<number, string>>(
     {},
   );
@@ -513,6 +515,10 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         description: "Designer added to list successfully",
       });
       setDesignerNotes((prev) => ({ ...prev, [designerId]: "" }));
+      
+      // Close and reopen modal to refresh with latest data
+      onOpenChange(false);
+      await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -557,8 +563,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         description: "Designer removed from list successfully",
       });
       
-      // Close the modal and refresh data
-      onOpenChange(false);
+      // Invalidate and refetch the lists data
+      await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
     } catch (error: any) {
       toast({
         title: "Error",

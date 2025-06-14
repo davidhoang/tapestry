@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDesigners, useCreateDesigner, useUpdateDesigner, useDeleteDesigners } from "@/hooks/use-designer";
 import { useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
 import DesignerCard from "@/components/DesignerCard";
@@ -58,6 +58,7 @@ export default function DirectoryPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showAddToListDialog, setShowAddToListDialog] = useState(false);
   const { toast } = useToast();
+  const scrollPositionRef = useRef<number>(0);
 
   const filteredDesigners = designers?.filter((designer) => {
     const matchesSearch = designer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,7 +190,25 @@ export default function DirectoryPage() {
           </div>
         )}
 
-        <Dialog open={!!designerToEdit} onOpenChange={(open) => !open && setDesignerToEdit(null)}>
+        <Dialog 
+          open={!!designerToEdit} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setDesignerToEdit(null);
+              // Force scroll restoration with proper cleanup
+              setTimeout(() => {
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                document.body.classList.remove('overflow-hidden');
+                // Restore scroll position if needed
+                window.scrollTo(0, scrollPositionRef.current);
+              }, 50);
+            } else {
+              // Store current scroll position when opening
+              scrollPositionRef.current = window.scrollY;
+            }
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit Designer</DialogTitle>

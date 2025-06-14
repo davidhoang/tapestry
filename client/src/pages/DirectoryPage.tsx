@@ -195,7 +195,7 @@ export default function DirectoryPage() {
                   type="checkbox"
                   checked={selectedIds.includes(designer.id)}
                   onChange={() => toggleDesignerSelection(designer.id)}
-                  className="absolute top-2 left-2 z-10"
+                  className="absolute top-4 left-4 z-10 w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2"
                 />
                 <DesignerCard 
                   designer={designer} 

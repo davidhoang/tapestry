@@ -77,10 +77,10 @@ export default function DesignerDetailsPage() {
           </div>
         )}
         
-        {/* Profile Photo - positioned to overlap cover and align with content */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
-          <div className="w-full max-w-4xl mx-auto px-8 relative">
-            <div className="absolute left-8">
+        {/* Profile Photo - positioned to overlap cover */}
+        <div className="container mx-auto px-8">
+          <div className="max-w-4xl mx-auto relative">
+            <div className="absolute -bottom-16 left-0">
               {designer.photoUrl ? (
                 <img
                   src={designer.photoUrl}

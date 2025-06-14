@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useDesigners, useCreateDesigner, useUpdateDesigner, useDeleteDesigners } from "@/hooks/use-designer";
 import { useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
 import Navigation from "@/components/Navigation";
@@ -48,6 +50,20 @@ const EXPERIENCE_LEVELS = [
   "Senior Director",
   "VP"
 ];
+
+const designerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  title: z.string().min(1, "Title is required"),
+  email: z.string().email("Please enter a valid email address").or(z.literal("")),
+  location: z.string().optional(),
+  company: z.string().optional(),
+  level: z.string().min(1, "Level is required"),
+  website: z.string().optional(),
+  linkedIn: z.string().optional(),
+  skills: z.array(z.string()).default([]),
+  notes: z.string().optional(),
+  available: z.boolean().default(false),
+});
 
 export default function DirectoryPage() {
   const { data: designers, isLoading } = useDesigners();
@@ -245,6 +261,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const form = useForm({
+    resolver: zodResolver(designerSchema),
     defaultValues: {
       name: designer?.name || "",
       email: designer?.email || "",

@@ -236,8 +236,7 @@ export function registerRoutes(app: Express): Server {
       
       // Filter out designers with incomplete basic information
       const completeDesigners = allDesigners.filter(designer => 
-        designer.name && designer.name.trim() && 
-        designer.title && designer.title.trim()
+        designer.name && designer.name.trim()
       );
       
       res.json(completeDesigners);

@@ -2,15 +2,110 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, ArrowLeft } from "lucide-react";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import { useDesigner } from "@/hooks/use-designers";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useUpdateDesigner } from "@/hooks/use-designer";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertDesignerSchema } from "@db/schema";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import SkillsInput from "@/components/SkillsInput";
+import { useToast } from "@/hooks/use-toast";
+
+const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt: true });
+type FormData = z.infer<typeof formSchema>;
 
 export default function DesignerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { toast } = useToast();
   
   const { data: designer, isLoading, error } = useDesigner(parseInt(id || "0"));
+  const updateDesigner = useUpdateDesigner();
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      email: "",
+      company: "",
+      location: "",
+      level: "",
+      website: "",
+      linkedIn: "",
+      skills: [],
+      notes: "",
+      available: false,
+    },
+  });
+
+  const handleEdit = () => {
+    if (designer) {
+      form.reset({
+        name: designer.name || "",
+        title: designer.title || "",
+        email: designer.email || "",
+        company: designer.company || "",
+        location: designer.location || "",
+        level: designer.level || "",
+        website: designer.website || "",
+        linkedIn: designer.linkedIn || "",
+        skills: designer.skills || [],
+        notes: designer.notes || "",
+        available: designer.available || false,
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    if (!designer) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(data));
+
+      await updateDesigner.mutateAsync({ 
+        id: designer.id, 
+        formData 
+      });
+
+      toast({
+        title: "Designer updated",
+        description: "The designer information has been updated successfully.",
+      });
+      
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update designer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -99,10 +194,23 @@ export default function DesignerDetailsPage() {
             )}
           </div>
 
-          {/* Name and Title */}
+          {/* Name and Title with Edit Button */}
           <div className="space-y-4">
-            <h1 className="text-5xl font-bold leading-tight tracking-tight">{designer.name}</h1>
-            <p className="text-2xl text-muted-foreground font-light">{designer.title}</p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-5xl font-bold leading-tight tracking-tight">{designer.name}</h1>
+                <p className="text-2xl text-muted-foreground font-light">{designer.title}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEdit}
+                className="flex items-center gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+            </div>
             
             {/* Company and Location */}
             <div className="flex items-center space-x-3 text-lg text-muted-foreground">
@@ -172,6 +280,205 @@ export default function DesignerDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Designer</DialogTitle>
+            <DialogDescription>
+              Update the designer's information below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Job title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="email@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Level *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Senior, Staff, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="company"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Company name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="City, State/Country" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input type="url" placeholder="https://..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="linkedIn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LinkedIn</FormLabel>
+                      <FormControl>
+                        <Input type="url" placeholder="https://linkedin.com/in/..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="skills"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Skills</FormLabel>
+                    <FormControl>
+                      <SkillsInput value={field.value} onChange={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Additional information about the designer..."
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="available"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal">
+                      Open to roles
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateDesigner.isPending}>
+                  {updateDesigner.isPending ? "Updating..." : "Update Designer"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

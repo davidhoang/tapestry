@@ -557,8 +557,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         description: "Designer removed from list successfully",
       });
       
-      // Refresh the page to update the list
-      window.location.reload();
+      // Close the modal and refresh data
+      onOpenChange(false);
     } catch (error: any) {
       toast({
         title: "Error",

@@ -516,7 +516,50 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Remove designer from list route
+  app.delete("/api/lists/:listId/designers/:designerId", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
 
+    try {
+      const listId = parseInt(req.params.listId);
+      const designerId = parseInt(req.params.designerId);
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Remove the designer from the list
+      const deletedEntry = await db
+        .delete(listDesigners)
+        .where(
+          and(
+            eq(listDesigners.listId, listId),
+            eq(listDesigners.designerId, designerId)
+          )
+        )
+        .returning();
+
+      if (deletedEntry.length === 0) {
+        return res.status(404).json({ error: "Designer not found in this list" });
+      }
+
+      res.json({ message: "Designer removed from list successfully" });
+    } catch (err) {
+      console.error('Error removing designer from list:', err);
+      res.status(500).json({ error: "Failed to remove designer from list" });
+    }
+  }));
 
   // Public list route
   app.get("/api/lists/:id/public", async (req, res) => {

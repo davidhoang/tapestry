@@ -464,11 +464,16 @@ interface EditListDialogProps {
 function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const updateList = useUpdateList();
   const addDesigner = useAddDesignersToList();
+  const { data: designers } = useDesigners();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [designerNotes, setDesignerNotes] = useState<Record<number, string>>(
-    {},
-  );
+  const [designerNotes, setDesignerNotes] = useState<Record<number, string>>({});
+  
+  // Track changes for batch operations
+  const [currentDesigners, setCurrentDesigners] = useState(list.designers || []);
+  const [designersToAdd, setDesignersToAdd] = useState<number[]>([]);
+  const [designersToRemove, setDesignersToRemove] = useState<number[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -503,29 +508,10 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     }
   };
 
-  const handleAddDesigner = async (designerId: number) => {
-    try {
-      await addDesigner.mutateAsync({
-        listId: list.id,
-        designerId,
-        notes: designerNotes[designerId],
-      });
-      toast({
-        title: "Success",
-        description: "Designer added to list successfully",
-      });
-      setDesignerNotes((prev) => ({ ...prev, [designerId]: "" }));
-      
-      // Close and reopen modal to refresh with latest data
-      onOpenChange(false);
-      await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add designer to list",
-        variant: "destructive",
-      });
-    }
+  const handleAddDesigner = (designerId: number) => {
+    // Add to pending additions
+    setDesignersToAdd(prev => [...prev, designerId]);
+    setHasChanges(true);
   };
 
   const handleUpdateNotes = async (designerId: number, notes: string) => {
@@ -548,27 +534,55 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     }
   };
 
-  const handleRemoveDesigner = async (designerId: number) => {
+  const handleRemoveDesigner = (designerId: number) => {
+    // Add to pending removals
+    setDesignersToRemove(prev => [...prev, designerId]);
+    setHasChanges(true);
+  };
+
+  const handleSaveDesignerChanges = async () => {
     try {
-      const response = await fetch(`/api/lists/${list.id}/designers/${designerId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to remove designer');
+      // Add new designers
+      if (designersToAdd.length > 0) {
+        await Promise.all(
+          designersToAdd.map(designerId =>
+            addDesigner.mutateAsync({
+              listId: list.id,
+              designerId,
+              notes: designerNotes[designerId],
+            })
+          )
+        );
       }
-      
+
+      // Remove designers
+      if (designersToRemove.length > 0) {
+        await Promise.all(
+          designersToRemove.map(designerId =>
+            fetch(`/api/lists/${list.id}/designers/${designerId}`, {
+              method: 'DELETE',
+            })
+          )
+        );
+      }
+
       toast({
         title: "Success",
-        description: "Designer removed from list successfully",
+        description: "Designer changes saved successfully",
       });
+
+      // Reset changes tracking
+      setDesignersToAdd([]);
+      setDesignersToRemove([]);
+      setHasChanges(false);
       
-      // Invalidate and refetch the lists data
+      // Refresh data
       await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
+      onOpenChange(false);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to remove designer from list",
+        description: error.message || "Failed to save designer changes",
         variant: "destructive",
       });
     }
@@ -634,8 +648,21 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                     {updateList.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    Save Changes
+                    Save List Details
                   </Button>
+                  {hasChanges && (
+                    <Button 
+                      type="button"
+                      onClick={handleSaveDesignerChanges}
+                      disabled={addDesigner.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {addDesigner.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Save Designer Changes
+                    </Button>
+                  )}
                 </div>
               </form>
             </Form>
@@ -646,10 +673,52 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                 <div className="flex-1">
                   <DesignerSelect 
                     onSelect={handleAddDesigner}
-                    excludeDesignerIds={list.designers?.map(d => d.designer.id) || []}
+                    excludeDesignerIds={[
+                      ...(list.designers?.map(d => d.designer.id) || []),
+                      ...designersToAdd
+                    ]}
                   />
                 </div>
               </div>
+
+              {/* Show pending additions */}
+              {designersToAdd.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-green-600">Pending Additions</h4>
+                  <div className="space-y-2">
+                    {designersToAdd.map((designerId) => {
+                      const designer = designers?.find(d => d.id === designerId);
+                      if (!designer) return null;
+                      return (
+                        <div key={designerId} className="flex items-center justify-between p-2 rounded-md border border-green-200 bg-green-50">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={designer.photoUrl || ""} />
+                              <AvatarFallback>
+                                {designer.name.split(" ").map((n) => n[0]).join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">{designer.name}</p>
+                              <p className="text-xs text-muted-foreground">{designer.title}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDesignersToAdd(prev => prev.filter(id => id !== designerId));
+                              setHasChanges(designersToAdd.length > 1 || designersToRemove.length > 0);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -662,10 +731,14 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                   }: {
                     designer: SelectDesigner;
                     notes?: string;
-                  }) => (
+                  }) => {
+                    const isBeingRemoved = designersToRemove.includes(designer.id);
+                    return (
                     <div
                       key={designer.id}
-                      className="flex flex-col p-2 rounded-md border"
+                      className={`flex flex-col p-2 rounded-md border ${
+                        isBeingRemoved ? 'border-red-200 bg-red-50 opacity-60' : ''
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -706,14 +779,27 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                                 ? "Edit Notes"
                                 : "Add Notes"}
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleRemoveDesigner(designer.id)}
-                          >
-                            Remove
-                          </Button>
+                          {isBeingRemoved ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDesignersToRemove(prev => prev.filter(id => id !== designer.id));
+                                setHasChanges(designersToAdd.length > 0 || designersToRemove.length > 1);
+                              }}
+                            >
+                              Undo Remove
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleRemoveDesigner(designer.id)}
+                            >
+                              Remove
+                            </Button>
+                          )}
                         </div>
                       </div>
 

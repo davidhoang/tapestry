@@ -421,12 +421,12 @@ export default function DesignerDetailsPage() {
                 </div>
                 
                 {/* Company and Location */}
-                <div className="flex items-center space-x-3 text-lg text-muted-foreground designer-meta">
-                  <span className="font-medium">{designer.level}</span>
+                <div className="flex items-center space-x-4 text-lg text-muted-foreground designer-meta">
+                  <span><span className="font-medium text-foreground">Level:</span> {designer.level}</span>
                   <span>•</span>
-                  <span>{designer.company}</span>
+                  <span><span className="font-medium text-foreground">Company:</span> {designer.company}</span>
                   <span>•</span>
-                  <span>{designer.location}</span>
+                  <span><span className="font-medium text-foreground">Location:</span> {designer.location}</span>
                 </div>
               </div>
 

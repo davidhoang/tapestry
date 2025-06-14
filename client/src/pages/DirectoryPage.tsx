@@ -282,6 +282,19 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
     form.reset();
     setPhotoFile(null);
     onClose();
+    
+    // Force comprehensive scroll restoration after modal closes
+    setTimeout(() => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+      document.body.classList.remove('overflow-hidden');
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.paddingRight = '';
+      document.documentElement.classList.remove('overflow-hidden');
+      
+      // Force repaint to ensure scroll is restored
+      document.body.offsetHeight;
+    }, 150);
   };
 
   const onSubmit = async (values: any) => {

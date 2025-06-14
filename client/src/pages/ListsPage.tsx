@@ -581,11 +581,11 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col relative">
         <DialogHeader>
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto pr-2 pb-20">
           <div className="space-y-6">
             <Form {...form}>
               <form
@@ -634,25 +634,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                     </FormItem>
                   )}
                 />
-                <div className="flex flex-col gap-2">
-                  {hasChanges && (
-                    <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
-                      <p className="font-medium">Pending Changes:</p>
-                      <ul className="list-disc list-inside text-xs mt-1">
-                        {designersToAdd.length > 0 && <li>{designersToAdd.length} designer{designersToAdd.length > 1 ? 's' : ''} to add</li>}
-                        {designersToRemove.length > 0 && <li>{designersToRemove.length} designer{designersToRemove.length > 1 ? 's' : ''} to remove</li>}
-                      </ul>
-                    </div>
-                  )}
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={updateList.isPending || addDesigner.isPending}>
-                      {(updateList.isPending || addDesigner.isPending) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      Save All Changes
-                    </Button>
-                  </div>
-                </div>
+
               </form>
             </Form>
 
@@ -832,6 +814,33 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
               </div>
             </div>
           </div>
+        </div>
+        
+        {/* Floating Footer */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between">
+          <div className="flex-1">
+            {hasChanges && (
+              <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2 inline-block">
+                <span className="font-medium">Pending: </span>
+                <span className="text-xs">
+                  {designersToAdd.length > 0 && `+${designersToAdd.length}`}
+                  {designersToAdd.length > 0 && designersToRemove.length > 0 && ', '}
+                  {designersToRemove.length > 0 && `-${designersToRemove.length}`}
+                  {' '}designer{(designersToAdd.length + designersToRemove.length) > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+          </div>
+          <Button 
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={updateList.isPending || addDesigner.isPending}
+            className="ml-4"
+          >
+            {(updateList.isPending || addDesigner.isPending) && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Save All Changes
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

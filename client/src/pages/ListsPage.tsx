@@ -489,20 +489,57 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     summary: string;
   }) => {
     try {
+      // Update list details
       await updateList.mutateAsync({
         id: list.id,
         ...values,
       });
+
+      // Apply designer changes if any
+      if (hasChanges) {
+        // Add new designers
+        if (designersToAdd.length > 0) {
+          await Promise.all(
+            designersToAdd.map(designerId =>
+              addDesigner.mutateAsync({
+                listId: list.id,
+                designerId,
+                notes: designerNotes[designerId],
+              })
+            )
+          );
+        }
+
+        // Remove designers
+        if (designersToRemove.length > 0) {
+          await Promise.all(
+            designersToRemove.map(designerId =>
+              fetch(`/api/lists/${list.id}/designers/${designerId}`, {
+                method: 'DELETE',
+              })
+            )
+          );
+        }
+
+        // Reset changes tracking
+        setDesignersToAdd([]);
+        setDesignersToRemove([]);
+        setHasChanges(false);
+      }
+
       toast({
         title: "Success",
-        description: "List updated successfully",
+        description: "All changes saved successfully",
       });
+      
       form.reset();
+      // Refresh data
+      await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
       onOpenChange(false);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update list",
+        description: error.message || "Failed to save changes",
         variant: "destructive",
       });
     }
@@ -540,53 +577,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     setHasChanges(true);
   };
 
-  const handleSaveDesignerChanges = async () => {
-    try {
-      // Add new designers
-      if (designersToAdd.length > 0) {
-        await Promise.all(
-          designersToAdd.map(designerId =>
-            addDesigner.mutateAsync({
-              listId: list.id,
-              designerId,
-              notes: designerNotes[designerId],
-            })
-          )
-        );
-      }
 
-      // Remove designers
-      if (designersToRemove.length > 0) {
-        await Promise.all(
-          designersToRemove.map(designerId =>
-            fetch(`/api/lists/${list.id}/designers/${designerId}`, {
-              method: 'DELETE',
-            })
-          )
-        );
-      }
-
-      toast({
-        title: "Success",
-        description: "Designer changes saved successfully",
-      });
-
-      // Reset changes tracking
-      setDesignersToAdd([]);
-      setDesignersToRemove([]);
-      setHasChanges(false);
-      
-      // Refresh data
-      await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save designer changes",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -643,26 +634,24 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                     </FormItem>
                   )}
                 />
-                <div className="flex justify-end space-x-2">
-                  <Button type="submit" disabled={updateList.isPending}>
-                    {updateList.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Save List Details
-                  </Button>
+                <div className="flex flex-col gap-2">
                   {hasChanges && (
-                    <Button 
-                      type="button"
-                      onClick={handleSaveDesignerChanges}
-                      disabled={addDesigner.isPending}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {addDesigner.isPending && (
+                    <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-2">
+                      <p className="font-medium">Pending Changes:</p>
+                      <ul className="list-disc list-inside text-xs mt-1">
+                        {designersToAdd.length > 0 && <li>{designersToAdd.length} designer{designersToAdd.length > 1 ? 's' : ''} to add</li>}
+                        {designersToRemove.length > 0 && <li>{designersToRemove.length} designer{designersToRemove.length > 1 ? 's' : ''} to remove</li>}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={updateList.isPending || addDesigner.isPending}>
+                      {(updateList.isPending || addDesigner.isPending) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      Save Designer Changes
+                      Save All Changes
                     </Button>
-                  )}
+                  </div>
                 </div>
               </form>
             </Form>

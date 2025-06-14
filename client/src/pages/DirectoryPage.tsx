@@ -54,7 +54,7 @@ const EXPERIENCE_LEVELS = [
 const designerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   title: z.string().min(1, "Title is required"),
-  email: z.string().email("Please enter a valid email address").or(z.literal("")),
+  email: z.union([z.string().email("Please enter a valid email address"), z.literal("")]),
   location: z.string().optional(),
   company: z.string().optional(),
   level: z.string().min(1, "Level is required"),

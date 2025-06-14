@@ -40,20 +40,6 @@ export default function HomePage() {
               A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
             </p>
             
-            <div className="flex justify-center">
-              <a 
-                href="https://replit.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-2 bg-black/20 backdrop-blur-sm rounded-full text-white/70 hover:text-white hover:bg-black/30 transition-all text-sm"
-              >
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.5 8.5h-3.25c-.41 0-.75.34-.75.75v5.5c0 .41.34.75.75.75H17.5c.41 0 .75-.34.75-.75v-5.5c0-.41-.34-.75-.75-.75zm-7 0H7.25c-.41 0-.75.34-.75.75v5.5c0 .41.34.75.75.75H10.5c.41 0 .75-.34.75-.75v-5.5c0-.41-.34-.75-.75-.75z"/>
-                </svg>
-                Made with Replit
-              </a>
-            </div>
-            
             <div className="flex justify-center pt-4">
               <Button asChild size="lg" className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6">
                 {user ? (

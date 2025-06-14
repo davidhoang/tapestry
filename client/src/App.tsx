@@ -54,6 +54,7 @@ function App() {
                 <Route path="/lists" component={ListsPage} />
                 <Route path="/matchmaker" component={MatchmakerPage} />
                 <Route path="/components" component={ComponentsPage} />
+                {user.isAdmin && <Route path="/admin" component={AdminPage} />}
               </>
             ) : (
               <Route path="*" component={HomePage} />

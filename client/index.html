@@ -8,12 +8,19 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      src="https://replit.com/public/js/replit-badge-v2.js"
-      theme="dark"
-      position="bottom-right"
-      text="Made with Replit"
-      url="https://replit.com/refer/dh-design"
-    ></script>
+    <a 
+      href="https://replit.com/refer/dh-design" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;"
+    >
+      <img 
+        src="/built-on-replit-badge.png" 
+        alt="Built on Replit" 
+        style="width: 150px; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s ease, box-shadow 0.2s ease;"
+        onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.25)'"
+        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"
+      />
+    </a>
   </body>
 </html>

@@ -722,6 +722,77 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Admin API routes
+  app.get("/api/admin/db/tables", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const tables = await db.execute(sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name;
+    `);
+
+    res.json(tables);
+  }));
+
+  app.post("/api/admin/db/query", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const { query } = req.body;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Query is required and must be a string" 
+      });
+    }
+
+    // Basic safety checks - prevent destructive operations without explicit confirmation
+    const lowerQuery = query.toLowerCase().trim();
+    const destructiveKeywords = ['drop', 'truncate', 'delete from users', 'delete from designers', 'delete from lists'];
+    
+    const isDestructive = destructiveKeywords.some(keyword => 
+      lowerQuery.includes(keyword)
+    );
+
+    if (isDestructive && !req.body.confirmDestructive) {
+      return res.status(400).json({
+        success: false,
+        error: "Destructive operation detected. This query could delete or modify data. Please review carefully."
+      });
+    }
+
+    try {
+      const result = await db.execute(sql.raw(query));
+      
+      res.json({
+        success: true,
+        data: result,
+        rowCount: Array.isArray(result) ? result.length : 0
+      });
+    } catch (error: any) {
+      res.json({
+        success: false,
+        error: error.message || "Query execution failed"
+      });
+    }
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }

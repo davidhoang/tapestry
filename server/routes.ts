@@ -733,13 +733,15 @@ export function registerRoutes(app: Express): Server {
       return res.status(403).send("Not authorized");
     }
 
-    const tables = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
       ORDER BY table_name;
     `);
 
+    // Drizzle returns a QueryResult object with rows property
+    const tables = result.rows || result;
     res.json(tables);
   }));
 
@@ -780,10 +782,13 @@ export function registerRoutes(app: Express): Server {
     try {
       const result = await db.execute(sql.raw(query));
       
+      // Extract rows from the result object
+      const data = result.rows || result;
+      
       res.json({
         success: true,
-        data: result,
-        rowCount: Array.isArray(result) ? result.length : 0
+        data: Array.isArray(data) ? data : [data],
+        rowCount: Array.isArray(data) ? data.length : (data ? 1 : 0)
       });
     } catch (error: any) {
       res.json({

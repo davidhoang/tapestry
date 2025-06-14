@@ -22,7 +22,7 @@ export default function AdminPage() {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
 
   // Fetch available tables
-  const { data: tables, isLoading: tablesLoading } = useQuery({
+  const { data: tablesResponse, isLoading: tablesLoading } = useQuery({
     queryKey: ["/api/admin/db/tables"],
     queryFn: async () => {
       const response = await fetch("/api/admin/db/tables");
@@ -32,6 +32,9 @@ export default function AdminPage() {
       return response.json();
     },
   });
+
+  // Extract the actual tables array from the response
+  const tables = Array.isArray(tablesResponse) ? tablesResponse : (tablesResponse?.rows || []);
 
   // Execute query mutation
   const executeQuery = useMutation({
@@ -172,11 +175,15 @@ export default function AdminPage() {
               <div>Loading tables...</div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {tables?.map((table: any) => (
-                  <Badge key={table.table_name} variant="outline">
-                    {table.table_name}
-                  </Badge>
-                ))}
+                {tables && tables.length > 0 ? (
+                  tables.map((table: any, index: number) => (
+                    <Badge key={table.table_name || index} variant="outline">
+                      {table.table_name || 'Unknown Table'}
+                    </Badge>
+                  ))
+                ) : (
+                  <div className="text-muted-foreground">No tables found</div>
+                )}
               </div>
             )}
           </CardContent>

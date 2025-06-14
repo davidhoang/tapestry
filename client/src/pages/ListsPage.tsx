@@ -467,7 +467,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const { data: designers } = useDesigners();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [designerNotes, setDesignerNotes] = useState<Record<number, string>>({});
+  const [designerNotes, setDesignerNotes] = useState<Record<number, string | undefined>>({});
   
   // Track changes for batch operations
   const [currentDesigners, setCurrentDesigners] = useState(list.designers || []);
@@ -724,16 +724,9 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
             <div className="space-y-2">
               <h3 className="font-medium">Current Designers</h3>
               <div className="space-y-2">
-                {list.designers?.map(
-                  ({
-                    designer,
-                    notes,
-                  }: {
-                    designer: SelectDesigner;
-                    notes?: string;
-                  }) => {
-                    const isBeingRemoved = designersToRemove.includes(designer.id);
-                    return (
+                {list.designers?.map(({ designer, notes }) => {
+                  const isBeingRemoved = designersToRemove.includes(designer.id);
+                  return (
                     <div
                       key={designer.id}
                       className={`flex flex-col p-2 rounded-md border ${
@@ -764,13 +757,15 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                             size="sm"
                             onClick={() => {
                               const currentNotes = designerNotes[designer.id];
-                              setDesignerNotes((prev) => ({
-                                ...prev,
-                                [designer.id]:
-                                  currentNotes === undefined
-                                    ? notes || ""
-                                    : undefined,
-                              }));
+                              setDesignerNotes((prev) => {
+                                const newNotes = { ...prev };
+                                if (currentNotes === undefined) {
+                                  newNotes[designer.id] = notes || "";
+                                } else {
+                                  delete newNotes[designer.id];
+                                }
+                                return newNotes;
+                              });
                             }}
                           >
                             {designerNotes[designer.id] !== undefined
@@ -843,8 +838,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                         </p>
                       )}
                     </div>
-                  ),
-                )}
+                  );
+                })}
               </div>
             </div>
           </div>

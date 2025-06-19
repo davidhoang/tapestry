@@ -27,7 +27,7 @@ export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="border-b border-white/20 bg-black">
+    <nav className="border-b border-white/20 bg-black fixed top-0 left-0 right-0 z-50">
       <div className="container flex h-14 max-w-screen-2xl items-center px-4">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -80,7 +80,7 @@ export default function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" onClick={() => setShowAuthDialog(true)} className="text-white hover:bg-white/10">
+              <Button variant="outline" onClick={() => setShowAuthDialog(true)} className="text-white border-white/30 hover:bg-white hover:text-black transition-colors">
                 Sign in
               </Button>
             )}
@@ -149,12 +149,12 @@ export default function Navigation() {
                     </>
                   ) : (
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       onClick={() => {
                         setShowAuthDialog(true);
                         setMobileMenuOpen(false);
                       }} 
-                      className="text-white hover:bg-white/10 text-lg py-2 px-4 rounded justify-start"
+                      className="text-white border-white/30 hover:bg-white hover:text-black text-lg py-2 px-4 rounded justify-start transition-colors"
                     >
                       Sign in
                     </Button>

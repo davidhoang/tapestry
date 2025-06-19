@@ -48,11 +48,11 @@ function App() {
             {!user && <Route path="/" component={HomePage} />}
             {user ? (
               <>
-                <Route path="/" component={DirectoryPage} />
+                <Route path="/" component={MatchmakerPage} />
+                <Route path="/matchmaker" component={MatchmakerPage} />
                 <Route path="/directory" component={DirectoryPage} />
                 <Route path="/designer/:id" component={DesignerDetailsPage} />
                 <Route path="/lists" component={ListsPage} />
-                <Route path="/matchmaker" component={MatchmakerPage} />
                 <Route path="/components" component={ComponentsPage} />
                 {user.isAdmin && <Route path="/admin" component={AdminPage} />}
               </>

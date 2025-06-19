@@ -41,11 +41,11 @@ export default function HomePage() {
             </p>
 
             <div className="flex justify-center pt-4">
-              <Button asChild size="lg" className="bg-gray-900 text-white hover:bg-gray-800 text-lg px-8 py-6">
+              <Button asChild size="lg" className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6">
                 {user ? (
-                  <Link href="/directory">Browse Directory</Link>
+                  <Link href="/matchmaker">Start Matching</Link>
                 ) : (
-                  <Link href="/auth">Browse Directory</Link>
+                  <Link href="/auth">Start Matching</Link>
                 )}
               </Button>
             </div>

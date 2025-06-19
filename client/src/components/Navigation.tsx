@@ -36,6 +36,12 @@ export default function Navigation() {
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
               <Link
+                href="/matchmaker"
+                className={location === "/matchmaker" || location === "/" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
+              >
+                Matchmaker
+              </Link>
+              <Link
                 href="/directory"
                 className={location === "/directory" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
               >
@@ -98,6 +104,17 @@ export default function Navigation() {
                 <div className="flex flex-col space-y-4 mt-6">
                   {user ? (
                     <>
+                      <Link
+                        href="/matchmaker"
+                        className={`text-lg py-2 px-4 rounded transition-colors ${
+                          location === "/matchmaker" || location === "/" 
+                            ? "text-white bg-white/10" 
+                            : "text-white/60 hover:text-white hover:bg-white/5"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Matchmaker
+                      </Link>
                       <Link
                         href="/directory"
                         className={`text-lg py-2 px-4 rounded transition-colors ${

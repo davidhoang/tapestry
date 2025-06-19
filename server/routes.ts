@@ -12,9 +12,15 @@ import fs from "fs/promises";
 import express from "express";
 import { sql } from "drizzle-orm";
 import { Client } from "@replit/object-storage";
+import OpenAI from "openai";
 
 // Initialize Object Storage client
 const objectStorage = new Client();
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Configure multer for memory storage
 const upload = multer({
@@ -719,6 +725,108 @@ export function registerRoutes(app: Express): Server {
     } catch (err: any) {
       console.error('Error sending email:', err);
       res.status(500).json({ error: err.message || "Failed to send email" });
+    }
+  }));
+
+  // AI Matchmaker endpoint
+  app.post("/api/matchmaker/analyze", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { roleDescription } = req.body;
+
+    if (!roleDescription || roleDescription.trim().length === 0) {
+      return res.status(400).json({ error: "Role description is required" });
+    }
+
+    // Get all designers from database
+    const allDesigners = await db.query.designers.findMany({
+      orderBy: desc(designers.createdAt),
+    });
+
+    if (allDesigners.length === 0) {
+      return res.json({ 
+        recommendations: [],
+        analysis: "No designers found in database to match against."
+      });
+    }
+
+    // Create a summary of all designers for OpenAI
+    const designerSummaries = allDesigners.map(designer => ({
+      id: designer.id,
+      name: designer.name,
+      title: designer.title,
+      company: designer.company,
+      skills: designer.skills,
+      bio: designer.bio,
+      experience: designer.experience,
+      portfolioUrl: designer.portfolioUrl
+    }));
+
+    // Use OpenAI to analyze and recommend matches
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert design recruiter and talent matcher. Your job is to analyze a role description and recommend the best designers from a given pool based on their skills, experience, and background.
+
+          Return your response as a JSON object with this structure:
+          {
+            "analysis": "Brief analysis of the role requirements",
+            "recommendations": [
+              {
+                "designerId": number,
+                "matchScore": number (0-100),
+                "reasoning": "Explanation of why this designer is a good match",
+                "matchedSkills": ["skill1", "skill2"],
+                "concerns": "Any potential concerns or gaps (optional)"
+              }
+            ]
+          }
+
+          Rank designers by match quality and only include those with a match score of 60 or higher. Limit to top 10 matches.`
+        },
+        {
+          role: "user",
+          content: `Role Description:
+${roleDescription}
+
+Available Designers:
+${JSON.stringify(designerSummaries, null, 2)}
+
+Please analyze this role and recommend the best matching designers.`
+        }
+      ],
+      temperature: 0.3,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      return res.status(500).json({ error: "Failed to get AI analysis" });
+    }
+
+    try {
+      const analysis = JSON.parse(aiResponse);
+      
+      // Enrich recommendations with full designer data
+      const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+        const designer = allDesigners.find(d => d.id === rec.designerId);
+        return {
+          ...rec,
+          designer
+        };
+      }).filter((rec: any) => rec.designer); // Remove any recommendations where designer wasn't found
+
+      res.json({
+        analysis: analysis.analysis,
+        recommendations: enrichedRecommendations,
+        roleDescription
+      });
+    } catch (error) {
+      console.error('Failed to parse AI response:', error);
+      res.status(500).json({ error: "Failed to parse AI analysis" });
     }
   }));
 

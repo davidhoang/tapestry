@@ -29,10 +29,10 @@ export default function HomePage() {
         {/* Hero Content */}
         <div className="relative z-10 flex-1 flex items-center justify-center text-center space-y-8 px-4 max-w-4xl mx-auto">
           <div className="space-y-6">
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900">
               Design Talent Match
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-700 max-w-2xl mx-auto leading-relaxed">
               Connect with exceptional design talent through intelligent matching
             </p>
 
@@ -41,7 +41,7 @@ export default function HomePage() {
             </p>
 
             <div className="flex justify-center pt-4">
-              <Button asChild size="lg" className="bg-white text-black hover:bg-white/90 text-lg px-8 py-6">
+              <Button asChild size="lg" className="bg-gray-900 text-white hover:bg-gray-800 text-lg px-8 py-6">
                 {user ? (
                   <Link href="/directory">Browse Directory</Link>
                 ) : (

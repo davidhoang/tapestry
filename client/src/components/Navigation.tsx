@@ -80,7 +80,7 @@ export default function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="outline" onClick={() => setShowAuthDialog(true)} className="text-black border-white/30 bg-white hover:bg-gray-100 hover:text-black transition-colors">
+              <Button variant="default" onClick={() => setShowAuthDialog(true)} className="bg-white text-black hover:bg-gray-100 border-none transition-colors">
                 Sign in
               </Button>
             )}
@@ -154,7 +154,7 @@ export default function Navigation() {
                         setShowAuthDialog(true);
                         setMobileMenuOpen(false);
                       }} 
-                      className="text-black border-white/30 bg-white hover:bg-gray-100 hover:text-black text-lg py-2 px-4 rounded justify-start transition-colors"
+                      className="bg-white text-black hover:bg-gray-100 border-none text-lg py-2 px-4 rounded justify-start transition-colors"
                     >
                       Sign in
                     </Button>

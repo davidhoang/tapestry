@@ -97,3 +97,13 @@ export const insertListDesignerSchema = createInsertSchema(listDesigners);
 export const selectListDesignerSchema = createSelectSchema(listDesigners);
 export type InsertListDesigner = typeof listDesigners.$inferInsert;
 export type SelectListDesigner = typeof listDesigners.$inferSelect;
+
+export const insertConversationSchema = createInsertSchema(conversations);
+export const selectConversationSchema = createSelectSchema(conversations);
+export type InsertConversation = typeof conversations.$inferInsert;
+export type SelectConversation = typeof conversations.$inferSelect;
+
+export const insertMessageSchema = createInsertSchema(messages);
+export const selectMessageSchema = createSelectSchema(messages);
+export type InsertMessage = typeof messages.$inferInsert;
+export type SelectMessage = typeof messages.$inferSelect;

@@ -52,6 +52,17 @@ export default function MatchmakerChatPage() {
     setSelectedDesigners(newSelected);
   };
 
+  // Auto-show mobile modal when recommendations change
+  useEffect(() => {
+    if (currentRecommendations.length > 0 && !showMobileModal) {
+      // Check if we're on mobile (screen width < 1536px)
+      const isMobile = window.innerWidth < 1536;
+      if (isMobile) {
+        setShowMobileModal(true);
+      }
+    }
+  }, [currentRecommendations, showMobileModal]);
+
   const handleCreateList = async () => {
     if (!listName.trim()) {
       toast({
@@ -175,7 +186,7 @@ export default function MatchmakerChatPage() {
       <Navigation />
       
       {/* Single responsive layout */}
-      <div className={`flex flex-col xl:flex-row h-screen pt-16 ${currentRecommendations.length > 0 ? 'xl:pr-96' : ''}`}>
+      <div className={`flex flex-col min-[1536px]:flex-row h-screen pt-16 ${currentRecommendations.length > 0 ? 'min-[1536px]:pr-96' : ''}`}>
         {/* Chat Interface */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1">
@@ -187,9 +198,9 @@ export default function MatchmakerChatPage() {
           </div>
         </div>
 
-        {/* Desktop Recommendations Sidebar - Only show on very large screens */}
+        {/* Desktop Recommendations Sidebar - Only show on very large screens (>= 1536px) */}
         {currentRecommendations.length > 0 && (
-          <div className="hidden xl:flex xl:w-96 xl:fixed xl:right-0 xl:top-16 xl:bottom-0 bg-background border-l border-border shadow-lg flex-col">
+          <div className="hidden min-[1536px]:flex min-[1536px]:w-96 min-[1536px]:fixed min-[1536px]:right-0 min-[1536px]:top-16 min-[1536px]:bottom-0 bg-background border-l border-border shadow-lg flex-col">
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <div>
@@ -368,7 +379,7 @@ export default function MatchmakerChatPage() {
 
         {/* Mobile Modal for Recommendations */}
         {showMobileModal && currentRecommendations.length > 0 && (
-          <div className="xl:hidden fixed inset-0 bg-background z-50 flex flex-col">
+          <div className="max-[1535px]:flex hidden fixed inset-0 bg-background z-50 flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-background">
               <div>

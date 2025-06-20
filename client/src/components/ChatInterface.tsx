@@ -187,10 +187,10 @@ export default function ChatInterface({ conversation, onRecommendationsChange, o
                     className="bg-muted/50 border border-border rounded-lg p-3 lg:cursor-default cursor-pointer lg:hover:bg-muted/50 hover:bg-muted/70 transition-colors"
                     onClick={() => onShowMobileModal?.()}
                   >
-                    <p className="text-xs text-muted-foreground font-medium xl:hidden">
+                    <p className="text-xs text-muted-foreground font-medium max-[1535px]:block hidden">
                       ✨ {msg.recommendations.length} designer matches found - tap to view
                     </p>
-                    <p className="text-xs text-muted-foreground font-medium hidden xl:block">
+                    <p className="text-xs text-muted-foreground font-medium hidden min-[1536px]:block">
                       ✨ {msg.recommendations.length} designer matches found - see sidebar
                     </p>
                   </div>

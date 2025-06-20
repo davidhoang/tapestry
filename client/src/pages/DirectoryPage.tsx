@@ -133,7 +133,6 @@ export default function DirectoryPage() {
                 setShowEnrichment(true);
               }}
             >
-              <Sparkles className="mr-2 h-4 w-4" />
               AI Enrich New
             </Button>
             {selectedIds.length > 0 && (
@@ -552,7 +551,6 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
                   AI Enrich Profile
                 </>
               )}
@@ -747,7 +745,6 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                         }
                       }}
                     >
-                      <Sparkles className="mr-1 h-3 w-3" />
                       Suggest
                     </Button>
                   </div>
@@ -783,7 +780,6 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                         </>
                       ) : (
                         <>
-                          <Sparkles className="mr-2 h-4 w-4" />
                           AI Suggest
                         </>
                       )}

@@ -47,9 +47,13 @@ export default function DesignerCard({
           <img 
             src={getDesignerCoverImage(designer.id)} 
             alt="Cover"
-            className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-[3000ms] ease-out group-hover:scale-110"
+            style={{ transitionDuration: '3s' }}
           />
-          <div className="absolute inset-0 bg-black/20 transition-opacity duration-[3000ms] group-hover:bg-black/30" />
+          <div 
+            className="absolute inset-0 bg-black/20 transition-opacity duration-[3000ms] ease-out group-hover:bg-black/30" 
+            style={{ transitionDuration: '3s' }}
+          />
           
           {/* Top-left checkbox */}
           {showCheckbox && (

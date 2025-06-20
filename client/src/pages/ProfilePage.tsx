@@ -94,7 +94,7 @@ export default function ProfilePage() {
   const userWorkspace = workspaces?.[0];
 
   // Set workspace name when data loads
-  useState(() => {
+  React.useEffect(() => {
     if (userWorkspace?.name && workspaceName === "") {
       setWorkspaceName(userWorkspace.name);
     }
@@ -154,28 +154,10 @@ export default function ProfilePage() {
     },
   });
 
-  const handleProfileSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    let profilePhotoUrl = user?.profilePhotoUrl;
-    
-    if (profilePhoto) {
-      try {
-        const result = await uploadPhotoMutation.mutateAsync(profilePhoto);
-        profilePhotoUrl = result.profilePhotoUrl;
-      } catch (error) {
-        return; // Error already handled by mutation
-      }
-    }
-
-    updateProfileMutation.mutate({
-      profilePhotoUrl,
-    });
-  };
-
-  const handleWorkspaceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    // Validate workspace name
     if (!workspaceName.trim()) {
       toast({
         title: "Error",
@@ -185,9 +167,34 @@ export default function ProfilePage() {
       return;
     }
 
-    updateWorkspaceMutation.mutate({
-      name: workspaceName.trim(),
-    });
+    try {
+      // Handle profile photo upload first (if any)
+      let profilePhotoUrl = user?.profilePhotoUrl;
+      
+      if (profilePhoto) {
+        const result = await uploadPhotoMutation.mutateAsync(profilePhoto);
+        profilePhotoUrl = result.profilePhotoUrl;
+      }
+
+      // Update profile if photo changed
+      if (profilePhoto) {
+        await updateProfileMutation.mutateAsync({
+          profilePhotoUrl,
+        });
+      }
+
+      // Update workspace name
+      await updateWorkspaceMutation.mutateAsync({
+        name: workspaceName.trim(),
+      });
+
+      toast({
+        title: "Success",
+        description: "Changes saved successfully",
+      });
+    } catch (error) {
+      // Individual mutations already handle their own errors
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,17 +240,17 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <div className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
-        {/* Profile Settings Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Settings</CardTitle>
-            <CardDescription>
-              Manage your account settings and profile information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleProfileSubmit} className="space-y-6">
+      <div className="container mx-auto px-4 py-8 pt-24 max-w-2xl space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Profile Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Settings</CardTitle>
+              <CardDescription>
+                Manage your account settings and profile information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
           {/* Profile Photo Section */}
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
@@ -318,30 +325,18 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={updateProfileMutation.isPending || uploadPhotoMutation.isPending}
-              >
-                {(updateProfileMutation.isPending || uploadPhotoMutation.isPending) && (
-                  <Upload className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Save Profile Changes
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Workspace Settings Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Workspace Settings</CardTitle>
-            <CardDescription>
-              Manage your workspace name and settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleWorkspaceSubmit} className="space-y-4">
+          {/* Workspace Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace Settings</CardTitle>
+              <CardDescription>
+                Manage your workspace name and settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="workspaceName">Workspace Name</Label>
                 <Input
@@ -355,20 +350,21 @@ export default function ProfilePage() {
                   This name will be used in your workspace URL: /{userWorkspace?.slug || 'your-workspace'}
                 </p>
               </div>
+            </CardContent>
+          </Card>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={updateWorkspaceMutation.isPending}
-              >
-                {updateWorkspaceMutation.isPending && (
-                  <Upload className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Update Workspace Name
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+          {/* Single Save Button */}
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={updateProfileMutation.isPending || uploadPhotoMutation.isPending || updateWorkspaceMutation.isPending}
+          >
+            {(updateProfileMutation.isPending || uploadPhotoMutation.isPending || updateWorkspaceMutation.isPending) && (
+              <Upload className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Save Changes
+          </Button>
+        </form>
       </div>
     </div>
   );

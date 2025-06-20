@@ -81,6 +81,19 @@
   .text-secondary-foreground {
     color: hsl(240 6% 40%) !important;
   }
+
+  /* Designer profile specific overrides */
+  .designer-skills-text {
+    color: #374151 !important;
+  }
+
+  .designer-profile-text {
+    color: #111827 !important;
+  }
+
+  .designer-profile-text * {
+    color: #111827 !important;
+  }
 }
 
 /* Custom scrollbar styles */

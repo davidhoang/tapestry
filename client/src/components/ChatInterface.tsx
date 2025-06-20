@@ -17,9 +17,10 @@ import type { SelectDesigner } from "@db/schema";
 interface ChatInterfaceProps {
   conversation: ConversationWithMessages;
   onRecommendationsChange?: (recommendations: any[]) => void;
+  onShowMobileModal?: () => void;
 }
 
-export default function ChatInterface({ conversation, onRecommendationsChange }: ChatInterfaceProps) {
+export default function ChatInterface({ conversation, onRecommendationsChange, onShowMobileModal }: ChatInterfaceProps) {
   const [message, setMessage] = useState("");
   const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(new Set());
   const [showCreateList, setShowCreateList] = useState(false);
@@ -179,12 +180,18 @@ export default function ChatInterface({ conversation, onRecommendationsChange }:
                 </p>
               </div>
               
-              {/* Indicator for recommendations - shows on all screen sizes */}
+              {/* Indicator for recommendations */}
               {msg.role === "assistant" && msg.recommendations && (
                 <div className="mt-3">
-                  <div className="bg-muted/50 border border-border rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground font-medium">
-                      ✨ {msg.recommendations.length} designer matches found - see recommendations section
+                  <div 
+                    className="bg-muted/50 border border-border rounded-lg p-3 lg:cursor-default cursor-pointer lg:hover:bg-muted/50 hover:bg-muted/70 transition-colors"
+                    onClick={() => onShowMobileModal?.()}
+                  >
+                    <p className="text-xs text-muted-foreground font-medium lg:hidden">
+                      ✨ {msg.recommendations.length} designer matches found - tap to view
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium hidden lg:block">
+                      ✨ {msg.recommendations.length} designer matches found - see sidebar
                     </p>
                   </div>
                 </div>

@@ -17,18 +17,22 @@ export default function SkillsInput({ value, onChange }: SkillsInputProps) {
 
   // Fetch all unique skills when component mounts
   useEffect(() => {
-    fetch('/api/skills')
-      .then(res => res.json())
-      .then(data => {
-        // Ensure we're working with an array
+    const fetchSkills = async () => {
+      try {
+        const response = await fetch('/api/skills');
+        if (!response.ok) {
+          throw new Error('Failed to fetch skills');
+        }
+        const data = await response.json();
         const skillsArray = Array.isArray(data) ? data : [];
-        console.log('Fetched skills:', skillsArray);
         setAllSkills(skillsArray);
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error fetching skills:', error);
         setAllSkills([]);
-      });
+      }
+    };
+    
+    fetchSkills();
   }, []);
 
   // Update suggestions based on input

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -14,8 +17,11 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { UserCircle, Menu, X } from "lucide-react";
 import { useState } from "react";
 import AuthPage from "../pages/AuthPage";
@@ -69,14 +75,14 @@ export default function Navigation() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href="/components">
-                      <a className="flex items-center w-full">Components</a>
+                    <Link href="/components" className="flex items-center w-full">
+                      Components
                     </Link>
                   </DropdownMenuItem>
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                        <a className="flex items-center w-full">Database Admin</a>
+                      <Link href="/admin" className="flex items-center w-full">
+                        Database Admin
                       </Link>
                     </DropdownMenuItem>
                   )}

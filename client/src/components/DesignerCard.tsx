@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SelectDesigner } from "@db/schema";
 import { Pencil, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
@@ -24,13 +25,12 @@ export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick, on
       >
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4 pr-12">
-            {designer.photoUrl && (
-              <img
-                src={designer.photoUrl}
-                alt={designer.name}
-                className="h-16 w-16 rounded-full object-cover bg-muted"
-              />
-            )}
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={designer.photoUrl || undefined} alt={designer.name} />
+              <AvatarFallback className="text-lg font-medium">
+                {designer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0">

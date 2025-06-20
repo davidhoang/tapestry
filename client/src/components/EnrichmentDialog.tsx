@@ -234,13 +234,19 @@ export default function EnrichmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden" aria-describedby="enrichment-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             {isNewDesigner ? "Enrich New Designer Profile" : "Enrich Designer Profile"}
           </DialogTitle>
         </DialogHeader>
+        <div id="enrichment-description" className="sr-only">
+          {isNewDesigner 
+            ? "Search for a designer's professional information online to create a new profile."
+            : "Enhance an existing designer profile with additional information from online sources."
+          }
+        </div>
 
         <div className="space-y-6">
           {!enrichmentResult && (

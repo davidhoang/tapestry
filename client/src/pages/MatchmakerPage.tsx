@@ -135,11 +135,11 @@ export default function MatchmakerPage() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Background with random cover image */}
+      {/* Background with repeating pattern */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 bg-repeat"
         style={{
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url('${backgroundImage}')`
+          backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('${backgroundImage}')`
         }}
       />
       

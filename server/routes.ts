@@ -1850,35 +1850,14 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
 
     try {
-      const { username } = req.body;
+      const { profilePhotoUrl } = req.body;
       const userId = req.user.id;
-
-      // Validate username if provided
-      if (username !== undefined) {
-        if (username && username.trim().length < 2) {
-          return res.status(400).json({ error: "Username must be at least 2 characters long" });
-        }
-
-        // Check if username is already taken (excluding current user)
-        if (username && username.trim()) {
-          const existingUser = await db.query.users.findFirst({
-            where: and(
-              eq(users.username, username.trim()),
-              ne(users.id, userId)
-            ),
-          });
-
-          if (existingUser) {
-            return res.status(400).json({ error: "Username is already taken" });
-          }
-        }
-      }
 
       // Update user profile
       const [updatedUser] = await db
         .update(users)
         .set({
-          ...(username !== undefined && { username: username?.trim() || null }),
+          ...(profilePhotoUrl !== undefined && { profilePhotoUrl }),
         })
         .where(eq(users.id, userId))
         .returning();
@@ -1887,6 +1866,54 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     } catch (error: any) {
       console.error("Profile update error:", error);
       res.status(500).json({ error: "Failed to update profile" });
+    }
+  }));
+
+  // Workspace management routes
+  app.put("/api/workspaces/update", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { name } = req.body;
+      const userId = req.user.id;
+
+      if (!name || name.trim().length < 2) {
+        return res.status(400).json({ error: "Workspace name must be at least 2 characters long" });
+      }
+
+      // Get user's workspace
+      const userWorkspace = await getUserWorkspace(userId);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      // Check if user is owner or admin of the workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, userWorkspace.id),
+          eq(workspaceMembers.userId, userId)
+        ),
+      });
+
+      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+        return res.status(403).json({ error: "Not authorized to update workspace" });
+      }
+
+      // Update workspace name
+      const [updatedWorkspace] = await db
+        .update(workspaces)
+        .set({
+          name: name.trim(),
+        })
+        .where(eq(workspaces.id, userWorkspace.id))
+        .returning();
+
+      res.json(updatedWorkspace);
+    } catch (error: any) {
+      console.error("Workspace update error:", error);
+      res.status(500).json({ error: "Failed to update workspace" });
     }
   }));
 

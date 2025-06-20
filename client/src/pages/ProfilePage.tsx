@@ -7,12 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, User, Camera } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import Navigation from "../components/Navigation";
 
 interface ProfileUpdateData {
-  username?: string;
   profilePhotoUrl?: string;
+}
+
+interface WorkspaceUpdateData {
+  name: string;
 }
 
 async function updateProfile(data: ProfileUpdateData) {
@@ -53,11 +56,11 @@ async function uploadProfilePhoto(file: File) {
 
 export default function ProfilePage() {
   const { user } = useUser();
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [username, setUsername] = useState(user?.username || '');
-  const [isUploading, setIsUploading] = useState(false);
 
   const profileMutation = useMutation({
     mutationFn: updateProfile,

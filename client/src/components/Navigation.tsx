@@ -50,8 +50,8 @@ export default function Navigation() {
 
   const getUserInitials = () => {
     if (!user) return 'U';
-    if (user.username) {
-      return user.username.substring(0, 2).toUpperCase();
+    if (userWorkspace?.name) {
+      return userWorkspace.name.substring(0, 2).toUpperCase();
     }
     if (user.email) {
       return user.email.substring(0, 2).toUpperCase();
@@ -108,8 +108,8 @@ export default function Navigation() {
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      {user.username && (
-                        <p className="font-medium">{user.username}</p>
+                      {userWorkspace?.name && (
+                        <p className="font-medium">{userWorkspace.name}</p>
                       )}
                       <p className="w-[200px] truncate text-sm text-muted-foreground">
                         {user.email}

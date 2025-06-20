@@ -62,16 +62,36 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const profileMutation = useMutation({
+  // Get user's workspace
+  const { data: workspaces } = useQuery({
+    queryKey: ["/api/workspaces"],
+    queryFn: async () => {
+      const response = await fetch("/api/workspaces");
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
+  const userWorkspace = workspaces?.[0];
+
+  // Set workspace name when data loads
+  useState(() => {
+    if (userWorkspace?.name && workspaceName === "") {
+      setWorkspaceName(userWorkspace.name);
+    }
+  }, [userWorkspace?.name, workspaceName]);
+
+  const updateProfileMutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
       toast({
         title: "Success",
         description: "Profile updated successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -80,16 +100,16 @@ export default function ProfilePage() {
     },
   });
 
-  const photoMutation = useMutation({
+  const uploadPhotoMutation = useMutation({
     mutationFn: uploadProfilePhoto,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Profile photo updated successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -98,46 +118,82 @@ export default function ProfilePage() {
     },
   });
 
-  const handleUsernameSubmit = (e: React.FormEvent) => {
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: updateWorkspace,
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Workspace name updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim() && username !== user?.username) {
-      profileMutation.mutate({ username: username.trim() });
+    
+    let profilePhotoUrl = user?.profilePhotoUrl;
+    
+    if (profilePhoto) {
+      try {
+        const result = await uploadPhotoMutation.mutateAsync(profilePhoto);
+        profilePhotoUrl = result.profilePhotoUrl;
+      } catch (error) {
+        return; // Error already handled by mutation
+      }
     }
+
+    updateProfileMutation.mutate({
+      profilePhotoUrl,
+    });
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleWorkspaceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!workspaceName.trim()) {
+      toast({
+        title: "Error",
+        description: "Workspace name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateWorkspaceMutation.mutate({
+      name: workspaceName.trim(),
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Error",
-        description: "Please select an image file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "Image must be smaller than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      await photoMutation.mutateAsync(file);
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "Error",
+          description: "File size must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
       }
+      
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error", 
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setProfilePhoto(file);
     }
   };
 
@@ -159,14 +215,54 @@ export default function ProfilePage() {
     <div className="min-h-screen">
       <Navigation />
       <div className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* Workspace Settings Card */}
         <Card>
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-          <CardDescription>
-            Manage your account settings and profile information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          <CardHeader>
+            <CardTitle>Workspace Settings</CardTitle>
+            <CardDescription>
+              Manage your workspace name and settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleWorkspaceSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="workspaceName">Workspace Name</Label>
+                <Input
+                  id="workspaceName"
+                  type="text"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  placeholder="Enter your workspace name"
+                />
+                <p className="text-sm text-muted-foreground">
+                  This name will be used in your workspace URL: /{userWorkspace?.slug || 'your-workspace'}
+                </p>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={updateWorkspaceMutation.isPending}
+              >
+                {updateWorkspaceMutation.isPending && (
+                  <Upload className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Update Workspace Name
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Profile Settings Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+            <CardDescription>
+              Manage your account settings and profile information
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleProfileSubmit} className="space-y-6">
           {/* Profile Photo Section */}
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
@@ -190,11 +286,11 @@ export default function ProfilePage() {
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
+                disabled={uploadPhotoMutation.isPending}
                 className="gap-2"
               >
                 <Upload className="w-4 h-4" />
-                {isUploading ? 'Uploading...' : 'Upload Photo'}
+                {uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload Photo'}
               </Button>
               <p className="text-sm text-muted-foreground mt-2">
                 JPG, PNG or GIF. Max 5MB.
@@ -204,55 +300,52 @@ export default function ProfilePage() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={handlePhotoUpload}
+              onChange={handleFileChange}
               className="hidden"
             />
           </div>
 
-          {/* Username Section */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <form onSubmit={handleUsernameSubmit} className="flex gap-2 mt-1">
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  className="flex-1"
-                />
-                <Button 
-                  type="submit" 
-                  disabled={profileMutation.isPending || !username.trim() || username === user.username}
-                >
-                  {profileMutation.isPending ? 'Saving...' : 'Save'}
-                </Button>
-              </form>
-              <p className="text-sm text-muted-foreground mt-1">
-                Choose a unique username for your profile
-              </p>
-            </div>
-          </div>
 
-          {/* Account Info */}
-          <div className="space-y-4 pt-4 border-t">
-            <div>
-              <Label>Email</Label>
-              <Input value={user.email} disabled className="mt-1" />
-              <p className="text-sm text-muted-foreground mt-1">
-                Your email address cannot be changed
-              </p>
-            </div>
-            <div>
-              <Label>Member since</Label>
-              <Input 
-                value={new Date(user.createdAt).toLocaleDateString()} 
-                disabled 
-                className="mt-1" 
-              />
-            </div>
-          </div>
-        </CardContent>
+
+              {/* Email Section (Read-only) */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Your email address cannot be changed
+                </p>
+              </div>
+
+              {/* Member Since Section (Read-only) */}
+              <div className="space-y-2">
+                <Label htmlFor="memberSince">Member since</Label>
+                <Input
+                  id="memberSince"
+                  type="text"
+                  value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : ""}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={updateProfileMutation.isPending || uploadPhotoMutation.isPending}
+              >
+                {(updateProfileMutation.isPending || uploadPhotoMutation.isPending) && (
+                  <Upload className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Profile Changes
+              </Button>
+            </form>
+          </CardContent>
         </Card>
       </div>
     </div>

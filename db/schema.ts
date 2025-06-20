@@ -15,9 +15,39 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const workspaces = pgTable("workspaces", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  ownerId: integer("owner_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const workspaceMembers = pgTable("workspace_members", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text("role").notNull().default("member"), // "owner", "admin", "member"
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const workspaceInvitations = pgTable("workspace_invitations", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("member"),
+  token: text("token").notNull().unique(),
+  invitedBy: integer("invited_by").references(() => users.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const designers = pgTable("designers", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
   name: text("name").notNull(),
   title: text("title").notNull(),
   location: text("location"),
@@ -36,6 +66,7 @@ export const designers = pgTable("designers", {
 export const lists = pgTable("lists", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
   name: text("name").notNull(),
   description: text("description"),
   summary: text("summary"),
@@ -54,6 +85,7 @@ export const listDesigners = pgTable("list_designers", {
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
   title: text("title"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -68,10 +100,48 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [workspaces.ownerId],
+    references: [users.id],
+  }),
+  members: many(workspaceMembers),
+  designers: many(designers),
+  lists: many(lists),
+  conversations: many(conversations),
+  invitations: many(workspaceInvitations),
+}));
+
+export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceMembers.workspaceId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [workspaceMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const workspaceInvitationRelations = relations(workspaceInvitations, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceInvitations.workspaceId],
+    references: [workspaces.id],
+  }),
+  inviter: one(users, {
+    fields: [workspaceInvitations.invitedBy],
+    references: [users.id],
+  }),
+}));
+
 export const designerRelations = relations(designers, ({ one }) => ({
   user: one(users, {
     fields: [designers.userId],
     references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [designers.workspaceId],
+    references: [workspaces.id],
   }),
 }));
 
@@ -79,6 +149,10 @@ export const listRelations = relations(lists, ({ one, many }) => ({
   user: one(users, {
     fields: [lists.userId],
     references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [lists.workspaceId],
+    references: [workspaces.id],
   }),
   designers: many(listDesigners),
 }));
@@ -107,6 +181,21 @@ export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
+
+export const insertWorkspaceSchema = createInsertSchema(workspaces);
+export const selectWorkspaceSchema = createSelectSchema(workspaces);
+export type InsertWorkspace = typeof workspaces.$inferInsert;
+export type SelectWorkspace = typeof workspaces.$inferSelect;
+
+export const insertWorkspaceMemberSchema = createInsertSchema(workspaceMembers);
+export const selectWorkspaceMemberSchema = createSelectSchema(workspaceMembers);
+export type InsertWorkspaceMember = typeof workspaceMembers.$inferInsert;
+export type SelectWorkspaceMember = typeof workspaceMembers.$inferSelect;
+
+export const insertWorkspaceInvitationSchema = createInsertSchema(workspaceInvitations);
+export const selectWorkspaceInvitationSchema = createSelectSchema(workspaceInvitations);
+export type InsertWorkspaceInvitation = typeof workspaceInvitations.$inferInsert;
+export type SelectWorkspaceInvitation = typeof workspaceInvitations.$inferSelect;
 
 export const insertDesignerSchema = createInsertSchema(designers);
 export const selectDesignerSchema = createSelectSchema(designers);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X, Sparkles, Users, MessageSquare, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -99,13 +100,25 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden">
-        {/* Header with close button */}
-        <div className="absolute top-4 right-4 z-10">
+        <VisuallyHidden>
+          <DialogTitle>Onboarding</DialogTitle>
+        </VisuallyHidden>
+        
+        {/* Header with skip and close buttons */}
+        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
           <Button
             variant="ghost"
             size="sm"
             onClick={skipOnboarding}
-            className="h-8 w-8 p-0 hover:bg-black/10"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Skip
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={skipOnboarding}
+            className="h-8 w-8 p-0 rounded-full hover:bg-muted"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -114,7 +127,7 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
         {/* Main content */}
         <div className="relative min-h-[500px] flex flex-col">
           {/* Slide content */}
-          <div className="flex-1 p-8 pt-12 text-center">
+          <div className="flex-1 p-8 pt-16 text-center">
             <div className="max-w-md mx-auto space-y-6">
               {/* Icon */}
               <div className="flex justify-center">
@@ -138,60 +151,51 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
                 </div>
               )}
             </div>
+
+            {/* Progress dots - centered in content area */}
+            <div className="flex justify-center space-x-2 mt-8">
+              {onboardingSlides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-colors",
+                    index === currentSlide
+                      ? "bg-primary"
+                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                  )}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Footer with navigation */}
-          <div className="border-t bg-muted/20 p-6">
-            <div className="flex items-center justify-between">
-              {/* Progress dots */}
-              <div className="flex space-x-2">
-                {onboardingSlides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToSlide(index)}
-                    className={cn(
-                      "w-2 h-2 rounded-full transition-colors",
-                      index === currentSlide
-                        ? "bg-primary"
-                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                    )}
-                  />
-                ))}
-              </div>
+          {/* Navigation buttons - floating */}
+          <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center">
+            {/* Back button - floating left */}
+            {currentSlide > 0 ? (
+              <Button
+                variant="outline"
+                onClick={prevSlide}
+                size="sm"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+            ) : (
+              <div></div> // Empty div to maintain spacing
+            )}
 
-              {/* Navigation buttons */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={skipOnboarding}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Skip
-                </Button>
-                
-                {currentSlide > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={prevSlide}
-                    size="sm"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Back
-                  </Button>
-                )}
-
-                {currentSlide < onboardingSlides.length - 1 ? (
-                  <Button onClick={nextSlide} size="sm">
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                ) : (
-                  <Button onClick={completeOnboarding} size="sm">
-                    Get Started
-                  </Button>
-                )}
-              </div>
-            </div>
+            {/* Next/Get Started button - floating right */}
+            {currentSlide < onboardingSlides.length - 1 ? (
+              <Button onClick={nextSlide} size="sm">
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            ) : (
+              <Button onClick={completeOnboarding} size="sm">
+                Get Started
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

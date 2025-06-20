@@ -26,7 +26,7 @@
     background-image: url('/images/bg.jpeg');
     background-repeat: repeat;
     background-size: 300px;
-    opacity: 0.4;
+    opacity: 0.12;
     pointer-events: none;
     z-index: -1;
   }

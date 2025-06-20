@@ -88,22 +88,42 @@ export default function CsvImport() {
       setCsvHeaders(headers);
       setCsvData(data.slice(0, 10)); // Show first 10 rows for preview
       
-      // Auto-map fields based on common column names
+      // Auto-map fields based on exact column names or common patterns
       const autoMappings: FieldMapping[] = headers.map(header => {
-        const lowerHeader = header.toLowerCase();
+        const lowerHeader = header.toLowerCase().trim();
         let dbField = '';
         
-        if (lowerHeader.includes('name')) dbField = 'name';
-        else if (lowerHeader.includes('title') || lowerHeader.includes('position')) dbField = 'title';
-        else if (lowerHeader.includes('email')) dbField = 'email';
-        else if (lowerHeader.includes('level') || lowerHeader.includes('seniority')) dbField = 'level';
-        else if (lowerHeader.includes('location') || lowerHeader.includes('city')) dbField = 'location';
-        else if (lowerHeader.includes('company') || lowerHeader.includes('organization')) dbField = 'company';
-        else if (lowerHeader.includes('website') || lowerHeader.includes('url')) dbField = 'website';
-        else if (lowerHeader.includes('linkedin')) dbField = 'linkedIn';
-        else if (lowerHeader.includes('skill')) dbField = 'skills';
-        else if (lowerHeader.includes('available')) dbField = 'available';
-        else if (lowerHeader.includes('note')) dbField = 'notes';
+        // First try exact matches
+        const exactMatches = {
+          'name': 'name',
+          'title': 'title', 
+          'email': 'email',
+          'level': 'level',
+          'location': 'location',
+          'company': 'company',
+          'website': 'website',
+          'linkedin': 'linkedIn',
+          'skills': 'skills',
+          'available': 'available',
+          'notes': 'notes'
+        };
+        
+        if (exactMatches[lowerHeader as keyof typeof exactMatches]) {
+          dbField = exactMatches[lowerHeader as keyof typeof exactMatches];
+        } else {
+          // Then try pattern matching for flexibility
+          if (lowerHeader.includes('name')) dbField = 'name';
+          else if (lowerHeader.includes('title') || lowerHeader.includes('position')) dbField = 'title';
+          else if (lowerHeader.includes('email')) dbField = 'email';
+          else if (lowerHeader.includes('level') || lowerHeader.includes('seniority')) dbField = 'level';
+          else if (lowerHeader.includes('location') || lowerHeader.includes('city')) dbField = 'location';
+          else if (lowerHeader.includes('company') || lowerHeader.includes('organization')) dbField = 'company';
+          else if (lowerHeader.includes('website') || lowerHeader.includes('url')) dbField = 'website';
+          else if (lowerHeader.includes('linkedin')) dbField = 'linkedIn';
+          else if (lowerHeader.includes('skill')) dbField = 'skills';
+          else if (lowerHeader.includes('available')) dbField = 'available';
+          else if (lowerHeader.includes('note')) dbField = 'notes';
+        }
         
         return { csvColumn: header, dbField };
       });
@@ -276,14 +296,14 @@ export default function CsvImport() {
                     </div>
                     <div className="flex-1">
                       <Select
-                        value={mapping?.dbField || ""}
-                        onValueChange={(value) => updateFieldMapping(header, value)}
+                        value={mapping?.dbField || "__SKIP__"}
+                        onValueChange={(value) => updateFieldMapping(header, value === "__SKIP__" ? "" : value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select database field" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Don't import</SelectItem>
+                          <SelectItem value="__SKIP__">Don't import</SelectItem>
                           {DB_FIELDS.map((field) => (
                             <SelectItem key={field.value} value={field.value}>
                               {field.label}

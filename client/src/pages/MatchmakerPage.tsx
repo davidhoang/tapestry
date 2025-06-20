@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin } from "lucide-react";
+import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, Shuffle } from "lucide-react";
 import Navigation from "../components/Navigation";
 
 export default function MatchmakerPage() {
@@ -28,6 +28,24 @@ export default function MatchmakerPage() {
     const randomNumber = Math.floor(Math.random() * imageCount) + 1;
     return `/images/card-covers/img-cover-${randomNumber}.png`;
   });
+
+  // Random prompt examples
+  const [currentPrompt, setCurrentPrompt] = useState(0);
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
+  
+  const samplePrompts = [
+    "We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus...",
+    "Seeking a creative UI/UX designer for mobile app development. Must have experience with iOS and Android design patterns, animation, and user testing. Portfolio should showcase consumer-facing apps...",
+    "Need a design systems expert to lead our component library. Should have experience with Storybook, Figma tokens, and working with engineering teams. 3+ years of design systems experience required...",
+    "Looking for a brand designer with strong typography and visual identity skills. Experience with packaging design, marketing materials, and brand guidelines. Agency or in-house experience preferred...",
+    "Seeking a freelance web designer for e-commerce projects. Must be proficient in Shopify, have conversion optimization experience, and understand accessibility standards. Remote work available..."
+  ];
+
+  const randomizePrompt = () => {
+    const nextPrompt = (currentPrompt + 1) % samplePrompts.length;
+    setCurrentPrompt(nextPrompt);
+    setRoleDescription(samplePrompts[nextPrompt]);
+  };
   
   const matchmaker = useMatchmaker();
   const createList = useCreateList();
@@ -144,23 +162,42 @@ export default function MatchmakerPage() {
             <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
               <div className="p-8">
                 <div className="relative">
-                  <Textarea
-                    id="role-description"
-                    placeholder="We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus..."
-                    value={roleDescription}
-                    onChange={(e) => setRoleDescription(e.target.value)}
-                    rows={5}
-                    className="w-full border-0 bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:ring-0 resize-none px-0 py-4"
-                    style={{ 
-                      boxShadow: 'none',
-                      outline: 'none'
-                    }}
-                  />
+                  <div className="relative">
+                    <Textarea
+                      id="role-description"
+                      placeholder={samplePrompts[currentPrompt]}
+                      value={roleDescription}
+                      onChange={(e) => setRoleDescription(e.target.value)}
+                      onFocus={() => setIsPromptFocused(true)}
+                      onBlur={() => setIsPromptFocused(false)}
+                      rows={5}
+                      className={`w-full border-0 bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:ring-0 resize-none px-0 py-4 transition-all duration-300 ${
+                        isPromptFocused ? 'transform -translate-y-1' : ''
+                      }`}
+                      style={{ 
+                        boxShadow: 'none',
+                        outline: 'none'
+                      }}
+                    />
+                    
+                    {/* Animated glow border */}
+                    <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-300 ${
+                      isPromptFocused 
+                        ? 'shadow-[0_0_20px_rgba(59,130,246,0.3)] border-2 border-blue-400/30' 
+                        : ''
+                    }`} />
+                  </div>
                   
                   <div className="flex justify-between items-center mt-6">
-                    <div className="text-sm text-gray-500">
-                      {roleDescription.length > 0 && `${roleDescription.length} characters`}
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={randomizePrompt}
+                      className="text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      <Shuffle className="mr-2 h-4 w-4" />
+                      Try example
+                    </Button>
                     
                     <Button
                       onClick={handleAnalyze}

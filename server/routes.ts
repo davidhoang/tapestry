@@ -1566,7 +1566,10 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       
       // Parse PDF text content
       const pdfParse = (await import("pdf-parse")).default;
-      const pdfData = await pdfParse(pdfBuffer);
+      const pdfData = await pdfParse(pdfBuffer, {
+        // Pass options to avoid test file access
+        max: 0,
+      });
       const textContent = pdfData.text;
       const totalPages = pdfData.numpages;
 

@@ -400,13 +400,164 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
     }
   };
 
+  const handleAISuggestNotes = async (field: any) => {
+    setIsGeneratingNotes(true);
+    try {
+      const currentValues = form.getValues();
+      const bio = currentValues.notes || '';
+      const experience = `${currentValues.title} at ${currentValues.company || 'Unknown Company'}. ${currentValues.level} level designer.`;
+      
+      const response = await fetch('/api/designers/generate-skills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bio, experience })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI suggestions');
+      }
+
+      const suggestions = await response.json();
+      
+      // Generate enhanced notes based on current information
+      const enhancedNotes = `## Profile Summary
+${currentValues.name} is a ${currentValues.level} ${currentValues.title}${currentValues.company ? ` at ${currentValues.company}` : ''}${currentValues.location ? ` based in ${currentValues.location}` : ''}.
+
+## Skills & Expertise
+${suggestions.skills.length > 0 ? suggestions.skills.map((skill: string) => `- ${skill}`).join('\n') : 'Skills to be added based on experience and portfolio.'}
+
+## Professional Background
+${bio || 'Professional background and experience details to be added.'}
+
+## Contact & Availability
+${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.available ? 'Currently open to new opportunities.' : 'Availability status to be confirmed.'}`;
+
+      field.onChange(enhancedNotes);
+      
+      toast({
+        title: "AI Notes Generated",
+        description: "Professional notes have been generated based on the current profile information.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate AI suggestions",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingNotes(false);
+    }
+  };
+
+  const handleEnrichProfile = async () => {
+    setIsEnrichingProfile(true);
+    try {
+      const currentValues = form.getValues();
+      
+      if (!currentValues.name.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter a name before enriching the profile",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch('/api/designers/enrich-new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: currentValues.name })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to enrich profile');
+      }
+
+      const enrichment = await response.json();
+      
+      if (enrichment.success && enrichment.data) {
+        const data = enrichment.data;
+        
+        // Update form with enriched data (only if current field is empty)
+        if (data.title && !currentValues.title) {
+          form.setValue('title', data.title);
+        }
+        if (data.company && !currentValues.company) {
+          form.setValue('company', data.company);
+        }
+        if (data.location && !currentValues.location) {
+          form.setValue('location', data.location);
+        }
+        if (data.email && !currentValues.email) {
+          form.setValue('email', data.email);
+        }
+        if (data.portfolioUrl && !currentValues.website) {
+          form.setValue('website', data.portfolioUrl);
+        }
+        if (data.socialLinks?.linkedin && !currentValues.linkedIn) {
+          form.setValue('linkedIn', data.socialLinks.linkedin);
+        }
+        if (data.bio && !currentValues.notes) {
+          form.setValue('notes', data.bio);
+        }
+        if (data.skills && data.skills.length > 0) {
+          const currentSkills = form.getValues('skills') || [];
+          const newSkills = [...new Set([...currentSkills, ...data.skills])];
+          form.setValue('skills', newSkills);
+        }
+        
+        toast({
+          title: "Profile Enriched",
+          description: `Found information with ${Math.round(enrichment.confidence * 100)}% confidence. Empty fields have been populated.`,
+        });
+      } else {
+        toast({
+          title: "No Additional Information",
+          description: "Could not find additional information for this person online.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enrich profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEnrichingProfile(false);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <label htmlFor="photo" className="block text-sm font-medium mb-2">
-            Photo
-          </label>
+          <div className="flex items-center justify-between mb-4">
+            <label htmlFor="photo" className="block text-sm font-medium">
+              Photo
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleEnrichProfile}
+              disabled={isEnrichingProfile}
+            >
+              {isEnrichingProfile ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enriching...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI Enrich Profile
+                </>
+              )}
+            </Button>
+          </div>
           <input
             type="file"
             id="photo"

@@ -50,7 +50,10 @@ export default function DesignerCard({
               e.stopPropagation();
               onToggleSelect?.(designer.id);
             }}
-            className="absolute top-4 left-4 z-10 w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            className="absolute top-4 left-4 z-10 w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2 cursor-pointer"
           />
         )}
         

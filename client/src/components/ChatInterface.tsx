@@ -180,7 +180,7 @@ export default function ChatInterface({ conversation, onRecommendationsChange }:
               </div>
               
               {msg.role === "assistant" && msg.recommendations && (
-                <div className="mt-3 space-y-2 hidden sm:block">
+                <div className="mt-3 space-y-2 hidden min-[769px]:block">
                   <p className="text-xs text-muted-foreground font-medium">
                     Designer Matches:
                   </p>
@@ -221,7 +221,7 @@ export default function ChatInterface({ conversation, onRecommendationsChange }:
               
               {/* Mobile indicator for recommendations */}
               {msg.role === "assistant" && msg.recommendations && (
-                <div className="mt-3 sm:hidden">
+                <div className="mt-3 max-[768px]:block hidden">
                   <div className="bg-muted/50 border border-border rounded-lg p-3">
                     <p className="text-xs text-muted-foreground font-medium">
                       ✨ {msg.recommendations.length} designer matches found - see below

@@ -174,7 +174,7 @@ export default function MatchmakerChatPage() {
       <Navigation />
       
       {/* Desktop Layout */}
-<div className={`hidden md:flex transition-all duration-300 ${currentRecommendations.length > 0 ? 'pr-96' : ''}`}>
+      <div className={`hidden sm:flex transition-all duration-300 ${currentRecommendations.length > 0 ? 'pr-96' : ''}`}>
         <div className="flex-1 flex flex-col h-screen pt-16">
           <div className="flex-1">
             <ChatInterface 
@@ -365,7 +365,7 @@ export default function MatchmakerChatPage() {
       </div>
 
       {/* Mobile Layout */}
-      <div className="md:hidden">
+      <div className="sm:hidden">
         <div className="flex flex-col h-screen pt-16">
           {/* Chat Interface */}
           <div className="flex-1">

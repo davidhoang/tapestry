@@ -91,38 +91,38 @@ export default function ComponentsPage() {
     },
     {
       name: "Body Large",
-      element: <p className="text-lg leading-7">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form with multiple lines of content.</p>,
-      code: `<p className="text-lg leading-7">Body Large</p>`
+      element: <p className="text-lg leading-7 font-serif">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form with multiple lines of content.</p>,
+      code: `<p className="text-lg leading-7 font-serif">Body Large</p>`
     },
     {
       name: "Body Regular",
-      element: <p className="text-base leading-6">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form with multiple lines of content.</p>,
-      code: `<p className="text-base leading-6">Body Regular</p>`
+      element: <p className="text-base leading-6 font-serif">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form with multiple lines of content.</p>,
+      code: `<p className="text-base leading-6 font-serif">Body Regular</p>`
     },
     {
       name: "Body Small",
-      element: <p className="text-sm leading-5">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form.</p>,
-      code: `<p className="text-sm leading-5">Body Small</p>`
+      element: <p className="text-sm leading-5 font-serif">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form.</p>,
+      code: `<p className="text-sm leading-5 font-serif">Body Small</p>`
     },
     {
       name: "Caption",
-      element: <p className="text-xs text-muted-foreground leading-4">The quick brown fox jumps over the lazy dog</p>,
-      code: `<p className="text-xs text-muted-foreground leading-4">Caption</p>`
+      element: <p className="text-xs text-muted-foreground leading-4 font-serif">The quick brown fox jumps over the lazy dog</p>,
+      code: `<p className="text-xs text-muted-foreground leading-4 font-serif">Caption</p>`
     },
     {
       name: "Blockquote",
-      element: <blockquote className="border-l-4 border-primary pl-4 italic text-lg">The quick brown fox jumps over the lazy dog. This is an inspirational quote or important callout.</blockquote>,
-      code: `<blockquote className="border-l-4 border-primary pl-4 italic text-lg">Quote</blockquote>`
+      element: <blockquote className="border-l-4 border-primary pl-4 italic text-lg font-serif">The quick brown fox jumps over the lazy dog. This is an inspirational quote or important callout.</blockquote>,
+      code: `<blockquote className="border-l-4 border-primary pl-4 italic text-lg font-serif">Quote</blockquote>`
     },
     {
       name: "Code Inline",
-      element: <p className="text-base">The quick brown fox jumps over the <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">lazy dog</code> in the forest.</p>,
+      element: <p className="text-base font-serif">The quick brown fox jumps over the <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">lazy dog</code> in the forest.</p>,
       code: `<code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">code</code>`
     },
     {
       name: "Lead Text",
-      element: <p className="text-xl text-muted-foreground leading-8">The quick brown fox jumps over the lazy dog. This is larger text used for introductions.</p>,
-      code: `<p className="text-xl text-muted-foreground leading-8">Lead Text</p>`
+      element: <p className="text-xl text-muted-foreground leading-8 font-serif">The quick brown fox jumps over the lazy dog. This is larger text used for introductions.</p>,
+      code: `<p className="text-xl text-muted-foreground leading-8 font-serif">Lead Text</p>`
     }
   ];
 
@@ -771,8 +771,8 @@ export default function ComponentsPage() {
       <Navigation />
       <div className="container mx-auto px-4 pt-24 pb-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">UI Components Library</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold mb-2 font-serif">UI Components Library</h1>
+          <p className="text-muted-foreground font-serif">
             A comprehensive showcase of all available UI components, typography, and colors in your application.
             Click the copy button to copy component code to your clipboard.
           </p>

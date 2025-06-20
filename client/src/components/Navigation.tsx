@@ -37,7 +37,7 @@ export default function Navigation() {
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 mx-auto">
         <div className="flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold text-gray-900">Design Talent Match</span>
+            <span className="font-bold text-gray-900 font-serif">Design Talent Match</span>
           </Link>
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-medium">

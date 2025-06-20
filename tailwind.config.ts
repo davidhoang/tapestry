@@ -7,7 +7,8 @@ export default {
     extend: {
       fontFamily: {
         'serif': ['Crimson Text', 'Charter', 'Georgia', 'Times New Roman', 'serif'],
-        'sans': ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        'sans': ['Crimson Text', 'Charter', 'Georgia', 'Times New Roman', 'serif'], // Using serif as default
+        DEFAULT: ['Crimson Text', 'Charter', 'Georgia', 'Times New Roman', 'serif'],
       },
       borderRadius: {
         lg: "var(--radius)",

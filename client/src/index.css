@@ -11,20 +11,47 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-serif antialiased bg-background text-foreground;
   }
 
-  /* Apply serif font to main content elements with improved typography */
+  /* Enhanced serif typography for all text elements */
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     letter-spacing: -0.02em;
   }
 
-  p, .prose, .content, .designer-description {
+  p, .prose, .content, .designer-description, button, input, textarea, label, span, div {
     @apply font-serif;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     line-height: 1.6;
+  }
+
+  /* UI elements should also use serif */
+  .ui-text, nav, .navigation, .menu, .dropdown, .form-label, .button-text {
+    @apply font-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  /* Override any sans-serif defaults in UI components */
+  nav * {
+    @apply font-serif;
+  }
+
+  /* Button text should be serif */
+  button, .btn {
+    @apply font-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  /* Form elements */
+  input, textarea, select, label {
+    @apply font-serif;
+  }
+
+  /* Cards and content containers */
+  .card, .badge, .alert {
+    @apply font-serif;
   }
 
   /* Larger headings get more refined spacing */

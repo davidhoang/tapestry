@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import SkillsInput from "@/components/SkillsInput";
 import { useToast } from "@/hooks/use-toast";
+import { getDesignerCoverImage } from "@/utils/coverImages";
 
 const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt: true });
 type FormData = z.infer<typeof formSchema>;
@@ -148,8 +149,13 @@ export default function DesignerDetailsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Cover Photo Section */}
-      <div className="relative h-64 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 overflow-hidden">
-        <div className="absolute inset-0 bg-black/20" />
+      <div className="relative h-64 overflow-hidden">
+        <img 
+          src={getDesignerCoverImage(designer.id)} 
+          alt="Cover"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/30" />
         
         {/* Back Button */}
         <Button

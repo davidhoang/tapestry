@@ -4,6 +4,8 @@ Tapestry is a  [Proof of Concept](http://www.proofofconcept.pub) experiment.
 
 Problem statement: I get reached out by a lot of people in my network asking for recommendations of designers. Though I'd like to help, this is time consuming and often results in me needing to manually go through a repository of talent.
 
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">I miss my old talent network...<br><br>There are a LOT of startups pinging me about hiring designers right now but I don&#39;t have a great system/product for connecting 🤔<br><br>anyone building in this space again?</p>&mdash; Ridd 🤿 (@ridd_design) <a href="https://twitter.com/ridd_design/status/1934366396122620267?ref_src=twsrc%5Etfw">June 15, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
 ## Tech stack
 - Replit for vibe coding - [Use my referral](https://replit.com/refer/dh-design)
 - SendGrid for email

@@ -104,6 +104,22 @@
     border-bottom: none !important;
     text-decoration: none !important;
   }
+
+  /* Hide view mode buttons in MDEditor */
+  .w-md-editor-bar .w-md-editor-toolbar-mode,
+  .w-md-editor-toolbar-mode,
+  .w-md-editor-bar-view,
+  .w-md-editor-toolbar .w-md-editor-toolbar-mode {
+    display: none !important;
+  }
+
+  /* Hide specific toolbar buttons by targeting their SVG icons */
+  .w-md-editor-bar button[data-name="preview"],
+  .w-md-editor-bar button[data-name="edit"],
+  .w-md-editor-bar button[data-name="live"],
+  .w-md-editor-bar .w-md-editor-toolbar-child:last-child {
+    display: none !important;
+  }
 }
 
 /* Custom scrollbar styles */

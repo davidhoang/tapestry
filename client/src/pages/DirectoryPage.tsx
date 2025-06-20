@@ -784,6 +784,8 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                       preview="edit"
                       hideToolbar={false}
                       visibleDragBar={false}
+                      toolbarHeight={60}
+                      height={200}
                     />
                   </FormControl>
                   <FormMessage />

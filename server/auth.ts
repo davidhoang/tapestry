@@ -165,6 +165,15 @@ export function setupAuth(app: Express) {
           return next(err);
         }
 
+        // Handle "Remember me" functionality
+        if (req.body.rememberMe) {
+          // Extend session to 30 days if "Remember me" is checked
+          req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+        } else {
+          // Default session (24 hours)
+          req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        }
+
         return res.json({
           message: "Login successful",
           user: { id: user.id, email: user.email },

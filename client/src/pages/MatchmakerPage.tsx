@@ -125,42 +125,55 @@ export default function MatchmakerPage() {
             </p>
           </div>
 
-          <Card className="shadow-lg">
-            <CardHeader className="pb-6">
-              <CardTitle className="text-2xl">Role Description</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="role-description" className="text-base font-medium">
-                  Describe the role, project, or ideal candidate
-                </Label>
-                <Textarea
-                  id="role-description"
-                  placeholder="We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus..."
-                  value={roleDescription}
-                  onChange={(e) => setRoleDescription(e.target.value)}
-                  rows={6}
-                  className="resize-none text-base leading-relaxed"
-                />
+          <div className="relative">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="p-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Describe your ideal designer</h2>
+                  <p className="text-gray-600">Tell us about the role, skills, and experience you're looking for</p>
+                </div>
+                
+                <div className="relative">
+                  <Textarea
+                    id="role-description"
+                    placeholder="We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus..."
+                    value={roleDescription}
+                    onChange={(e) => setRoleDescription(e.target.value)}
+                    rows={8}
+                    className="w-full border-0 border-b-2 border-gray-200 rounded-none bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:border-primary focus:ring-0 resize-none px-0 py-4"
+                    style={{ 
+                      boxShadow: 'none',
+                      outline: 'none'
+                    }}
+                  />
+                  
+                  <div className="flex justify-between items-center mt-6">
+                    <div className="text-sm text-gray-500">
+                      {roleDescription.length > 0 && `${roleDescription.length} characters`}
+                    </div>
+                    
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={matchmaker.isPending || !roleDescription.trim()}
+                      className="px-8 py-3 rounded-full bg-primary hover:bg-primary/90 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {matchmaker.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Finding matches...
+                        </>
+                      ) : (
+                        <>
+                          <Star className="mr-2 h-4 w-4" />
+                          Find matches
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              
-              <Button
-                onClick={handleAnalyze}
-                disabled={matchmaker.isPending || !roleDescription.trim()}
-                className="w-full h-12 text-base font-medium"
-                size="lg"
-              >
-                {matchmaker.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing with AI...
-                  </>
-                ) : (
-                  "Find Matches"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {analysis && (
             <Card className="shadow-lg">

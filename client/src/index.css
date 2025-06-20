@@ -94,6 +94,16 @@
   .designer-profile-text * {
     color: #111827 !important;
   }
+
+  .designer-profile-text h1,
+  .designer-profile-text h2,
+  .designer-profile-text h3,
+  .designer-profile-text h4,
+  .designer-profile-text h5,
+  .designer-profile-text h6 {
+    border-bottom: none !important;
+    text-decoration: none !important;
+  }
 }
 
 /* Custom scrollbar styles */

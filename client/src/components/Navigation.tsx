@@ -22,7 +22,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
-import { UserCircle, Menu, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserCircle, Menu, X, Settings, User } from "lucide-react";
 import { useState } from "react";
 import AuthPage from "../pages/AuthPage";
 
@@ -31,6 +32,17 @@ export default function Navigation() {
   const { user, logout } = useUser();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    if (user.username) {
+      return user.username.substring(0, 2).toUpperCase();
+    }
+    if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
 
   return (
     <nav className="border-b border-gray-200 bg-nav-cream fixed top-0 left-0 right-0 z-50">
@@ -69,14 +81,37 @@ export default function Navigation() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-gray-100">
-                    <UserCircle className="h-5 w-5" />
+                  <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.profilePhotoUrl || undefined} alt="Profile photo" />
+                      <AvatarFallback className="text-xs">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      {user.username && (
+                        <p className="font-medium">{user.username}</p>
+                      )}
+                      <p className="w-[200px] truncate text-sm text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border-t"></div>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile Settings
+                    </Link>
+                  </DropdownMenuItem>
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/components" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" />
                         Components
                       </Link>
                     </DropdownMenuItem>
@@ -84,10 +119,12 @@ export default function Navigation() {
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" />
                         Database Admin
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  <div className="border-t"></div>
                   <DropdownMenuItem onSelect={() => logout()}>
                     Logout
                   </DropdownMenuItem>

@@ -12,6 +12,7 @@ import MatchmakerChatPage from "./pages/MatchmakerChatPage";
 import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
 import AdminPage from "./pages/AdminPage";
+import ProfilePage from "./pages/ProfilePage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 
@@ -55,6 +56,7 @@ function App() {
                 <Route path="/directory" component={DirectoryPage} />
                 <Route path="/designer/:id" component={DesignerDetailsPage} />
                 <Route path="/lists" component={ListsPage} />
+                <Route path="/profile" component={ProfilePage} />
                 <Route path="/components" component={ComponentsPage} />
                 {user.isAdmin && <Route path="/admin" component={AdminPage} />}
               </>

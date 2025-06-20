@@ -796,6 +796,43 @@ export default function ComponentsPage() {
           </div>
         </div>
 
+        {/* Category Filter Badges */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={searchTerm === "" ? "default" : "secondary"}
+              className="cursor-pointer"
+              onClick={() => setSearchTerm("")}
+            >
+              All
+            </Badge>
+            <Badge
+              variant={searchTerm.toLowerCase() === "typography" ? "default" : "secondary"}
+              className="cursor-pointer"
+              onClick={() => setSearchTerm("typography")}
+            >
+              Typography
+            </Badge>
+            <Badge
+              variant={searchTerm.toLowerCase() === "colors" || searchTerm.toLowerCase() === "color" ? "default" : "secondary"}
+              className="cursor-pointer"
+              onClick={() => setSearchTerm("colors")}
+            >
+              Colors
+            </Badge>
+            {categories.map(category => (
+              <Badge
+                key={category}
+                variant={searchTerm.toLowerCase() === category.toLowerCase() ? "default" : "secondary"}
+                className="cursor-pointer"
+                onClick={() => setSearchTerm(category)}
+              >
+                {category}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
         {/* Typography Section */}
         {(!searchTerm || searchTerm.toLowerCase().includes("typography")) && (
           <div className="mb-12">
@@ -892,43 +929,6 @@ export default function ComponentsPage() {
             </Card>
           </div>
         )}
-
-        {/* Category Filter Badges */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={searchTerm === "" ? "default" : "secondary"}
-              className="cursor-pointer"
-              onClick={() => setSearchTerm("")}
-            >
-              All
-            </Badge>
-            <Badge
-              variant={searchTerm.toLowerCase() === "typography" ? "default" : "secondary"}
-              className="cursor-pointer"
-              onClick={() => setSearchTerm("typography")}
-            >
-              Typography
-            </Badge>
-            <Badge
-              variant={searchTerm.toLowerCase() === "colors" || searchTerm.toLowerCase() === "color" ? "default" : "secondary"}
-              className="cursor-pointer"
-              onClick={() => setSearchTerm("colors")}
-            >
-              Colors
-            </Badge>
-            {categories.map(category => (
-              <Badge
-                key={category}
-                variant={searchTerm.toLowerCase() === category.toLowerCase() ? "default" : "secondary"}
-                className="cursor-pointer"
-                onClick={() => setSearchTerm(category)}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </div>
 
         {/* Components Grid */}
         <div className="grid gap-8">

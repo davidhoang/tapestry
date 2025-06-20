@@ -60,7 +60,7 @@ export const messages = pgTable("messages", {
   conversationId: integer("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
   role: text("role").notNull(), // 'user' or 'assistant'
   content: text("content").notNull(),
-  recommendations: jsonb("recommendations"), // Store match recommendations
+  recommendations: json("recommendations"), // Store match recommendations
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

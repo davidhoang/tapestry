@@ -781,6 +781,9 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                       value={field.value}
                       onChange={(value) => field.onChange(value || '')}
                       data-color-mode="light"
+                      preview="edit"
+                      hideToolbar={false}
+                      visibleDragBar={false}
                     />
                   </FormControl>
                   <FormMessage />

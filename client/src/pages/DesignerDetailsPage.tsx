@@ -2,10 +2,10 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, ArrowLeft, Pencil } from "lucide-react";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X } from "lucide-react";
 import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { useDesigner } from "@/hooks/use-designers";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +33,9 @@ export default function DesignerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
   const { data: designer, isLoading, error } = useDesigner(parseInt(id || "0"));
@@ -77,6 +80,37 @@ export default function DesignerDetailsPage() {
   const handleCancel = () => {
     setIsEditMode(false);
     form.reset();
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -85,6 +119,10 @@ export default function DesignerDetailsPage() {
     try {
       const formData = new FormData();
       formData.append('data', JSON.stringify(data));
+      
+      if (selectedPhoto) {
+        formData.append('photo', selectedPhoto);
+      }
 
       await updateDesigner.mutateAsync({ 
         id: designer.id, 
@@ -97,6 +135,8 @@ export default function DesignerDetailsPage() {
       });
       
       setIsEditMode(false);
+      setSelectedPhoto(null);
+      setPhotoPreview(null);
     } catch (error) {
       toast({
         title: "Error",
@@ -186,20 +226,61 @@ export default function DesignerDetailsPage() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 {/* Profile Photo */}
-                <div className="flex justify-start">
-                  {designer.photoUrl ? (
-                    <img
-                      src={designer.photoUrl}
-                      alt={designer.name}
-                      className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
-                    />
-                  ) : (
-                    <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
-                      <span className="text-4xl font-bold text-muted-foreground">
-                        {designer.name.charAt(0)}
-                      </span>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="relative">
+                      {photoPreview || designer.photoUrl ? (
+                        <img
+                          src={photoPreview || designer.photoUrl}
+                          alt={designer.name}
+                          className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+                        />
+                      ) : (
+                        <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                          <span className="text-4xl font-bold text-muted-foreground">
+                            {designer.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {photoPreview && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                          onClick={removePhoto}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
-                  )}
+                    
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {photoPreview || designer.photoUrl ? "Change Photo" : "Upload Photo"}
+                      </Button>
+                      
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                      
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG or GIF (max 5MB)
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Edit Header */}

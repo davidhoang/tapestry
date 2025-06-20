@@ -37,25 +37,25 @@ export default function Navigation() {
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 mx-auto">
         <div className="flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold text-gray-900 font-serif">Tapestry</span>
+            <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
           </Link>
           {user && (
-            <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
               <Link
                 href="/matchmaker"
-                className={location === "/matchmaker" || location === "/" ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                className={location === "/matchmaker" || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Matchmaker
               </Link>
               <Link
                 href="/directory"
-                className={location === "/directory" ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                className={location === "/directory" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Directory
               </Link>
               <Link
                 href="/lists"
-                className={location === "/lists" ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                className={location === "/lists" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Lists
               </Link>
@@ -121,8 +121,8 @@ export default function Navigation() {
                         href="/matchmaker"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/matchmaker" || location === "/" 
-                            ? "text-gray-900 bg-gray-100 font-medium" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -132,8 +132,8 @@ export default function Navigation() {
                         href="/directory"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/directory" 
-                            ? "text-gray-900 bg-gray-100 font-medium" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -143,8 +143,8 @@ export default function Navigation() {
                         href="/lists"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/lists" 
-                            ? "text-gray-900 bg-gray-100 font-medium" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >

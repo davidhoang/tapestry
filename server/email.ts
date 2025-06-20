@@ -16,24 +16,26 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
+  const msg = {
+    to: params.to,
+    from: {
+      email: params.from,
+      name: "Tapestry Team",
+    },
+    subject: params.subject,
+    html: params.html || params.text,
+  };
+
   try {
-    await sgMail.send({
-      to: params.to,
-      from: {
-        email: params.from,
-        name: "Tapestry Team"
-      },
-      subject: params.subject,
-      text: params.text,
-      html: params.html,
-    });
+    await sgMail.send(msg);
+    console.log(`Email successfully sent to ${params.to}`);
     return true;
   } catch (error: any) {
     console.error('SendGrid email error:', error);
-    if (error.response) {
-      console.error('SendGrid error details:', error.response.body);
+    if (error.response && error.response.body) {
+      console.error('SendGrid error details:', JSON.stringify(error.response.body, null, 2));
     }
-    return false;
+    throw error;
   }
 }
 

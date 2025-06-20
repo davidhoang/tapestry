@@ -1238,7 +1238,7 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       const finalMessage = message.replace('[INVITE_LINK]', inviteLink);
       
       // Send the invite email
-      const emailSent = await sendEmail({
+      await sendEmail({
         to: email,
         from: "david@davidhoang.com", // Using the same verified sender as other emails
         subject: "Invitation to Test Tapestry Alpha",
@@ -1246,28 +1246,28 @@ If you're asking questions or don't have enough info yet, don't include the MATC
         html: finalMessage.replace(/\n/g, '<br>')
       });
 
-      if (emailSent) {
-        res.json({
-          success: true,
-          message: `Alpha invite successfully sent to ${email}`
-        });
-      } else {
-        // For debugging/testing, return the email content that would have been sent
-        res.json({
-          success: false,
-          error: "Failed to send email via SendGrid (likely due to sender verification)",
-          emailPreview: {
-            to: email,
-            subject: "Invitation to Test Tapestry Alpha",
-            content: finalMessage
-          }
-        });
-      }
+      res.json({
+        success: true,
+        message: `Alpha invite successfully sent to ${email}`
+      });
+
     } catch (error: any) {
       console.error("Invite email error:", error);
+      
+      // Parse SendGrid error details if available
+      let errorMessage = "Failed to send invite";
+      if (error.response && error.response.body && error.response.body.errors) {
+        errorMessage = error.response.body.errors[0]?.message || errorMessage;
+      }
+      
       res.status(500).json({
         success: false,
-        error: error.message || "Failed to send invite"
+        error: errorMessage,
+        emailPreview: {
+          to: email,
+          subject: "Invitation to Test Tapestry Alpha",
+          content: message.replace('[INVITE_LINK]', `${req.protocol}://${req.get('host')}/auth`)
+        }
       });
     }
   }));

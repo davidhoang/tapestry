@@ -35,3 +35,4 @@ const MarkdownEditor = forwardRef<HTMLDivElement, MarkdownEditorProps>(
 MarkdownEditor.displayName = "MarkdownEditor";
 
 export { MarkdownEditor };
+export { MarkdownPreview } from './markdown-preview';

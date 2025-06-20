@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil } from "lucide-react";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
-import MDEditor from "@uiw/react-md-editor";
+import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { useDesigner } from "@/hooks/use-designers";
 import { useState } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
@@ -432,7 +431,7 @@ export default function DesignerDetailsPage() {
                 <div className="space-y-6">
                   <h2 className="text-3xl font-bold">About</h2>
                   <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed designer-profile-text">
-                    <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
+                    <MarkdownPreview source={designer.notes} />
                   </div>
                 </div>
               )}

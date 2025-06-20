@@ -777,7 +777,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                     </Button>
                   </div>
                   <FormControl>
-                    <MDEditor
+                    <MarkdownEditor
                       value={field.value}
                       onChange={(value) => field.onChange(value || '')}
                       data-color-mode="light"

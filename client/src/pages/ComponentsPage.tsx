@@ -57,6 +57,136 @@ export default function ComponentsPage() {
     setTimeout(() => setCopiedComponent(null), 2000);
   };
 
+  // Typography examples
+  const typographyExamples = [
+    {
+      name: "Heading 1",
+      element: <h1 className="text-4xl font-bold tracking-tight">The quick brown fox jumps over the lazy dog</h1>,
+      code: `<h1 className="text-4xl font-bold tracking-tight">Heading 1</h1>`
+    },
+    {
+      name: "Heading 2", 
+      element: <h2 className="text-3xl font-semibold tracking-tight">The quick brown fox jumps over the lazy dog</h2>,
+      code: `<h2 className="text-3xl font-semibold tracking-tight">Heading 2</h2>`
+    },
+    {
+      name: "Heading 3",
+      element: <h3 className="text-2xl font-semibold tracking-tight">The quick brown fox jumps over the lazy dog</h3>,
+      code: `<h3 className="text-2xl font-semibold tracking-tight">Heading 3</h3>`
+    },
+    {
+      name: "Heading 4",
+      element: <h4 className="text-xl font-semibold tracking-tight">The quick brown fox jumps over the lazy dog</h4>,
+      code: `<h4 className="text-xl font-semibold tracking-tight">Heading 4</h4>`
+    },
+    {
+      name: "Heading 5",
+      element: <h5 className="text-lg font-semibold">The quick brown fox jumps over the lazy dog</h5>,
+      code: `<h5 className="text-lg font-semibold">Heading 5</h5>`
+    },
+    {
+      name: "Heading 6",
+      element: <h6 className="text-base font-semibold">The quick brown fox jumps over the lazy dog</h6>,
+      code: `<h6 className="text-base font-semibold">Heading 6</h6>`
+    },
+    {
+      name: "Body Large",
+      element: <p className="text-lg leading-7">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form with multiple lines of content.</p>,
+      code: `<p className="text-lg leading-7">Body Large</p>`
+    },
+    {
+      name: "Body Regular",
+      element: <p className="text-base leading-6">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form with multiple lines of content.</p>,
+      code: `<p className="text-base leading-6">Body Regular</p>`
+    },
+    {
+      name: "Body Small",
+      element: <p className="text-sm leading-5">The quick brown fox jumps over the lazy dog. This is a longer piece of text to demonstrate how the typography looks in paragraph form.</p>,
+      code: `<p className="text-sm leading-5">Body Small</p>`
+    },
+    {
+      name: "Caption",
+      element: <p className="text-xs text-muted-foreground leading-4">The quick brown fox jumps over the lazy dog</p>,
+      code: `<p className="text-xs text-muted-foreground leading-4">Caption</p>`
+    },
+    {
+      name: "Blockquote",
+      element: <blockquote className="border-l-4 border-primary pl-4 italic text-lg">The quick brown fox jumps over the lazy dog. This is an inspirational quote or important callout.</blockquote>,
+      code: `<blockquote className="border-l-4 border-primary pl-4 italic text-lg">Quote</blockquote>`
+    },
+    {
+      name: "Code Inline",
+      element: <p className="text-base">The quick brown fox jumps over the <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">lazy dog</code> in the forest.</p>,
+      code: `<code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">code</code>`
+    },
+    {
+      name: "Lead Text",
+      element: <p className="text-xl text-muted-foreground leading-8">The quick brown fox jumps over the lazy dog. This is larger text used for introductions.</p>,
+      code: `<p className="text-xl text-muted-foreground leading-8">Lead Text</p>`
+    }
+  ];
+
+  // Color palette with actual theme colors
+  const colorPalette = [
+    {
+      name: "Primary",
+      colors: [
+        { name: "Primary", class: "bg-primary", text: "text-primary-foreground" },
+        { name: "Primary Foreground", class: "bg-primary-foreground border", text: "text-primary" }
+      ]
+    },
+    {
+      name: "Secondary", 
+      colors: [
+        { name: "Secondary", class: "bg-secondary", text: "text-secondary-foreground" },
+        { name: "Secondary Foreground", class: "bg-secondary-foreground border", text: "text-secondary" }
+      ]
+    },
+    {
+      name: "Background",
+      colors: [
+        { name: "Background", class: "bg-background border", text: "text-foreground" },
+        { name: "Foreground", class: "bg-foreground", text: "text-background" }
+      ]
+    },
+    {
+      name: "Muted",
+      colors: [
+        { name: "Muted", class: "bg-muted", text: "text-muted-foreground" },
+        { name: "Muted Foreground", class: "bg-muted-foreground", text: "text-muted" }
+      ]
+    },
+    {
+      name: "Accent",
+      colors: [
+        { name: "Accent", class: "bg-accent", text: "text-accent-foreground" },
+        { name: "Accent Foreground", class: "bg-accent-foreground border", text: "text-accent" }
+      ]
+    },
+    {
+      name: "Card",
+      colors: [
+        { name: "Card", class: "bg-card border", text: "text-card-foreground" },
+        { name: "Card Foreground", class: "bg-card-foreground", text: "text-card" }
+      ]
+    },
+    {
+      name: "Destructive",
+      colors: [
+        { name: "Destructive", class: "bg-destructive", text: "text-destructive-foreground" },
+        { name: "Destructive Foreground", class: "bg-destructive-foreground border", text: "text-destructive" }
+      ]
+    },
+    {
+      name: "Border & Input",
+      colors: [
+        { name: "Border", class: "bg-border", text: "text-foreground" },
+        { name: "Input", class: "bg-input", text: "text-foreground" },
+        { name: "Ring", class: "bg-ring", text: "text-primary-foreground" }
+      ]
+    }
+  ];
+
   const components = [
     {
       name: "Accordion",
@@ -648,7 +778,7 @@ export default function ComponentsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">UI Components Library</h1>
           <p className="text-muted-foreground">
-            A comprehensive showcase of all available UI components in your application.
+            A comprehensive showcase of all available UI components, typography, and colors in your application.
             Click the copy button to copy component code to your clipboard.
           </p>
         </div>
@@ -658,7 +788,7 @@ export default function ComponentsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search components..."
+              placeholder="Search components, typography, or colors..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -666,7 +796,104 @@ export default function ComponentsPage() {
           </div>
         </div>
 
-        {/* Category Filter */}
+        {/* Typography Section */}
+        {(!searchTerm || "typography".includes(searchTerm.toLowerCase())) && (
+          <div className="mb-12">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Typography</CardTitle>
+                    <Badge variant="outline" className="mt-1">
+                      Design System
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  {typographyExamples.map((typo) => (
+                    <div key={typo.name} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-muted-foreground">{typo.name}</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(typo.name, typo.code)}
+                          className="text-xs"
+                        >
+                          {copiedComponent === typo.name ? (
+                            <>
+                              <Check className="h-3 w-3 mr-1" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <div className="p-4 border rounded-lg bg-muted/30">
+                        {typo.element}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Color Palette Section */}
+        {(!searchTerm || "color".includes(searchTerm.toLowerCase()) || "palette".includes(searchTerm.toLowerCase())) && (
+          <div className="mb-12">
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Color Palette</CardTitle>
+                    <Badge variant="outline" className="mt-1">
+                      Design System
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {colorPalette.map((group) => (
+                    <div key={group.name} className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">{group.name}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {group.colors.map((color) => (
+                          <div key={color.name} className="flex items-center gap-3">
+                            <div className={`w-16 h-16 rounded-lg border ${color.class} ${color.text} flex items-center justify-center text-xs font-medium`}>
+                              Aa
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{color.name}</p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(color.name, color.class)}
+                                className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto"
+                              >
+                                {copiedComponent === color.name ? "Copied!" : color.class}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Category Filter Badges */}
         <div className="mb-8">
           <div className="flex flex-wrap gap-2">
             <Badge
@@ -745,7 +972,7 @@ export default function ComponentsPage() {
           ))}
         </div>
 
-        {filteredComponents.length === 0 && (
+        {filteredComponents.length === 0 && searchTerm && !["typography", "color", "palette"].some(term => searchTerm.toLowerCase().includes(term)) && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No components found matching your search.</p>
           </div>

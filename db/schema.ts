@@ -47,6 +47,23 @@ export const listDesigners = pgTable("list_designers", {
   addedAt: timestamp("added_at").defaultNow(),
 });
 
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  title: text("title"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
+  role: text("role").notNull(), // 'user' or 'assistant'
+  content: text("content").notNull(),
+  recommendations: jsonb("recommendations"), // Store match recommendations
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const designerRelations = relations(designers, ({ one }) => ({
   user: one(users, {
     fields: [designers.userId],
@@ -71,6 +88,15 @@ export const listDesignerRelations = relations(listDesigners, ({ one }) => ({
     fields: [listDesigners.designerId],
     references: [designers.id],
   }),
+}));
+
+export const conversationRelations = relations(conversations, ({ one, many }) => ({
+  user: one(users, { fields: [conversations.userId], references: [users.id] }),
+  messages: many(messages),
+}));
+
+export const messageRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, { fields: [messages.conversationId], references: [conversations.id] }),
 }));
 
 export const insertUserSchema = createInsertSchema(users);

@@ -1,53 +1,41 @@
-import { useState } from "react";
-import { useMatchmaker, type MatchRecommendation } from "@/hooks/use-matchmaker";
+import { useState, useEffect } from "react";
+import { useCreateConversation, useConversation } from "@/hooks/use-conversations";
 import { useCreateList } from "@/hooks/use-lists";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, DollarSign, Clock } from "lucide-react";
-import { Link } from "wouter";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, MessageSquare, Plus, ExternalLink, Mail, MapPin } from "lucide-react";
 import Navigation from "../components/Navigation";
+import ChatInterface from "../components/ChatInterface";
+import type { SelectDesigner } from "@db/schema";
 
-export default function MatchmakerPage() {
-  const [roleDescription, setRoleDescription] = useState("");
-  const [recommendations, setRecommendations] = useState<MatchRecommendation[]>([]);
-  const [analysis, setAnalysis] = useState("");
+export default function MatchmakerChatPage() {
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [currentRecommendations, setCurrentRecommendations] = useState<any[]>([]);
   const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(new Set());
   const [showCreateList, setShowCreateList] = useState(false);
   const [listName, setListName] = useState("");
   const [listDescription, setListDescription] = useState("");
   
-  const matchmaker = useMatchmaker();
+  const createConversation = useCreateConversation();
+  const conversation = useConversation(conversationId);
   const createList = useCreateList();
   const { toast } = useToast();
 
-  const handleAnalyze = async () => {
-    if (!roleDescription.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a role description",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleStartConversation = async () => {
     try {
-      const result = await matchmaker.mutateAsync(roleDescription);
-      setRecommendations(result.recommendations);
-      setAnalysis(result.analysis);
-      setSelectedDesigners(new Set());
+      const newConversation = await createConversation.mutateAsync("Designer Matching Session");
+      setConversationId(newConversation.id);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to analyze role",
+        description: error.message || "Failed to start conversation",
         variant: "destructive",
       });
     }
@@ -115,104 +103,101 @@ export default function MatchmakerPage() {
     return "bg-orange-400";
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
-      <div className={`flex transition-all duration-300 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
-        <div className="flex-1 container mx-auto px-4 pt-24 pb-8 max-w-4xl">
+  if (!conversationId) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        
+        <div className="container mx-auto px-4 pt-24 pb-8 max-w-4xl">
           <div className="text-center space-y-6 mb-8">
             <h1 className="text-4xl font-bold tracking-tight">AI Design Matchmaker</h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Paste your role description and let AI find the perfect designer matches from your database
+              Have a conversation with AI to find the perfect designer matches from your database
             </p>
-            <div className="flex gap-4 justify-center">
-              <Button variant="outline" asChild>
-                <Link href="/chat">Try Chat Interface</Link>
-              </Button>
-            </div>
           </div>
 
           <Card className="shadow-lg">
-            <CardHeader className="pb-6">
-              <CardTitle className="text-2xl">Role Description</CardTitle>
+            <CardHeader className="text-center pb-6">
+              <CardTitle className="text-2xl flex items-center justify-center gap-2">
+                <MessageSquare className="h-6 w-6" />
+                Start New Conversation
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="role-description" className="text-base font-medium">
-                  Describe the role, project, or ideal candidate
-                </Label>
-                <Textarea
-                  id="role-description"
-                  placeholder="We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus..."
-                  value={roleDescription}
-                  onChange={(e) => setRoleDescription(e.target.value)}
-                  rows={6}
-                  className="resize-none text-base leading-relaxed"
-                />
-              </div>
+            <CardContent className="text-center space-y-6">
+              <p className="text-muted-foreground">
+                Start a conversation with our AI recruiter to find designers that match your specific needs. 
+                The AI will ask follow-up questions to better understand your requirements and provide 
+                tailored recommendations.
+              </p>
               
               <Button
-                onClick={handleAnalyze}
-                disabled={matchmaker.isPending || !roleDescription.trim()}
-                className="w-full h-12 text-base font-medium"
+                onClick={handleStartConversation}
+                disabled={createConversation.isPending}
                 size="lg"
+                className="w-full max-w-md"
               >
-                {matchmaker.isPending ? (
+                {createConversation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing with AI...
+                    Starting conversation...
                   </>
                 ) : (
-                  "Find Matches"
+                  <>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Start Conversation
+                  </>
                 )}
               </Button>
             </CardContent>
           </Card>
+        </div>
+      </div>
+    );
+  }
 
-          {analysis && (
-            <Card className="shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Star className="h-5 w-5 text-primary" />
-                  AI Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed text-base">{analysis}</p>
-              </CardContent>
-            </Card>
-          )}
+  if (!conversation.data) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading conversation...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-          {recommendations.length === 0 && analysis && (
-            <Card className="shadow-lg">
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground text-lg">No suitable matches found for this role description.</p>
-                <p className="text-sm text-muted-foreground mt-2">Try adjusting your requirements or adding more designers to your database.</p>
-              </CardContent>
-            </Card>
-          )}
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      
+      <div className={`flex transition-all duration-300 ${currentRecommendations.length > 0 ? 'pr-96' : ''}`}>
+        <div className="flex-1 flex flex-col h-screen pt-16">
+          <div className="flex-1">
+            <ChatInterface 
+              conversation={conversation.data}
+              onRecommendationsChange={setCurrentRecommendations}
+            />
+          </div>
         </div>
 
         {/* Recommendations Sidebar */}
-        {recommendations.length > 0 && (
+        {currentRecommendations.length > 0 && (
           <div className="fixed right-0 top-16 bottom-0 w-96 bg-background border-l border-border shadow-lg z-30 flex flex-col">
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-sm text-muted-foreground uppercase tracking-wide font-medium">Results</p>
                   <h2 className="text-xl font-semibold">
-                    {recommendations.length} Matches
+                    {currentRecommendations.length} Matches
                   </h2>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setRecommendations([]);
-                    setAnalysis("");
-                    setSelectedDesigners(new Set());
-                  }}
+                  onClick={() => setCurrentRecommendations([])}
                   className="h-8 w-8 p-0"
                 >
                   ×
@@ -222,7 +207,7 @@ export default function MatchmakerPage() {
 
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-4">
-                {recommendations.map((recommendation) => {
+                {currentRecommendations.map((recommendation) => {
                   const { designer, matchScore, reasoning, matchedSkills, concerns } = recommendation;
                   const isSelected = selectedDesigners.has(designer.id);
 
@@ -346,7 +331,7 @@ export default function MatchmakerPage() {
                           id="list-description"
                           value={listDescription}
                           onChange={(e) => setListDescription(e.target.value)}
-                          placeholder="Candidates for our B2B SaaS product designer role..."
+                          placeholder="Candidates from AI matchmaker conversation..."
                           rows={3}
                         />
                       </div>

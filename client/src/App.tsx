@@ -8,6 +8,7 @@ import DirectoryPage from "./pages/DirectoryPage";
 import DesignerDetailsPage from "./pages/DesignerDetailsPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
+import MatchmakerChatPage from "./pages/MatchmakerChatPage";
 import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
 import AdminPage from "./pages/AdminPage";
@@ -50,6 +51,7 @@ function App() {
               <>
                 <Route path="/" component={MatchmakerPage} />
                 <Route path="/matchmaker" component={MatchmakerPage} />
+        <Route path="/chat" component={MatchmakerChatPage} />
                 <Route path="/directory" component={DirectoryPage} />
                 <Route path="/designer/:id" component={DesignerDetailsPage} />
                 <Route path="/lists" component={ListsPage} />

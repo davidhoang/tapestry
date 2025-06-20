@@ -140,6 +140,7 @@ export default function ComponentsPage() {
     {
       name: "Warm Neutrals", 
       colors: [
+        { name: "Nav Cream (#FFF0EC)", class: "bg-nav-cream border", text: "text-gray-800" },
         { name: "Soft Cream", class: "bg-[#FBF8F3] border", text: "text-gray-800" },
         { name: "Warm Neutral", class: "bg-[#F5F2ED] border", text: "text-gray-800" },
         { name: "Muted Tan", class: "bg-[#E6D5B7]", text: "text-gray-800" },

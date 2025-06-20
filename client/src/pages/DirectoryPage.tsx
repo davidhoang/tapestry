@@ -126,15 +126,6 @@ export default function DirectoryPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
           <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => {
-                setEnrichmentDesigner(null);
-                setShowEnrichment(true);
-              }}
-            >
-              AI Enrich New
-            </Button>
             {selectedIds.length > 0 && (
               <>
                 <Button 

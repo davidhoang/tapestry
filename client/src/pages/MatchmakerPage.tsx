@@ -193,12 +193,15 @@ export default function MatchmakerPage() {
 
         {/* Recommendations Sidebar */}
         {recommendations.length > 0 && (
-          <div className="fixed right-0 top-0 bottom-0 w-96 bg-background border-l border-border shadow-lg z-40 overflow-y-auto">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">
-                  Matches ({recommendations.length})
-                </h2>
+          <div className="fixed right-0 top-0 bottom-0 w-96 bg-background border-l border-border shadow-lg z-40 flex flex-col">
+            <div className="p-6 border-b border-border">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wide font-medium">Results</p>
+                  <h2 className="text-xl font-semibold">
+                    {recommendations.length} Matches
+                  </h2>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -212,65 +215,9 @@ export default function MatchmakerPage() {
                   ×
                 </Button>
               </div>
+            </div>
 
-              {selectedDesigners.size > 0 && (
-                <div className="flex gap-2">
-                  <Dialog open={showCreateList} onOpenChange={setShowCreateList}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="flex-1">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create List ({selectedDesigners.size})
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Create Designer List</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="list-name">List Name</Label>
-                          <Input
-                            id="list-name"
-                            value={listName}
-                            onChange={(e) => setListName(e.target.value)}
-                            placeholder="Senior Product Designer Candidates"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="list-description">Description (Optional)</Label>
-                          <Textarea
-                            id="list-description"
-                            value={listDescription}
-                            onChange={(e) => setListDescription(e.target.value)}
-                            placeholder="Candidates for our B2B SaaS product designer role..."
-                            rows={3}
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowCreateList(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={handleCreateList}
-                            disabled={createList.isPending}
-                          >
-                            {createList.isPending ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Plus className="mr-2 h-4 w-4" />
-                            )}
-                            Create List
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
-
+            <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-4">
                 {recommendations.map((recommendation) => {
                   const { designer, matchScore, reasoning, matchedSkills, concerns } = recommendation;
@@ -365,6 +312,65 @@ export default function MatchmakerPage() {
                 })}
               </div>
             </div>
+
+            {/* Floating Create List Button */}
+            {selectedDesigners.size > 0 && (
+              <div className="p-6 border-t border-border bg-background">
+                <Dialog open={showCreateList} onOpenChange={setShowCreateList}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create List ({selectedDesigners.size})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create Designer List</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="list-name">List Name</Label>
+                        <Input
+                          id="list-name"
+                          value={listName}
+                          onChange={(e) => setListName(e.target.value)}
+                          placeholder="Senior Product Designer Candidates"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="list-description">Description (Optional)</Label>
+                        <Textarea
+                          id="list-description"
+                          value={listDescription}
+                          onChange={(e) => setListDescription(e.target.value)}
+                          placeholder="Candidates for our B2B SaaS product designer role..."
+                          rows={3}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowCreateList(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleCreateList}
+                          disabled={createList.isPending}
+                        >
+                          {createList.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="mr-2 h-4 w-4" />
+                          )}
+                          Create List
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </div>
         )}
       </div>

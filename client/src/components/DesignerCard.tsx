@@ -109,6 +109,7 @@ export default function DesignerCard({
                   <p className="text-sm text-muted-foreground truncate">
                     {designer.title}{designer.company ? ` at ${designer.company}` : ''}
                   </p>
+                  <p className="text-sm text-muted-foreground truncate">{designer.location}</p>
                 </div>
               </div>
             </div>
@@ -116,11 +117,6 @@ export default function DesignerCard({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <div className="flex items-center space-x-2 text-sm">
-              <span className="text-muted-foreground">{designer.company}</span>
-              <span className="text-muted-foreground">•</span>
-              <span className="text-muted-foreground">{designer.location}</span>
-            </div>
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
                 {displayedSkills.map((skill, i) => (

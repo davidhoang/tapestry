@@ -104,8 +104,8 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
           <DialogTitle>Onboarding</DialogTitle>
         </VisuallyHidden>
         
-        {/* Header with skip and close buttons */}
-        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
+        {/* Header with skip button */}
+        <div className="absolute top-4 left-4 z-10">
           <Button
             variant="ghost"
             size="sm"
@@ -113,14 +113,6 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
             className="text-muted-foreground hover:text-foreground"
           >
             Skip
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={skipOnboarding}
-            className="h-8 w-8 p-0 rounded-full hover:bg-muted"
-          >
-            <X className="h-4 w-4" />
           </Button>
         </div>
 

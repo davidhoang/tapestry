@@ -60,7 +60,7 @@ function App() {
                 <Route path="/matchmaker" component={MatchmakerPage} />
         <Route path="/chat" component={MatchmakerChatPage} />
                 <Route path="/directory" component={DirectoryPage} />
-                <Route path="/designer/:id" component={DesignerDetailsPage} />
+                <Route path="/designer/:slug" component={DesignerDetailsPage} />
                 <Route path="/lists" component={ListsPage} />
                 <Route path="/profile" component={ProfilePage} />
                 <Route path="/components" component={ComponentsPage} />

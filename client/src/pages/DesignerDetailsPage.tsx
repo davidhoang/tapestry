@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X } from "lucide-react";
 import { MarkdownPreview } from "@/components/ui/markdown-preview";
-import { useDesigner } from "@/hooks/use-designers";
+import { useDesignerBySlug } from "@/hooks/use-designers";
 import { useState, useRef } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
 import { useForm } from "react-hook-form";
@@ -30,7 +30,7 @@ const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt
 type FormData = z.infer<typeof formSchema>;
 
 export default function DesignerDetailsPage() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
@@ -38,7 +38,7 @@ export default function DesignerDetailsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  const { data: designer, isLoading, error } = useDesigner(parseInt(id || "0"));
+  const { data: designer, isLoading, error } = useDesignerBySlug(slug || "");
   const updateDesigner = useUpdateDesigner();
 
   const form = useForm<FormData>({

@@ -13,3 +13,10 @@ export function useDesigner(id: number) {
     enabled: !!id && id > 0,
   });
 }
+
+export function useDesignerBySlug(slug: string) {
+  return useQuery<SelectDesigner>({
+    queryKey: [`/api/designers/slug/${slug}`],
+    enabled: !!slug && slug.length > 0,
+  });
+}

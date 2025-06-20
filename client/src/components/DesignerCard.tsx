@@ -7,6 +7,7 @@ import { Pencil, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { getDesignerCoverImage } from "@/utils/coverImages";
+import { slugify } from "@/utils/slugify";
 
 interface DesignerCardProps {
   designer: SelectDesigner;
@@ -40,7 +41,7 @@ export default function DesignerCard({
     <>
       <Card 
         className="h-full relative cursor-pointer hover:shadow-md transition-shadow group overflow-hidden"
-        onClick={() => setLocation(`/designer/${designer.id}`)}
+        onClick={() => setLocation(`/designer/${slugify(designer.name)}`)}
       >
         {/* Cover Image */}
         <div className="relative h-16 overflow-hidden">

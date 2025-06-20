@@ -73,6 +73,8 @@ export default function DirectoryPage() {
   const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showAddToListDialog, setShowAddToListDialog] = useState(false);
+  const [showEnrichment, setShowEnrichment] = useState(false);
+  const [enrichmentDesigner, setEnrichmentDesigner] = useState<SelectDesigner | null>(null);
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
 
@@ -123,6 +125,16 @@ export default function DirectoryPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
           <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setEnrichmentDesigner(null);
+                setShowEnrichment(true);
+              }}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              AI Enrich New
+            </Button>
             {selectedIds.length > 0 && (
               <>
                 <Button 
@@ -200,6 +212,10 @@ export default function DirectoryPage() {
                 <DesignerCard 
                   designer={designer} 
                   onEdit={setDesignerToEdit}
+                  onEnrich={(designer) => {
+                    setEnrichmentDesigner(designer);
+                    setShowEnrichment(true);
+                  }}
                 />
               </div>
             ))}

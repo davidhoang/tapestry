@@ -1150,7 +1150,10 @@ If you're asking questions or don't have enough info yet, don't include the MATC
   }));
 
   // Profile enrichment endpoints
-  app.post("/api/designers/:id/enrich", requireAuth, async (req, res) => {
+  app.post("/api/designers/:id/enrich", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     try {
       const { id } = req.params;
       
@@ -1193,7 +1196,10 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   });
 
-  app.post("/api/designers/enrich-new", requireAuth, async (req, res) => {
+  app.post("/api/designers/enrich-new", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     try {
       const { name } = req.body;
 
@@ -1215,7 +1221,10 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   });
 
-  app.post("/api/designers/:id/apply-enrichment", requireAuth, async (req, res) => {
+  app.post("/api/designers/:id/apply-enrichment", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     try {
       const { id } = req.params;
       const enrichmentData: DesignerEnrichmentData = req.body;
@@ -1256,7 +1265,10 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   });
 
-  app.post("/api/designers/generate-skills", requireAuth, async (req, res) => {
+  app.post("/api/designers/generate-skills", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     try {
       const { bio, experience } = req.body;
 

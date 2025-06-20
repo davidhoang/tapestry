@@ -35,8 +35,9 @@ import {
 } from "@/components/ui/select";
 import MDEditor from "@uiw/react-md-editor";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, ListPlus } from "lucide-react";
+import { Loader2, Plus, Trash, ListPlus, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import EnrichmentDialog from "@/components/EnrichmentDialog";
 import { SelectDesigner } from "@db/schema";
 
 const EXPERIENCE_LEVELS = [
@@ -259,6 +260,16 @@ export default function DirectoryPage() {
           onOpenChange={setShowAddToListDialog}
           designerIds={selectedIds}
           onSuccess={() => setSelectedIds([])}
+        />
+
+        <EnrichmentDialog
+          open={showEnrichment}
+          onOpenChange={setShowEnrichment}
+          designer={enrichmentDesigner}
+          onSuccess={() => {
+            setShowEnrichment(false);
+            setEnrichmentDesigner(null);
+          }}
         />
       </div>
     </div>

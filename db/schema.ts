@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   username: text("username").unique(),
   profilePhotoUrl: text("profile_photo_url"),
   isAdmin: boolean("is_admin").default(false),
+  hasCompletedOnboarding: boolean("has_completed_onboarding").default(false),
+  onboardingDebugMode: boolean("onboarding_debug_mode").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

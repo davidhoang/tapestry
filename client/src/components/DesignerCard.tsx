@@ -6,6 +6,7 @@ import { SelectDesigner } from "@db/schema";
 import { Pencil, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { getDesignerCoverImage } from "@/utils/coverImages";
 
 interface DesignerCardProps {
   designer: SelectDesigner;
@@ -38,37 +39,47 @@ export default function DesignerCard({
   return (
     <>
       <Card 
-        className="h-full relative cursor-pointer hover:shadow-md transition-shadow group"
+        className="h-full relative cursor-pointer hover:shadow-md transition-shadow group overflow-hidden"
         onClick={() => setLocation(`/designer/${designer.id}`)}
       >
-        {/* Top-left checkbox */}
-        {showCheckbox && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggleSelect?.(designer.id);
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            className="absolute top-4 left-4 z-10 w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2 cursor-pointer"
+        {/* Cover Image */}
+        <div className="relative h-24 overflow-hidden">
+          <img 
+            src={getDesignerCoverImage(designer.id)} 
+            alt="Cover"
+            className="w-full h-full object-cover"
           />
-        )}
-        
-        {/* Top-right edit button - only visible on hover */}
-        {onEdit && (
-          <button
-            className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-secondary rounded-md"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(designer);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-        )}
+          <div className="absolute inset-0 bg-black/20" />
+          
+          {/* Top-left checkbox */}
+          {showCheckbox && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleSelect?.(designer.id);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className="absolute top-3 left-3 z-10 w-4 h-4 text-primary bg-white border-2 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer shadow-sm"
+            />
+          )}
+          
+          {/* Top-right edit button - only visible on hover */}
+          {onEdit && (
+            <button
+              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20 rounded-md backdrop-blur-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(designer);
+              }}
+            >
+              <Pencil className="h-4 w-4 text-white" />
+            </button>
+          )}
+        </div>
         
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4">

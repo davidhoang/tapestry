@@ -22,12 +22,8 @@ export default function MatchmakerPage() {
   const [listName, setListName] = useState("");
   const [listDescription, setListDescription] = useState("");
   
-  // Random background image selection
-  const [backgroundImage] = useState(() => {
-    const imageCount = 18; // We have img-cover-1.png through img-cover-18.png
-    const randomNumber = Math.floor(Math.random() * imageCount) + 1;
-    return `/images/card-covers/img-cover-${randomNumber}.png`;
-  });
+  // Use consistent background image
+  const backgroundImage = '/images/bg.jpeg';
 
   // Random prompt examples
   const [currentPrompt, setCurrentPrompt] = useState(0);

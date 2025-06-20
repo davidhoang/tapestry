@@ -28,7 +28,7 @@ export default function Navigation() {
 
   return (
     <nav className="border-b border-white/20 bg-black fixed top-0 left-0 right-0 z-50">
-      <div className="container flex h-14 max-w-screen-2xl items-center justify-between px-4 mx-auto">
+      <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 mx-auto">
         <div className="flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <span className="font-bold text-white">Design Talent Match</span>

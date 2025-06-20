@@ -119,7 +119,7 @@ export default function MatchmakerPage() {
       <Navigation />
       
       <div className={`flex transition-all duration-300 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
-        <div className="flex-1 container mx-auto px-4 pt-20 pb-8 space-y-8">
+        <div className="flex-1 container mx-auto px-4 pt-24 pb-8 space-y-8">
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-2">
               <Brain className="h-8 w-8 text-primary" />
@@ -193,7 +193,7 @@ export default function MatchmakerPage() {
 
         {/* Recommendations Sidebar */}
         {recommendations.length > 0 && (
-          <div className="fixed right-0 top-0 bottom-0 w-96 bg-background border-l border-border shadow-lg z-40 flex flex-col">
+          <div className="fixed right-0 top-16 bottom-0 w-96 bg-background border-l border-border shadow-lg z-30 flex flex-col">
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between mb-2">
                 <div>

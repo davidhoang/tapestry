@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useUser } from "../hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +94,7 @@ export default function ProfilePage() {
   const userWorkspace = workspaces?.[0];
 
   // Set workspace name when data loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (userWorkspace?.name && workspaceName === "") {
       setWorkspaceName(userWorkspace.name);
     }

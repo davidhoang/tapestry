@@ -15,6 +15,7 @@ import express from "express";
 import { sql } from "drizzle-orm";
 import { Client } from "@replit/object-storage";
 import OpenAI from "openai";
+const pdfParse = require("pdf-parse");
 
 // Initialize Object Storage client
 const objectStorage = new Client();
@@ -51,6 +52,21 @@ const csvUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Invalid file type. Only CSV files are allowed.'));
+    }
+  },
+});
+
+// Configure multer for PDF uploads
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for PDF files
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF files are allowed.'));
     }
   },
 });
@@ -1536,6 +1552,220 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to process CSV file'
+      });
+    }
+  }));
+
+  // PDF processing route for LinkedIn exports
+  app.post("/api/import/pdf/process", requireAdmin, pdfUpload.single('pdf'), withErrorHandler(async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No PDF file uploaded" });
+    }
+
+    try {
+      const pdfBuffer = req.file.buffer;
+      
+      // Parse PDF text content
+      const pdfData = await pdfParse(pdfBuffer);
+      const textContent = pdfData.text;
+      const totalPages = pdfData.numpages;
+
+      // Use OpenAI to extract contact information from the PDF text
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert at extracting contact information from LinkedIn export PDFs. 
+            
+            Your task is to parse the text content and extract individual contact profiles. Look for patterns that indicate LinkedIn profiles such as:
+            - Names (usually the first line or prominently displayed)
+            - Job titles and companies
+            - Locations
+            - LinkedIn profile URLs
+            - Skills and experience information
+            - Contact information (emails, phone numbers)
+            
+            Return a JSON array of contacts with the following structure:
+            {
+              "contacts": [
+                {
+                  "name": "Full Name",
+                  "title": "Job Title",
+                  "company": "Company Name",
+                  "location": "City, State/Country",
+                  "email": "email@example.com",
+                  "linkedIn": "linkedin.com/in/profile",
+                  "skills": ["skill1", "skill2", "skill3"],
+                  "experience": "Brief experience summary",
+                  "confidence": 0.85
+                }
+              ]
+            }
+            
+            - Set confidence between 0-1 based on how complete the information is
+            - Only include contacts where you have at least a name and title
+            - Extract skills from job descriptions and experience sections
+            - Be conservative with confidence scores - only use 0.8+ for very complete profiles
+            - If you can't extract meaningful contact information, return an empty array`
+          },
+          {
+            role: "user",
+            content: `Please extract contact information from this LinkedIn export PDF content:\n\n${textContent}`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 4000,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content;
+      if (!aiResponse) {
+        throw new Error("No response from AI");
+      }
+
+      let extractedContacts = [];
+      let errors: string[] = [];
+
+      try {
+        // Clean the response to extract JSON
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[0];
+          const parsed = JSON.parse(jsonStr);
+          extractedContacts = parsed.contacts || [];
+        } else {
+          throw new Error("No valid JSON found in response");
+        }
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        errors.push("Failed to parse extracted contact information");
+      }
+
+      // Validate and clean contacts
+      const validContacts = extractedContacts
+        .filter((contact: any) => contact.name && contact.title)
+        .map((contact: any) => ({
+          name: contact.name.trim(),
+          title: contact.title?.trim() || '',
+          company: contact.company?.trim() || null,
+          location: contact.location?.trim() || null,
+          email: contact.email?.trim() || null,
+          linkedIn: contact.linkedIn?.trim() || null,
+          skills: Array.isArray(contact.skills) ? contact.skills.slice(0, 10) : [],
+          experience: contact.experience?.trim() || null,
+          confidence: Math.min(Math.max(contact.confidence || 0.5, 0), 1)
+        }));
+
+      const result = {
+        success: validContacts.length > 0 || errors.length === 0,
+        contacts: validContacts,
+        totalPages,
+        errors: errors.length > 0 ? errors : undefined,
+        message: validContacts.length === 0 ? "No contacts could be extracted from the PDF" : undefined
+      };
+
+      res.json(result);
+
+    } catch (error: any) {
+      console.error('PDF processing error:', error);
+      res.status(500).json({ 
+        error: "Failed to process PDF file",
+        details: error.message 
+      });
+    }
+  }));
+
+  // PDF import route - imports processed contacts into database
+  app.post("/api/import/pdf/import", requireAdmin, withErrorHandler(async (req, res) => {
+    const { contacts } = req.body;
+
+    if (!contacts || !Array.isArray(contacts)) {
+      return res.status(400).json({ error: "Invalid contacts data" });
+    }
+
+    try {
+      const results = {
+        success: true,
+        imported: 0,
+        skipped: 0,
+        errors: [] as Array<{ contact: string; error: string }>,
+      };
+
+      for (const contact of contacts) {
+        try {
+          // Check if designer already exists by email or name+company
+          let existingDesigner = null;
+          
+          if (contact.email) {
+            existingDesigner = await db.query.designers.findFirst({
+              where: and(
+                eq(designers.email, contact.email),
+                eq(designers.userId, req.user.id)
+              ),
+            });
+          }
+          
+          if (!existingDesigner && contact.name && contact.company) {
+            existingDesigner = await db.query.designers.findFirst({
+              where: and(
+                eq(designers.name, contact.name),
+                eq(designers.company, contact.company),
+                eq(designers.userId, req.user.id)
+              ),
+            });
+          }
+
+          if (existingDesigner) {
+            results.skipped++;
+            continue;
+          }
+
+          // Determine level based on title
+          let level = 'Mid-level';
+          const titleLower = contact.title.toLowerCase();
+          if (titleLower.includes('senior') || titleLower.includes('lead') || titleLower.includes('principal')) {
+            level = 'Senior';
+          } else if (titleLower.includes('junior') || titleLower.includes('intern') || titleLower.includes('entry')) {
+            level = 'Junior';
+          } else if (titleLower.includes('director') || titleLower.includes('vp') || titleLower.includes('head')) {
+            level = 'Director';
+          }
+
+          // Create designer record
+          const designerData = {
+            name: contact.name,
+            title: contact.title,
+            email: contact.email || `${contact.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+            level,
+            company: contact.company,
+            location: contact.location,
+            website: null,
+            linkedIn: contact.linkedIn,
+            skills: contact.skills?.join(', ') || null,
+            bio: contact.experience,
+            available: true,
+            notes: `Imported from LinkedIn PDF - Confidence: ${Math.round(contact.confidence * 100)}%`,
+            userId: req.user.id,
+          };
+
+          await db.insert(designers).values(designerData);
+          results.imported++;
+
+        } catch (error: any) {
+          results.errors.push({
+            contact: contact.name,
+            error: error.message
+          });
+        }
+      }
+
+      res.json(results);
+
+    } catch (error: any) {
+      console.error('PDF import error:', error);
+      res.status(500).json({ 
+        error: "Failed to import contacts",
+        details: error.message 
       });
     }
   }));

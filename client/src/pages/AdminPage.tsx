@@ -15,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import CsvImport from "@/components/CsvImport";
+import PdfImport from "@/components/PdfImport";
 import AdminRoute from "@/components/AdminRoute";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { Switch } from "@/components/ui/switch";
@@ -306,6 +307,7 @@ export default function AdminPage() {
           <TabsList>
             <TabsTrigger value="database">Database</TabsTrigger>
             <TabsTrigger value="import">CSV Import</TabsTrigger>
+            <TabsTrigger value="pdf-import">PDF Import</TabsTrigger>
             <TabsTrigger value="invites">Alpha Invites</TabsTrigger>
             <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
           </TabsList>
@@ -403,6 +405,10 @@ export default function AdminPage() {
 
           <TabsContent value="import">
             <CsvImport />
+          </TabsContent>
+
+          <TabsContent value="pdf-import">
+            <PdfImport />
           </TabsContent>
 
           <TabsContent value="invites">

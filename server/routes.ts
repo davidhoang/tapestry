@@ -39,6 +39,21 @@ const upload = multer({
   },
 });
 
+// Configure multer for CSV uploads
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit for CSV files
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV files are allowed.'));
+    }
+  },
+});
+
 // Middleware to check if user is admin
 const requireAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {

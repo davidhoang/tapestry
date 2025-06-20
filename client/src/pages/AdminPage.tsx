@@ -8,7 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Database, Play, AlertCircle, CheckCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Database, Play, AlertCircle, CheckCircle, Upload } from "lucide-react";
+import CsvImport from "@/components/CsvImport";
+import AdminRoute from "@/components/AdminRoute";
 
 interface QueryResult {
   success: boolean;
@@ -158,102 +161,115 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container mx-auto pt-20 pb-8 px-4 max-w-6xl">
-      <div className="flex items-center gap-2 mb-8">
-        <Database className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Database Admin</h1>
-      </div>
+    <AdminRoute>
+      <div className="container mx-auto pt-20 pb-8 px-4 max-w-6xl">
+        <div className="flex items-center gap-2 mb-8">
+          <Database className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        </div>
 
-      <div className="grid gap-6">
-        {/* Tables Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Database Tables</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tablesLoading ? (
-              <div>Loading tables...</div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {tables && tables.length > 0 ? (
-                  tables.map((table: any, index: number) => (
-                    <Badge key={table.table_name || index} variant="outline">
-                      {table.table_name || 'Unknown Table'}
-                    </Badge>
-                  ))
+        <Tabs defaultValue="database" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="database">Database</TabsTrigger>
+            <TabsTrigger value="import">CSV Import</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="database" className="grid gap-6">
+            {/* Tables Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Database Tables</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tablesLoading ? (
+                  <div>Loading tables...</div>
                 ) : (
-                  <div className="text-muted-foreground">No tables found</div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Common Queries */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Queries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2">
-              {getCommonQueries().map((queryItem, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="justify-start h-auto p-3 text-left"
-                  onClick={() => setQuery(queryItem.query)}
-                >
-                  <div>
-                    <div className="font-medium">{queryItem.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {queryItem.query.slice(0, 100)}...
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    {tables && tables.length > 0 ? (
+                      tables.map((table: any, index: number) => (
+                        <Badge key={table.table_name || index} variant="outline">
+                          {table.table_name || 'Unknown Table'}
+                        </Badge>
+                      ))
+                    ) : (
+                      <div className="text-muted-foreground">No tables found</div>
+                    )}
                   </div>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Query Editor */}
-        <Card>
-          <CardHeader>
-            <CardTitle>SQL Query Editor</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Enter your SQL query here..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                rows={6}
-                className="font-mono text-sm"
-              />
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-muted-foreground">
-                  Supported operations: SELECT, INSERT, UPDATE, DELETE
+            {/* Common Queries */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Queries</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2">
+                  {getCommonQueries().map((queryItem, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className="justify-start h-auto p-3 text-left"
+                      onClick={() => setQuery(queryItem.query)}
+                    >
+                      <div>
+                        <div className="font-medium">{queryItem.name}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {queryItem.query.slice(0, 100)}...
+                        </div>
+                      </div>
+                    </Button>
+                  ))}
                 </div>
-                <Button 
-                  onClick={handleExecuteQuery}
-                  disabled={!query.trim() || executeQuery.isPending}
-                  className="flex items-center gap-2"
-                >
-                  <Play className="h-4 w-4" />
-                  {executeQuery.isPending ? "Executing..." : "Execute Query"}
-                </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <Separator />
+            {/* Query Editor */}
+            <Card>
+              <CardHeader>
+                <CardTitle>SQL Query Editor</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="Enter your SQL query here..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    rows={6}
+                    className="font-mono text-sm"
+                  />
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">
+                      Supported operations: SELECT, INSERT, UPDATE, DELETE
+                    </div>
+                    <Button 
+                      onClick={handleExecuteQuery}
+                      disabled={!query.trim() || executeQuery.isPending}
+                      className="flex items-center gap-2"
+                    >
+                      <Play className="h-4 w-4" />
+                      {executeQuery.isPending ? "Executing..." : "Execute Query"}
+                    </Button>
+                  </div>
+                </div>
 
-            {/* Results */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Results</h3>
-              {renderResults()}
-            </div>
-          </CardContent>
-        </Card>
+                <Separator />
+
+                {/* Results */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Results</h3>
+                  {renderResults()}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="import">
+            <CsvImport />
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </AdminRoute>
   );
 }

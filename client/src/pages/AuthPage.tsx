@@ -11,7 +11,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
@@ -20,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 type AuthFormData = {
   email: string;
   password: string;
-  rememberMe?: boolean;
 };
 
 export default function AuthPage() {
@@ -55,7 +53,6 @@ function LoginForm() {
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: false,
     },
   });
 
@@ -107,25 +104,6 @@ function LoginForm() {
                 <Input type="password" {...field} />
               </FormControl>
               <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="rememberMe"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="text-sm font-normal">
-                  Remember me for 30 days
-                </FormLabel>
-              </div>
             </FormItem>
           )}
         />

@@ -10,9 +10,10 @@ interface DesignerCardProps {
   onEdit?: (designer: SelectDesigner) => void;
   onAdd?: (designer: SelectDesigner) => void;
   onSkillClick?: (skill: string) => void;
+  onEnrich?: (designer: SelectDesigner) => void;
 }
 
-export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick }: DesignerCardProps) {
+export default function DesignerCard({ designer, onEdit, onAdd, onSkillClick, onEnrich }: DesignerCardProps) {
   const [, setLocation] = useLocation();
 
   return (

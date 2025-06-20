@@ -1149,6 +1149,129 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   }));
 
+  // Profile enrichment endpoints
+  app.post("/api/designers/:id/enrich", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get existing designer data
+      const designer = await db.query.designers.findFirst({
+        where: and(eq(designers.id, parseInt(id)), eq(designers.userId, req.user!.id))
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Prepare existing data for enrichment
+      const existingData = {
+        name: designer.name,
+        title: designer.title || undefined,
+        company: designer.company || undefined,
+        bio: designer.bio || undefined,
+        experience: designer.experience || undefined,
+        skills: designer.skills || undefined,
+        portfolioUrl: designer.portfolioUrl || undefined,
+        email: designer.email || undefined,
+        phone: designer.phone || undefined,
+        location: designer.location || undefined,
+        availability: designer.availability || undefined,
+        rate: designer.rate || undefined
+      };
+
+      // Enrich the profile
+      const enrichmentResult = await enrichDesignerProfile(designer.name, existingData);
+
+      if (!enrichmentResult.success) {
+        return res.status(500).json({ error: enrichmentResult.error });
+      }
+
+      res.json(enrichmentResult);
+    } catch (error: any) {
+      console.error("Profile enrichment error:", error);
+      res.status(500).json({ error: error.message || "Failed to enrich profile" });
+    }
+  });
+
+  app.post("/api/designers/enrich-new", requireAuth, async (req, res) => {
+    try {
+      const { name } = req.body;
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Designer name is required" });
+      }
+
+      // Enrich the profile for a new designer
+      const enrichmentResult = await enrichDesignerProfile(name.trim());
+
+      if (!enrichmentResult.success) {
+        return res.status(500).json({ error: enrichmentResult.error });
+      }
+
+      res.json(enrichmentResult);
+    } catch (error: any) {
+      console.error("New profile enrichment error:", error);
+      res.status(500).json({ error: error.message || "Failed to enrich profile" });
+    }
+  });
+
+  app.post("/api/designers/:id/apply-enrichment", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const enrichmentData: DesignerEnrichmentData = req.body;
+
+      // Verify designer exists and belongs to user
+      const designer = await db.query.designers.findFirst({
+        where: and(eq(designers.id, parseInt(id)), eq(designers.userId, req.user!.id))
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Apply enrichment data
+      const updatedDesigner = await db.update(designers)
+        .set({
+          name: enrichmentData.name || designer.name,
+          title: enrichmentData.title || designer.title,
+          company: enrichmentData.company || designer.company,
+          bio: enrichmentData.bio || designer.bio,
+          experience: enrichmentData.experience || designer.experience,
+          skills: enrichmentData.skills || designer.skills,
+          portfolioUrl: enrichmentData.portfolioUrl || designer.portfolioUrl,
+          email: enrichmentData.email || designer.email,
+          phone: enrichmentData.phone || designer.phone,
+          location: enrichmentData.location || designer.location,
+          availability: enrichmentData.availability || designer.availability,
+          rate: enrichmentData.rate || designer.rate,
+          updatedAt: new Date()
+        })
+        .where(eq(designers.id, parseInt(id)))
+        .returning();
+
+      res.json(updatedDesigner[0]);
+    } catch (error: any) {
+      console.error("Apply enrichment error:", error);
+      res.status(500).json({ error: error.message || "Failed to apply enrichment" });
+    }
+  });
+
+  app.post("/api/designers/generate-skills", requireAuth, async (req, res) => {
+    try {
+      const { bio, experience } = req.body;
+
+      if (!bio && !experience) {
+        return res.status(400).json({ error: "Bio or experience is required" });
+      }
+
+      const skills = await generateDesignerSkills(bio || "", experience || "");
+      res.json({ skills });
+    } catch (error: any) {
+      console.error("Skills generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate skills" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

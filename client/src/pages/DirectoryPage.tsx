@@ -286,6 +286,8 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
   const createDesigner = useCreateDesigner();
   const updateDesigner = useUpdateDesigner();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
+  const [isEnrichingProfile, setIsEnrichingProfile] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(designerSchema),
@@ -554,7 +556,50 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
               name="skills"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Skills</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Skills</FormLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const currentValues = form.getValues();
+                          const bio = currentValues.notes || '';
+                          const experience = `${currentValues.title} at ${currentValues.company || 'Unknown Company'}`;
+                          
+                          const response = await fetch('/api/designers/generate-skills', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ bio, experience })
+                          });
+
+                          if (response.ok) {
+                            const { skills } = await response.json();
+                            if (skills && skills.length > 0) {
+                              const currentSkills = field.value || [];
+                              const newSkills = [...new Set([...currentSkills, ...skills])];
+                              field.onChange(newSkills);
+                              toast({
+                                title: "Skills Generated",
+                                description: `Added ${skills.length} suggested skills`,
+                              });
+                            }
+                          }
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to generate skills",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <Sparkles className="mr-1 h-3 w-3" />
+                      Suggest
+                    </Button>
+                  </div>
                   <FormControl>
                     <SkillsInput
                       value={field.value}
@@ -571,7 +616,28 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Notes</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAISuggestNotes(field)}
+                      disabled={isGeneratingNotes}
+                    >
+                      {isGeneratingNotes ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          AI Suggest
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <FormControl>
                     <MDEditor
                       value={field.value}

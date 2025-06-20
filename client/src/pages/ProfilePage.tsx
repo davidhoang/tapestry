@@ -233,45 +233,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Workspace Settings Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Workspace Settings</CardTitle>
-            <CardDescription>
-              Manage your workspace name and settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleWorkspaceSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="workspaceName">Workspace Name</Label>
-                <Input
-                  id="workspaceName"
-                  type="text"
-                  value={workspaceName}
-                  onChange={(e) => setWorkspaceName(e.target.value)}
-                  placeholder="Enter your workspace name"
-                />
-                <p className="text-sm text-muted-foreground">
-                  This name will be used in your workspace URL: /{userWorkspace?.slug || 'your-workspace'}
-                </p>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={updateWorkspaceMutation.isPending}
-              >
-                {updateWorkspaceMutation.isPending && (
-                  <Upload className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Update Workspace Name
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
+      <div className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
         {/* Profile Settings Card */}
         <Card>
           <CardHeader>
@@ -365,6 +327,44 @@ export default function ProfilePage() {
                   <Upload className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Save Profile Changes
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Workspace Settings Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Workspace Settings</CardTitle>
+            <CardDescription>
+              Manage your workspace name and settings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleWorkspaceSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="workspaceName">Workspace Name</Label>
+                <Input
+                  id="workspaceName"
+                  type="text"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  placeholder="Enter your workspace name"
+                />
+                <p className="text-sm text-muted-foreground">
+                  This name will be used in your workspace URL: /{userWorkspace?.slug || 'your-workspace'}
+                </p>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={updateWorkspaceMutation.isPending}
+              >
+                {updateWorkspaceMutation.isPending && (
+                  <Upload className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Update Workspace Name
               </Button>
             </form>
           </CardContent>

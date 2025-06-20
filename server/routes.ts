@@ -15,7 +15,6 @@ import express from "express";
 import { sql } from "drizzle-orm";
 import { Client } from "@replit/object-storage";
 import OpenAI from "openai";
-const pdfParse = require("pdf-parse");
 
 // Initialize Object Storage client
 const objectStorage = new Client();
@@ -1566,6 +1565,7 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       const pdfBuffer = req.file.buffer;
       
       // Parse PDF text content
+      const pdfParse = (await import("pdf-parse")).default;
       const pdfData = await pdfParse(pdfBuffer);
       const textContent = pdfData.text;
       const totalPages = pdfData.numpages;

@@ -426,6 +426,16 @@ export default function DesignerDetailsPage() {
                 </div>
               </div>
 
+              {/* Notes Section */}
+              {designer.notes && (
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold">About</h2>
+                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed designer-profile-text">
+                    <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
+                  </div>
+                </div>
+              )}
+
               {/* Skills Section */}
               <div className="space-y-6">
                 <h2 className="text-3xl font-bold">Skills & Expertise</h2>
@@ -440,16 +450,6 @@ export default function DesignerDetailsPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Notes Section */}
-              {designer.notes && (
-                <div className="space-y-6">
-                  <h2 className="text-3xl font-bold">About</h2>
-                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed designer-profile-text">
-                    <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
-                  </div>
-                </div>
-              )}
 
               {/* Contact Section */}
               <div className="space-y-6">

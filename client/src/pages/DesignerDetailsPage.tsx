@@ -435,13 +435,12 @@ export default function DesignerDetailsPage() {
                 <h2 className="text-3xl font-bold">Skills & Expertise</h2>
                 <div className="flex flex-wrap gap-3">
                   {designer.skills.map((skill, i) => (
-                    <Badge 
+                    <span 
                       key={i} 
-                      variant="outline" 
-                      className="text-base px-6 py-3 border-2 hover:bg-secondary/50 transition-colors"
+                      className="text-base text-muted-foreground hover:text-foreground transition-colors cursor-default"
                     >
-                      {skill}
-                    </Badge>
+                      #{skill}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -450,7 +449,7 @@ export default function DesignerDetailsPage() {
               {designer.notes && (
                 <div className="space-y-6">
                   <h2 className="text-3xl font-bold">About</h2>
-                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed">
+                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed prose-p:text-gray-700 dark:prose-p:text-gray-300">
                     <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
                   </div>
                 </div>
@@ -461,28 +460,32 @@ export default function DesignerDetailsPage() {
                 <h2 className="text-3xl font-bold">Get in Touch</h2>
                 <div className="flex flex-wrap gap-4">
                   {designer.website && (
-                    <Button variant="outline" size="lg" className="text-base px-8 py-4" asChild>
-                      <a href={designer.website} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-5 w-5 mr-3" />
-                        Website
-                      </a>
-                    </Button>
+                    <a 
+                      href={designer.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                    >
+                      <Globe className="h-5 w-5" />
+                    </a>
                   )}
                   {designer.linkedIn && (
-                    <Button variant="outline" size="lg" className="text-base px-8 py-4" asChild>
-                      <a href={designer.linkedIn} target="_blank" rel="noopener noreferrer">
-                        <Linkedin className="h-5 w-5 mr-3" />
-                        LinkedIn
-                      </a>
-                    </Button>
+                    <a 
+                      href={designer.linkedIn} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                    >
+                      <Linkedin className="h-5 w-5" />
+                    </a>
                   )}
                   {designer.email && (
-                    <Button variant="outline" size="lg" className="text-base px-8 py-4" asChild>
-                      <a href={`mailto:${designer.email}`}>
-                        <Mail className="h-5 w-5 mr-3" />
-                        Email
-                      </a>
-                    </Button>
+                    <a 
+                      href={`mailto:${designer.email}`}
+                      className="p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                    >
+                      <Mail className="h-5 w-5" />
+                    </a>
                   )}
                 </div>
               </div>

@@ -1240,7 +1240,7 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       // Send the invite email
       const emailSent = await sendEmail({
         to: email,
-        from: "hello@tapestry.com", // You can customize this
+        from: "david@davidhoang.com", // Using the same verified sender as other emails
         subject: "Invitation to Test Tapestry Alpha",
         text: finalMessage,
         html: finalMessage.replace(/\n/g, '<br>')
@@ -1252,9 +1252,15 @@ If you're asking questions or don't have enough info yet, don't include the MATC
           message: `Alpha invite successfully sent to ${email}`
         });
       } else {
-        res.status(500).json({
+        // For debugging/testing, return the email content that would have been sent
+        res.json({
           success: false,
-          error: "Failed to send email"
+          error: "Failed to send email via SendGrid (likely due to sender verification)",
+          emailPreview: {
+            to: email,
+            subject: "Invitation to Test Tapestry Alpha",
+            content: finalMessage
+          }
         });
       }
     } catch (error: any) {

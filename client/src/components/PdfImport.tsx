@@ -43,6 +43,7 @@ export default function PdfImport() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -126,6 +127,8 @@ export default function PdfImport() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setSelectedFileName(file.name);
+
     if (file.type !== 'application/pdf') {
       toast({
         title: "Invalid file type",
@@ -172,6 +175,7 @@ export default function PdfImport() {
     setProcessingResult(null);
     setImportResult(null);
     setProcessingProgress(0);
+    setSelectedFileName("");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -193,30 +197,41 @@ export default function PdfImport() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Linkedin className="h-5 w-5 text-blue-600" />
-            LinkedIn PDF Export Import
+          <CardTitle>
+            "LinkedIn" PDF Import
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert>
-            <FileText className="h-4 w-4" />
-            <AlertDescription>
-              Upload a PDF export from LinkedIn connections or search results. The system will automatically extract contact information including names, titles, companies, and LinkedIn profiles.
-            </AlertDescription>
-          </Alert>
+          <div className="text-sm text-muted-foreground">
+            Upload a PDF export from LinkedIn connections or search results. The system will automatically extract contact information including names, titles, companies, and LinkedIn profiles.
+          </div>
 
           <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="pdf-file">Upload PDF File</Label>
-              <Input
-                id="pdf-file"
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                ref={fileInputRef}
-                disabled={isProcessing}
-              />
+            <div>
+              <Label htmlFor="pdf-file" className="block mb-2">Upload PDF File</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Choose File
+                </Button>
+                <Input
+                  id="pdf-file"
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  ref={fileInputRef}
+                  disabled={isProcessing}
+                  className="hidden"
+                />
+                <span className="text-sm text-muted-foreground self-center">
+                  {selectedFileName || "No file chosen"}
+                </span>
+              </div>
             </div>
             <div className="flex gap-2 items-end">
               {(processingResult || importResult) && (

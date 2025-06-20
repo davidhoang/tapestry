@@ -105,19 +105,23 @@
     text-decoration: none !important;
   }
 
-  /* Hide view mode buttons in MDEditor */
-  .w-md-editor-bar .w-md-editor-toolbar-mode,
+  /* Hide view mode buttons in MDEditor - more specific targeting */
+  .w-md-editor .w-md-editor-bar .w-md-editor-toolbar .w-md-editor-toolbar-child:last-child,
   .w-md-editor-toolbar-mode,
-  .w-md-editor-bar-view,
-  .w-md-editor-toolbar .w-md-editor-toolbar-mode {
+  .w-md-editor-bar-view {
     display: none !important;
   }
 
-  /* Hide specific toolbar buttons by targeting their SVG icons */
-  .w-md-editor-bar button[data-name="preview"],
-  .w-md-editor-bar button[data-name="edit"],
-  .w-md-editor-bar button[data-name="live"],
-  .w-md-editor-bar .w-md-editor-toolbar-child:last-child {
+  /* Hide the toolbar buttons with mode switching icons */
+  .w-md-editor-toolbar button:has(svg[data-name="preview"]),
+  .w-md-editor-toolbar button:has(svg[data-name="edit"]),
+  .w-md-editor-toolbar button:has(svg[data-name="live"]) {
+    display: none !important;
+  }
+
+  /* Alternative approach - hide the last group of buttons in toolbar */
+  .w-md-editor-bar .w-md-editor-toolbar .w-md-editor-toolbar-child:nth-last-child(1),
+  .w-md-editor-bar .w-md-editor-toolbar .w-md-editor-toolbar-child:nth-last-child(2) {
     display: none !important;
   }
 }

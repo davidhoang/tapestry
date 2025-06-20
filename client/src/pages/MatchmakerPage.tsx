@@ -159,34 +159,27 @@ export default function MatchmakerPage() {
           </div>
 
           <div className="relative">
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+            <div className={`bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border transition-all duration-300 overflow-hidden ${
+              isPromptFocused 
+                ? 'border-blue-400/50 shadow-[0_0_30px_rgba(59,130,246,0.4)] transform -translate-y-1' 
+                : 'border-white/20'
+            }`}>
               <div className="p-8">
                 <div className="relative">
-                  <div className="relative">
-                    <Textarea
-                      id="role-description"
-                      placeholder={samplePrompts[currentPrompt]}
-                      value={roleDescription}
-                      onChange={(e) => setRoleDescription(e.target.value)}
-                      onFocus={() => setIsPromptFocused(true)}
-                      onBlur={() => setIsPromptFocused(false)}
-                      rows={5}
-                      className={`w-full border-0 bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:ring-0 resize-none px-0 py-4 transition-all duration-300 ${
-                        isPromptFocused ? 'transform -translate-y-1' : ''
-                      }`}
-                      style={{ 
-                        boxShadow: 'none',
-                        outline: 'none'
-                      }}
-                    />
-                    
-                    {/* Animated glow border */}
-                    <div className={`absolute inset-0 rounded-3xl pointer-events-none transition-all duration-300 ${
-                      isPromptFocused 
-                        ? 'shadow-[0_0_20px_rgba(59,130,246,0.3)] border-2 border-blue-400/30' 
-                        : ''
-                    }`} />
-                  </div>
+                  <Textarea
+                    id="role-description"
+                    placeholder={samplePrompts[currentPrompt]}
+                    value={roleDescription}
+                    onChange={(e) => setRoleDescription(e.target.value)}
+                    onFocus={() => setIsPromptFocused(true)}
+                    onBlur={() => setIsPromptFocused(false)}
+                    rows={5}
+                    className="w-full border-0 bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:ring-0 resize-none px-0 py-4"
+                    style={{ 
+                      boxShadow: 'none',
+                      outline: 'none'
+                    }}
+                  />
                   
                   <div className="flex justify-between items-center mt-6">
                     <Button

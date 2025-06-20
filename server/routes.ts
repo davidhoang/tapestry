@@ -2,10 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
+import crypto from "crypto";
 import { enrichDesignerProfile, generateDesignerSkills, type DesignerEnrichmentData } from "./enrichment";
 import multer from "multer";
 import sharp from "sharp";
@@ -197,10 +198,26 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Designer routes with transaction support
+  // Get user's default workspace
+  const getUserWorkspace = async (userId: number) => {
+    const member = await db.query.workspaceMembers.findFirst({
+      where: eq(workspaceMembers.userId, userId),
+      with: {
+        workspace: true,
+      },
+    });
+    return member?.workspace || null;
+  };
+
+  // Designer routes with workspace support
   app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
     }
 
     const result = await db.transaction(async (tx) => {
@@ -215,14 +232,17 @@ export function registerRoutes(app: Express): Server {
         throw new Error("Invalid designer data format");
       }
 
-      // Check if email already exists within transaction (only if email is provided)
+      // Check if email already exists within workspace
       if (designerData.email && designerData.email.trim()) {
         const existingDesigner = await tx.query.designers.findFirst({
-          where: eq(designers.email, designerData.email.trim()),
+          where: and(
+            eq(designers.email, designerData.email.trim()),
+            eq(designers.workspaceId, userWorkspace.id)
+          ),
         });
 
         if (existingDesigner) {
-          throw new Error("A designer with this email address already exists. Please use a different email address.");
+          throw new Error("A designer with this email address already exists in this workspace.");
         }
       }
 
@@ -236,6 +256,7 @@ export function registerRoutes(app: Express): Server {
         .values({
           ...designerData,
           userId: req.user.id,
+          workspaceId: userWorkspace.id,
           photoUrl,
         })
         .returning();
@@ -274,14 +295,20 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
-  // Designer routes with transaction support
+  // Get designers in user's workspace
   app.get("/api/designers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
 
     try {
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
       const allDesigners = await db.query.designers.findMany({
+        where: eq(designers.workspaceId, userWorkspace.id),
         orderBy: desc(designers.createdAt),
       });
       
@@ -401,10 +428,15 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
-  // List routes with transaction support
+  // List routes with workspace support
   app.post("/api/lists", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
     }
 
     const result = await db.transaction(async (tx) => {
@@ -413,6 +445,7 @@ export function registerRoutes(app: Express): Server {
         .values({
           ...req.body,
           userId: req.user.id,
+          workspaceId: userWorkspace.id,
         })
         .returning();
 
@@ -439,8 +472,13 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
       const userLists = await db.query.lists.findMany({
-        where: eq(lists.userId, req.user.id),
+        where: eq(lists.workspaceId, userWorkspace.id),
         orderBy: desc(lists.createdAt),
         with: {
           designers: {
@@ -807,8 +845,14 @@ export function registerRoutes(app: Express): Server {
       return res.status(400).json({ error: "Role description is required" });
     }
 
-    // Get all designers from database
+    // Get all designers from user's workspace
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
     const allDesigners = await db.query.designers.findMany({
+      where: eq(designers.workspaceId, userWorkspace.id),
       orderBy: desc(designers.createdAt),
     });
 
@@ -1295,9 +1339,18 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     try {
       const { id } = req.params;
       
+      // Get user workspace
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
       // Get existing designer data
       const designer = await db.query.designers.findFirst({
-        where: and(eq(designers.id, parseInt(id)), eq(designers.userId, req.user!.id))
+        where: and(
+          eq(designers.id, parseInt(id)), 
+          eq(designers.workspaceId, userWorkspace.id)
+        )
       });
 
       if (!designer) {
@@ -1367,9 +1420,18 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       const { id } = req.params;
       const enrichmentData: DesignerEnrichmentData = req.body;
 
-      // Verify designer exists and belongs to user
+      // Get user workspace
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      // Verify designer exists and belongs to workspace
       const designer = await db.query.designers.findFirst({
-        where: and(eq(designers.id, parseInt(id)), eq(designers.userId, req.user!.id))
+        where: and(
+          eq(designers.id, parseInt(id)), 
+          eq(designers.workspaceId, userWorkspace.id)
+        )
       });
 
       if (!designer) {

@@ -61,6 +61,7 @@ export function useOnboarding() {
     mutationFn: completeOnboarding,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['onboarding'] });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
   });
 

@@ -42,9 +42,10 @@ const onboardingSlides: OnboardingSlide[] = [
 interface OnboardingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onComplete?: () => void;
 }
 
-export default function OnboardingModal({ open, onOpenChange }: OnboardingModalProps) {
+export default function OnboardingModal({ open, onOpenChange, onComplete }: OnboardingModalProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Handle escape key
@@ -80,8 +81,12 @@ export default function OnboardingModal({ open, onOpenChange }: OnboardingModalP
     onOpenChange(false);
   };
 
-  const completeOnboarding = () => {
-    onOpenChange(false);
+  const completeOnboarding = async () => {
+    if (onComplete) {
+      await onComplete();
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const goToSlide = (index: number) => {

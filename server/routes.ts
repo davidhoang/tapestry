@@ -1623,6 +1623,68 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   }));
 
+  // Onboarding API endpoints
+  app.get("/api/onboarding/state", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, req.user.id),
+        columns: {
+          hasCompletedOnboarding: true,
+          onboardingDebugMode: true,
+          isAdmin: true,
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
+        debugMode: user.isAdmin ? user.onboardingDebugMode : false,
+      });
+    } catch (error: any) {
+      console.error('Failed to fetch onboarding state:', error);
+      res.status(500).json({ error: "Failed to fetch onboarding state" });
+    }
+  });
+
+  app.post("/api/onboarding/complete", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      await db.update(users)
+        .set({ hasCompletedOnboarding: true })
+        .where(eq(users.id, req.user.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to complete onboarding:', error);
+      res.status(500).json({ error: "Failed to complete onboarding" });
+    }
+  });
+
+  app.put("/api/onboarding/settings", requireAdmin, async (req, res) => {
+    try {
+      const { debugMode } = req.body;
+
+      await db.update(users)
+        .set({ onboardingDebugMode: debugMode })
+        .where(eq(users.id, req.user.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to update onboarding settings:', error);
+      res.status(500).json({ error: "Failed to update onboarding settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

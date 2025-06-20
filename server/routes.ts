@@ -1200,6 +1200,72 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   }));
 
+  // Admin invite endpoint
+  app.post("/api/admin/send-invite", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const { email, message } = req.body;
+
+    if (!email || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Email and message are required" 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid email format" 
+      });
+    }
+
+    try {
+      // Import sendEmail function
+      const { sendEmail } = await import("./email");
+      
+      // Create invite link (you can customize this)
+      const inviteLink = `${req.protocol}://${req.get('host')}/auth`;
+      const finalMessage = message.replace('[INVITE_LINK]', inviteLink);
+      
+      // Send the invite email
+      const emailSent = await sendEmail({
+        to: email,
+        from: "hello@tapestry.com", // You can customize this
+        subject: "Invitation to Test Tapestry Alpha",
+        text: finalMessage,
+        html: finalMessage.replace(/\n/g, '<br>')
+      });
+
+      if (emailSent) {
+        res.json({
+          success: true,
+          message: `Alpha invite successfully sent to ${email}`
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: "Failed to send email"
+        });
+      }
+    } catch (error: any) {
+      console.error("Invite email error:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to send invite"
+      });
+    }
+  }));
+
   // Profile enrichment endpoints
   app.post("/api/designers/:id/enrich", async (req, res) => {
     if (!req.isAuthenticated()) {

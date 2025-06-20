@@ -9,7 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database, Play, AlertCircle, CheckCircle, Upload } from "lucide-react";
+import { Database, Play, AlertCircle, CheckCircle, Upload, Mail, Send, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 import CsvImport from "@/components/CsvImport";
 import AdminRoute from "@/components/AdminRoute";
 
@@ -18,6 +22,133 @@ interface QueryResult {
   data?: any[];
   rowCount?: number;
   error?: string;
+}
+
+interface InviteFormData {
+  email: string;
+  message: string;
+}
+
+function AlphaInviteForm() {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const form = useForm<InviteFormData>({
+    defaultValues: {
+      email: "",
+      message: "Hi there!\n\nYou've been invited to test Tapestry, our new platform for connecting with top design talent. We're currently in alpha and would love your feedback.\n\nClick the link below to get started:\n[INVITE_LINK]\n\nBest regards,\nThe Tapestry Team"
+    },
+  });
+
+  const sendInvite = useMutation({
+    mutationFn: async (data: InviteFormData) => {
+      const response = await fetch("/api/admin/send-invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Invite Sent",
+          description: `Alpha invite successfully sent to ${form.getValues('email')}`,
+        });
+        form.reset();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to send invite",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send invite",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = async (data: InviteFormData) => {
+    setIsLoading(true);
+    try {
+      await sendInvite.mutateAsync(data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5" />
+          Send Alpha Invite
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Address</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="Enter email address"
+                      {...field}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="message"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invite Message</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter invite message"
+                      className="min-h-[200px]"
+                      {...field}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isLoading} className="w-full">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending Invite...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Alpha Invite
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function AdminPage() {
@@ -172,6 +303,7 @@ export default function AdminPage() {
           <TabsList>
             <TabsTrigger value="database">Database</TabsTrigger>
             <TabsTrigger value="import">CSV Import</TabsTrigger>
+            <TabsTrigger value="invites">Alpha Invites</TabsTrigger>
           </TabsList>
 
           <TabsContent value="database" className="grid gap-6">
@@ -267,6 +399,10 @@ export default function AdminPage() {
 
           <TabsContent value="import">
             <CsvImport />
+          </TabsContent>
+
+          <TabsContent value="invites">
+            <AlphaInviteForm />
           </TabsContent>
         </Tabs>
       </div>

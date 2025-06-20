@@ -407,7 +407,12 @@ export default function DesignerDetailsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h1 className="text-5xl font-bold leading-tight tracking-tight">{designer.name}</h1>
-                    <p className="text-2xl text-muted-foreground font-light">{designer.title}</p>
+                    <p className="text-2xl text-muted-foreground font-light mt-2">
+                      {designer.level} {designer.title} at {designer.company}
+                    </p>
+                    <p className="text-lg text-muted-foreground designer-meta mt-1">
+                      {designer.location}
+                    </p>
                   </div>
                   <Button
                     variant="outline"
@@ -418,15 +423,6 @@ export default function DesignerDetailsPage() {
                     <Pencil className="h-4 w-4" />
                     Edit
                   </Button>
-                </div>
-                
-                {/* Company and Location */}
-                <div className="flex items-center space-x-4 text-lg text-muted-foreground designer-meta">
-                  <span><span className="font-medium text-foreground">Level:</span> {designer.level}</span>
-                  <span>|</span>
-                  <span><span className="font-medium text-foreground">Company:</span> {designer.company}</span>
-                  <span>|</span>
-                  <span><span className="font-medium text-foreground">Location:</span> {designer.location}</span>
                 </div>
               </div>
 

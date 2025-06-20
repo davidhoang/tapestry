@@ -56,17 +56,15 @@ export default function DesignerCard({
         
         {/* Top-right edit button - only visible on hover */}
         {onEdit && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 z-10 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+          <button
+            className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-secondary rounded-md"
             onClick={(e) => {
               e.stopPropagation();
               onEdit(designer);
             }}
           >
             <Pencil className="h-4 w-4" />
-          </Button>
+          </button>
         )}
         
         <CardHeader className="space-y-1 pb-4">

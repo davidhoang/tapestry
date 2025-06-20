@@ -38,9 +38,37 @@ export default function DesignerCard({
   return (
     <>
       <Card 
-        className="h-full relative cursor-pointer hover:shadow-md transition-shadow"
+        className="h-full relative cursor-pointer hover:shadow-md transition-shadow group"
         onClick={() => setLocation(`/designer/${designer.id}`)}
       >
+        {/* Top-left checkbox */}
+        {showCheckbox && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggleSelect?.(designer.id);
+            }}
+            className="absolute top-4 left-4 z-10 w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2"
+          />
+        )}
+        
+        {/* Top-right edit button - only visible on hover */}
+        {onEdit && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 z-10 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(designer);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+        
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4">
             <Avatar className="h-16 w-16">
@@ -115,38 +143,6 @@ export default function DesignerCard({
             )}
           </div>
         </CardContent>
-        
-        {/* Bottom section with controls */}
-        <div className="px-6 pb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {showCheckbox && (
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onToggleSelect?.(designer.id);
-                }}
-                className="w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2"
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(designer);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </div>
       </Card>
     </>
   );

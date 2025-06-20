@@ -126,7 +126,7 @@ export default function DirectoryPage() {
       <Navigation />
       <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Tapestry Directory</h1>
+          <h1 className="text-3xl font-bold">Directory</h1>
           <div className="flex gap-2">
             {selectedIds.length > 0 && (
               <>

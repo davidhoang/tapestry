@@ -13,6 +13,7 @@ import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
+import RegisterPage from "./pages/RegisterPage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
@@ -54,6 +55,7 @@ function App() {
         <main className="flex-1">
           <Switch>
             {!user && <Route path="/" component={HomePage} />}
+            <Route path="/register" component={RegisterPage} />
             {user ? (
               <>
                 <Route path="/" component={MatchmakerPage} />

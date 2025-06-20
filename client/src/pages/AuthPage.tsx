@@ -38,6 +38,12 @@ export default function AuthPage() {
         </CardHeader>
         <CardContent className="pb-3">
           <LoginForm />
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link href="/register" className="text-primary hover:underline">
+              Create one here
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

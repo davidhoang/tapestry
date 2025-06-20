@@ -1233,8 +1233,8 @@ If you're asking questions or don't have enough info yet, don't include the MATC
       // Import sendEmail function
       const { sendEmail } = await import("./email");
       
-      // Create invite link (you can customize this)
-      const inviteLink = `${req.protocol}://${req.get('host')}/auth`;
+      // Create invite link pointing to registration page
+      const inviteLink = `${req.protocol}://${req.get('host')}/register`;
       const finalMessage = message.replace('[INVITE_LINK]', inviteLink);
       
       // Send the invite email

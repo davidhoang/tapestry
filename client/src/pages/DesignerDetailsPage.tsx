@@ -437,7 +437,7 @@ export default function DesignerDetailsPage() {
                   {designer.skills.map((skill, i) => (
                     <span 
                       key={i} 
-                      className="text-base text-muted-foreground hover:text-foreground transition-colors cursor-default"
+                      className="text-base text-gray-700 hover:text-foreground transition-colors cursor-default"
                     >
                       #{skill}
                     </span>
@@ -449,7 +449,7 @@ export default function DesignerDetailsPage() {
               {designer.notes && (
                 <div className="space-y-6">
                   <h2 className="text-3xl font-bold">About</h2>
-                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed prose-p:text-gray-700 dark:prose-p:text-gray-300">
+                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed prose-p:text-gray-900 dark:prose-p:text-gray-100">
                     <MDEditor.Markdown source={designer.notes} style={{ backgroundColor: 'transparent' }} />
                   </div>
                 </div>

@@ -797,7 +797,7 @@ export default function ComponentsPage() {
         </div>
 
         {/* Typography Section */}
-        {(!searchTerm || "typography".includes(searchTerm.toLowerCase())) && (
+        {(!searchTerm || searchTerm.toLowerCase().includes("typography")) && (
           <div className="mb-12">
             <Card className="overflow-hidden">
               <CardHeader className="pb-4">
@@ -847,7 +847,7 @@ export default function ComponentsPage() {
         )}
 
         {/* Color Palette Section */}
-        {(!searchTerm || "color".includes(searchTerm.toLowerCase()) || "palette".includes(searchTerm.toLowerCase())) && (
+        {(!searchTerm || searchTerm.toLowerCase().includes("color") || searchTerm.toLowerCase().includes("palette")) && (
           <div className="mb-12">
             <Card className="overflow-hidden">
               <CardHeader className="pb-4">
@@ -902,6 +902,20 @@ export default function ComponentsPage() {
               onClick={() => setSearchTerm("")}
             >
               All
+            </Badge>
+            <Badge
+              variant={searchTerm.toLowerCase() === "typography" ? "default" : "secondary"}
+              className="cursor-pointer"
+              onClick={() => setSearchTerm("typography")}
+            >
+              Typography
+            </Badge>
+            <Badge
+              variant={searchTerm.toLowerCase() === "colors" || searchTerm.toLowerCase() === "color" ? "default" : "secondary"}
+              className="cursor-pointer"
+              onClick={() => setSearchTerm("colors")}
+            >
+              Colors
             </Badge>
             {categories.map(category => (
               <Badge

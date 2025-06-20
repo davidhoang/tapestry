@@ -5,6 +5,7 @@ import { db } from "@db";
 import { designers, lists, listDesigners, conversations, messages } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
+import { enrichDesignerProfile, generateDesignerSkills, type DesignerEnrichmentData } from "./enrichment";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";

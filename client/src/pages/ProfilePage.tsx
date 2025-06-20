@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, User, Camera } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Navigation from "../components/Navigation";
 
 interface ProfileUpdateData {
   username?: string;
@@ -152,8 +153,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <Card>
+    <div className="min-h-screen">
+      <Navigation />
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card>
         <CardHeader>
           <CardTitle>Profile Settings</CardTitle>
           <CardDescription>
@@ -247,7 +250,8 @@ export default function ProfilePage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

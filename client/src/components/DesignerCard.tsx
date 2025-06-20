@@ -96,8 +96,13 @@ export default function DesignerCard({
         
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={designer.photoUrl || undefined} alt={designer.name} />
+            <Avatar className="h-16 w-16 overflow-hidden">
+              <AvatarImage 
+                src={designer.photoUrl || undefined} 
+                alt={designer.name}
+                className="transition-transform duration-[3000ms] ease-out group-hover:scale-110"
+                style={{ transitionDuration: '3s' }}
+              />
               <AvatarFallback className="text-lg font-medium">
                 {designer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
               </AvatarFallback>

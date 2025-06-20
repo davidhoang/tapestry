@@ -1,6 +1,6 @@
 # Components Directory
 
-This directory contains all reusable UI components for the Design Talent Match application.
+This directory contains all reusable UI components for the Tapestry application.
 
 ## Organization
 

@@ -30,7 +30,7 @@ export default function HomePage() {
         <div className="relative z-10 flex-1 flex items-center justify-center text-center space-y-8 px-4 max-w-4xl mx-auto">
           <div className="space-y-6">
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
-              Design Talent Match
+              Tapestry
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
               Connect with exceptional design talent through intelligent matching

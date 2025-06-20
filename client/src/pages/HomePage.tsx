@@ -52,6 +52,22 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Built on Replit badge - only show when logged out */}
+      {!user && (
+        <a 
+          href="https://replit.com/refer/dh-design" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="fixed bottom-5 right-5 z-50 hover:scale-105 transition-transform duration-200"
+        >
+          <img 
+            src="/built-on-replit-badge.png" 
+            alt="Built on Replit" 
+            className="w-[150px] h-auto rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
+          />
+        </a>
+      )}
     </>
   );
 }

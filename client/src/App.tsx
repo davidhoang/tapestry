@@ -15,6 +15,7 @@ import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
+import Footer from "./components/Footer";
 
 function App() {
   const { user, isLoading } = useUser();
@@ -26,7 +27,12 @@ function App() {
     if (listId) {
       return (
         <QueryClientProvider client={queryClient}>
-          <PublicListPage params={{ id: listId }} />
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1">
+              <PublicListPage params={{ id: listId }} />
+            </div>
+            <Footer />
+          </div>
           <Toaster />
         </QueryClientProvider>
       );
@@ -44,8 +50,8 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen">
-        <main className="min-h-screen">
+      <div className="min-h-screen flex flex-col">
+        <main className="flex-1">
           <Switch>
             {!user && <Route path="/" component={HomePage} />}
             {user ? (
@@ -65,6 +71,7 @@ function App() {
             )}
           </Switch>
         </main>
+        <Footer />
         <Toaster />
       </div>
     </QueryClientProvider>

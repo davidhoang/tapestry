@@ -1731,6 +1731,17 @@ If you're asking questions or don't have enough info yet, don't include the MATC
             level = 'Director';
           }
 
+          // Normalize LinkedIn URL
+          const normalizeLinkedInUrl = (url: string): string => {
+            if (!url || url.trim() === '') return '';
+            const trimmed = url.trim();
+            if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+            if (trimmed.startsWith('linkedin.com') || trimmed.startsWith('www.linkedin.com')) return `https://${trimmed}`;
+            if (trimmed.startsWith('/in/')) return `https://www.linkedin.com${trimmed}`;
+            if (!trimmed.includes('/') && !trimmed.includes('.')) return `https://www.linkedin.com/in/${trimmed}`;
+            return `https://${trimmed}`;
+          };
+
           // Create designer record
           const designerData = {
             name: contact.name,
@@ -1740,10 +1751,10 @@ If you're asking questions or don't have enough info yet, don't include the MATC
             company: contact.company,
             location: contact.location,
             website: null,
-            linkedIn: contact.linkedIn,
+            linkedIn: normalizeLinkedInUrl(contact.linkedIn || ''),
             skills: contact.skills?.join(', ') || null,
             bio: contact.experience,
-            available: true,
+            available: false,
             notes: `Imported from LinkedIn PDF - Confidence: ${Math.round(contact.confidence * 100)}%`,
             userId: req.user.id,
           };

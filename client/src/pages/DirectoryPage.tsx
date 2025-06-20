@@ -40,6 +40,36 @@ import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import { SelectDesigner } from "@db/schema";
 
+// Helper function to normalize LinkedIn URLs
+const normalizeLinkedInUrl = (url: string): string => {
+  if (!url || url.trim() === '') return '';
+  
+  const trimmed = url.trim();
+  
+  // If it already starts with http:// or https://, return as is
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  
+  // If it starts with linkedin.com or www.linkedin.com, add https://
+  if (trimmed.startsWith('linkedin.com') || trimmed.startsWith('www.linkedin.com')) {
+    return `https://${trimmed}`;
+  }
+  
+  // If it looks like a LinkedIn profile path (/in/username), add the full domain
+  if (trimmed.startsWith('/in/')) {
+    return `https://www.linkedin.com${trimmed}`;
+  }
+  
+  // If it's just a username (no slashes), assume it's a LinkedIn profile
+  if (!trimmed.includes('/') && !trimmed.includes('.')) {
+    return `https://www.linkedin.com/in/${trimmed}`;
+  }
+  
+  // For any other case, assume https:// is needed
+  return `https://${trimmed}`;
+};
+
 const EXPERIENCE_LEVELS = [
   "Mid-level",
   "Senior",
@@ -282,7 +312,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
       linkedIn: designer?.linkedIn || "",
       skills: designer?.skills || [],
       notes: designer?.notes || "",
-      available: designer?.available || false,
+      available: designer?.available ?? false,
     },
   });
 
@@ -299,7 +329,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
         linkedIn: designer.linkedIn || "",
         skills: designer.skills || [],
         notes: designer.notes || "",
-        available: designer.available || false,
+        available: designer.available ?? false,
       });
     }
   }, [designer, form]);
@@ -337,7 +367,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
         company: values.company || "",
         level: values.level,
         website: values.website || "",
-        linkedIn: values.linkedIn || "",
+        linkedIn: normalizeLinkedInUrl(values.linkedIn) || "",
         email: values.email || "",
         skills: values.skills || [],
         notes: values.notes || "",

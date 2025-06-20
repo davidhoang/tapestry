@@ -70,7 +70,6 @@ export default function DirectoryPage() {
   const { data: designers, isLoading } = useDesigners();
   const deleteDesigners = useDeleteDesigners();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showAddToListDialog, setShowAddToListDialog] = useState(false);
@@ -80,18 +79,21 @@ export default function DirectoryPage() {
   const scrollPositionRef = useRef<number>(0);
 
   const filteredDesigners = designers?.filter((designer) => {
-    const matchesSearch = designer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         designer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         designer.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!searchTerm.trim()) return true;
     
-    const matchesSkills = selectedSkills.length === 0 || 
-                         selectedSkills.some(skill => 
-                           designer.skills.some(designerSkill => 
-                             designerSkill.toLowerCase().includes(skill.toLowerCase())
-                           )
-                         );
+    const searchLower = searchTerm.toLowerCase();
     
-    return matchesSearch && matchesSkills;
+    // Search in name, title, and company
+    const matchesBasicInfo = designer.name.toLowerCase().includes(searchLower) ||
+                            designer.title.toLowerCase().includes(searchLower) ||
+                            designer.company?.toLowerCase().includes(searchLower);
+    
+    // Search in skills
+    const matchesSkills = designer.skills.some(skill => 
+      skill.toLowerCase().includes(searchLower)
+    );
+    
+    return matchesBasicInfo || matchesSkills;
   }) || [];
 
   const handleDeleteSelected = async () => {
@@ -170,18 +172,10 @@ export default function DirectoryPage() {
         <div className="space-y-6">
           <div className="space-y-2">
             <Input
-              placeholder="Search designers by name, title, or company..."
+              placeholder="Search designers by name, title, company, or skills..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-lg py-3 px-4 bg-white border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg shadow-sm"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Search by skill</label>
-            <SkillsInput
-              value={selectedSkills}
-              onChange={setSelectedSkills}
             />
           </div>
         </div>

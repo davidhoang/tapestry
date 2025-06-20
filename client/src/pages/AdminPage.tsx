@@ -9,13 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database, Play, AlertCircle, CheckCircle, Upload, Mail, Send, Loader2 } from "lucide-react";
+import { Database, Play, AlertCircle, CheckCircle, Upload, Mail, Send, Loader2, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import CsvImport from "@/components/CsvImport";
 import AdminRoute from "@/components/AdminRoute";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import { Switch } from "@/components/ui/switch";
 
 interface QueryResult {
   success: boolean;
@@ -153,6 +155,7 @@ function AlphaInviteForm() {
 
 export default function AdminPage() {
   const [query, setQuery] = useState("");
+  const { onboardingState, updateSettings, isUpdatingSettings } = useOnboarding();
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
 
   // Fetch available tables
@@ -304,6 +307,7 @@ export default function AdminPage() {
             <TabsTrigger value="database">Database</TabsTrigger>
             <TabsTrigger value="import">CSV Import</TabsTrigger>
             <TabsTrigger value="invites">Alpha Invites</TabsTrigger>
+            <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
           </TabsList>
 
           <TabsContent value="database" className="grid gap-6">
@@ -403,6 +407,59 @@ export default function AdminPage() {
 
           <TabsContent value="invites">
             <AlphaInviteForm />
+          </TabsContent>
+
+          <TabsContent value="onboarding">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Onboarding Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="text-base font-medium">
+                      Debug Mode
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      When enabled, onboarding will show for all users on every login/signup. 
+                      When disabled, onboarding only shows for new users on first signup.
+                    </div>
+                  </div>
+                  <Switch
+                    checked={onboardingState?.debugMode || false}
+                    onCheckedChange={async (checked) => {
+                      try {
+                        await updateSettings({ debugMode: checked });
+                      } catch (error) {
+                        console.error('Failed to update onboarding settings:', error);
+                      }
+                    }}
+                    disabled={isUpdatingSettings}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Current Status</div>
+                  <div className="text-sm text-muted-foreground">
+                    <div>Debug Mode: {onboardingState?.debugMode ? 'Enabled' : 'Disabled'}</div>
+                    <div>Your Onboarding Status: {onboardingState?.hasCompletedOnboarding ? 'Completed' : 'Not Completed'}</div>
+                  </div>
+                </div>
+
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    This is an alpha feature. Debug mode is useful for testing the onboarding flow 
+                    but should be disabled in production to avoid showing onboarding to returning users.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -53,7 +53,7 @@ export function useOnboarding() {
   const { data: onboardingState, isLoading } = useQuery<OnboardingState>({
     queryKey: ['onboarding'],
     queryFn: fetchOnboardingState,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds for admin debugging
     retry: false
   });
 

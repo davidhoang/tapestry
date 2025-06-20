@@ -17,6 +17,7 @@ import RegisterPage from "./pages/RegisterPage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
+import OnboardingProvider from "./components/OnboardingProvider";
 
 function App() {
   const { user, isLoading } = useUser();
@@ -51,31 +52,33 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col">
-        <main className="flex-1">
-          <Switch>
-            {!user && <Route path="/" component={HomePage} />}
-            <Route path="/register" component={RegisterPage} />
-            {user ? (
-              <>
-                <Route path="/" component={MatchmakerPage} />
-                <Route path="/matchmaker" component={MatchmakerPage} />
-        <Route path="/chat" component={MatchmakerChatPage} />
-                <Route path="/directory" component={DirectoryPage} />
-                <Route path="/designer/:slug" component={DesignerDetailsPage} />
-                <Route path="/lists" component={ListsPage} />
-                <Route path="/profile" component={ProfilePage} />
-                <Route path="/components" component={ComponentsPage} />
-                {user.isAdmin && <Route path="/admin" component={AdminPage} />}
-              </>
-            ) : (
-              <Route path="*" component={HomePage} />
-            )}
-          </Switch>
-        </main>
-        <Footer />
-        <Toaster />
-      </div>
+      <OnboardingProvider>
+        <div className="min-h-screen flex flex-col">
+          <main className="flex-1">
+            <Switch>
+              {!user && <Route path="/" component={HomePage} />}
+              <Route path="/register" component={RegisterPage} />
+              {user ? (
+                <>
+                  <Route path="/" component={MatchmakerPage} />
+                  <Route path="/matchmaker" component={MatchmakerPage} />
+          <Route path="/chat" component={MatchmakerChatPage} />
+                  <Route path="/directory" component={DirectoryPage} />
+                  <Route path="/designer/:slug" component={DesignerDetailsPage} />
+                  <Route path="/lists" component={ListsPage} />
+                  <Route path="/profile" component={ProfilePage} />
+                  <Route path="/components" component={ComponentsPage} />
+                  {user.isAdmin && <Route path="/admin" component={AdminPage} />}
+                </>
+              ) : (
+                <Route path="*" component={HomePage} />
+              )}
+            </Switch>
+          </main>
+          <Footer />
+          <Toaster />
+        </div>
+      </OnboardingProvider>
     </QueryClientProvider>
   );
 }

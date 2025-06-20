@@ -1312,6 +1312,139 @@ If you're asking questions or don't have enough info yet, don't include the MATC
     }
   });
 
+  // CSV Import endpoint for admins
+  app.post("/api/admin/import-designers", requireAdmin, csvUpload.single('csv'), withErrorHandler(async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "No CSV file uploaded" 
+      });
+    }
+
+    if (!req.body.mappings) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Field mappings are required" 
+      });
+    }
+
+    try {
+      const csvContent = req.file.buffer.toString('utf-8');
+      const mappings = JSON.parse(req.body.mappings);
+      
+      // Parse CSV content
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      if (lines.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "CSV file is empty" 
+        });
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const dataRows = lines.slice(1);
+
+      const results = {
+        success: true,
+        imported: 0,
+        errors: [] as Array<{ row: number; error: string }>
+      };
+
+      // Process each row
+      for (let i = 0; i < dataRows.length; i++) {
+        const rowNumber = i + 2; // +2 because we skip header and array is 0-indexed
+        const values = dataRows[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        
+        try {
+          const designerData: any = {
+            userId: req.user.id
+          };
+
+          // Map CSV values to database fields
+          mappings.forEach(({ csvColumn, dbField }: { csvColumn: string; dbField: string }) => {
+            if (!dbField) return;
+            
+            const headerIndex = headers.indexOf(csvColumn);
+            if (headerIndex === -1) return;
+            
+            const value = values[headerIndex] || '';
+            
+            if (dbField === 'skills') {
+              // Parse skills as comma-separated values
+              designerData.skills = value ? value.split(',').map(s => s.trim()).filter(s => s) : [];
+            } else if (dbField === 'available') {
+              // Parse boolean values
+              designerData.available = value.toLowerCase() === 'true' || value === '1';
+            } else {
+              designerData[dbField] = value || null;
+            }
+          });
+
+          // Validate required fields
+          const requiredFields = ['name', 'title', 'email', 'level'];
+          const missingFields = requiredFields.filter(field => !designerData[field]);
+          
+          if (missingFields.length > 0) {
+            results.errors.push({
+              row: rowNumber,
+              error: `Missing required fields: ${missingFields.join(', ')}`
+            });
+            continue;
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(designerData.email)) {
+            results.errors.push({
+              row: rowNumber,
+              error: 'Invalid email format'
+            });
+            continue;
+          }
+
+          // Check if email already exists
+          const existingDesigner = await db.query.designers.findFirst({
+            where: eq(designers.email, designerData.email)
+          });
+
+          if (existingDesigner) {
+            results.errors.push({
+              row: rowNumber,
+              error: `Email ${designerData.email} already exists`
+            });
+            continue;
+          }
+
+          // Insert the designer
+          await db.insert(designers).values(designerData);
+          results.imported++;
+
+        } catch (error: any) {
+          results.errors.push({
+            row: rowNumber,
+            error: error.message || 'Failed to import row'
+          });
+        }
+      }
+
+      // Set success based on whether any records were imported
+      results.success = results.imported > 0;
+      
+      if (results.errors.length > 0 && results.imported === 0) {
+        results.success = false;
+      }
+
+      res.json(results);
+
+    } catch (error: any) {
+      console.error('CSV import error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to process CSV file'
+      });
+    }
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -93,7 +93,9 @@ export default function DesignerCard({
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0">
                   <h3 className="text-lg designer-name truncate">{designer.name}</h3>
-                  <p className="text-sm text-muted-foreground truncate">{designer.title}</p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {designer.title}{designer.company ? ` at ${designer.company}` : ''}
+                  </p>
                 </div>
               </div>
             </div>
@@ -102,8 +104,6 @@ export default function DesignerCard({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center space-x-2 text-sm">
-              <span className="text-muted-foreground">{designer.level}</span>
-              <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{designer.company}</span>
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{designer.location}</span>
@@ -111,17 +111,16 @@ export default function DesignerCard({
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
                 {displayedSkills.map((skill, i) => (
-                  <Badge 
+                  <span 
                     key={i} 
-                    variant="outline" 
-                    className="cursor-pointer hover:bg-secondary"
+                    className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       onSkillClick?.(skill);
                     }}
                   >
-                    {skill}
-                  </Badge>
+                    #{skill}
+                  </span>
                 ))}
                 {shouldShowExpansion && (
                   <Button

@@ -371,20 +371,20 @@ export default function ComponentsPage() {
       element: (
         <Card className="w-[350px]">
           <CardHeader>
-            <CardTitle>Create project</CardTitle>
-            <CardDescription>Deploy your new project in one-click.</CardDescription>
+            <CardTitle className="font-serif">Create project</CardTitle>
+            <CardDescription className="font-serif">Deploy your new project in one-click.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" placeholder="Name of your project" />
+                <Label htmlFor="name" className="font-serif">Name</Label>
+                <Input id="name" placeholder="Name of your project" className="font-serif" />
               </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline">Cancel</Button>
-            <Button>Deploy</Button>
+            <Button variant="outline" className="font-serif">Cancel</Button>
+            <Button className="font-serif">Deploy</Button>
           </CardFooter>
         </Card>
       ),

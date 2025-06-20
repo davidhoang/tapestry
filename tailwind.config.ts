@@ -11,9 +11,9 @@ export default {
         DEFAULT: ['Crimson Text', 'Charter', 'Georgia', 'Times New Roman', 'serif'],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "2px", // Minimal radius for flat design
+        md: "1px",
+        sm: "1px",
       },
       colors: {
         background: "hsl(var(--background))",

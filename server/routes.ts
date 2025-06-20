@@ -5,6 +5,7 @@ import { db } from "@db";
 import { users, designers, lists, listDesigners, conversations, messages } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
+import { slugify } from "./utils/slugify";
 import { enrichDesignerProfile, generateDesignerSkills, type DesignerEnrichmentData } from "./enrichment";
 import multer from "multer";
 import sharp from "sharp";
@@ -299,6 +300,28 @@ export function registerRoutes(app: Express): Server {
       res.json(designer);
     } catch (err) {
       console.error('Error fetching designer:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
+  app.get("/api/designers/slug/:slug", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const slug = req.params.slug;
+      // Find designer by matching slugified name
+      const allDesigners = await db.query.designers.findMany();
+      const designer = allDesigners.find(d => slugify(d.name) === slug);
+      
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+      
+      res.json(designer);
+    } catch (err) {
+      console.error('Error fetching designer by slug:', err);
       res.status(500).json({ error: "Failed to fetch designer" });
     }
   });

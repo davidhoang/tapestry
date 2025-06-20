@@ -175,7 +175,7 @@ export default function MatchmakerChatPage() {
       <Navigation />
       
       {/* Single responsive layout */}
-      <div className={`flex flex-col lg:flex-row h-screen pt-16 ${currentRecommendations.length > 0 ? 'lg:pr-96' : ''}`}>
+      <div className={`flex flex-col xl:flex-row h-screen pt-16 ${currentRecommendations.length > 0 ? 'xl:pr-96' : ''}`}>
         {/* Chat Interface */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1">
@@ -187,9 +187,9 @@ export default function MatchmakerChatPage() {
           </div>
         </div>
 
-        {/* Desktop Recommendations Sidebar */}
+        {/* Desktop Recommendations Sidebar - Only show on very large screens */}
         {currentRecommendations.length > 0 && (
-          <div className="hidden lg:flex lg:w-96 lg:fixed lg:right-0 lg:top-16 lg:bottom-0 bg-background border-l border-border shadow-lg flex-col">
+          <div className="hidden xl:flex xl:w-96 xl:fixed xl:right-0 xl:top-16 xl:bottom-0 bg-background border-l border-border shadow-lg flex-col">
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <div>
@@ -368,7 +368,7 @@ export default function MatchmakerChatPage() {
 
         {/* Mobile Modal for Recommendations */}
         {showMobileModal && currentRecommendations.length > 0 && (
-          <div className="lg:hidden fixed inset-0 bg-background z-50 flex flex-col">
+          <div className="xl:hidden fixed inset-0 bg-background z-50 flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-background">
               <div>

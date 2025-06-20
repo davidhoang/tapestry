@@ -769,7 +769,7 @@ export default function ComponentsPage() {
 
   return (
     <AdminRoute>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <Navigation />
         <div className="container mx-auto px-4 pt-24 pb-8">
           <div className="mb-8">

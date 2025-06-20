@@ -113,7 +113,7 @@ export default function MatchmakerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Navigation />
       
       <div className={`flex transition-all duration-300 ${recommendations.length > 0 ? 'pr-96' : ''}`}>

@@ -128,19 +128,14 @@ export default function MatchmakerPage() {
           <div className="relative">
             <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
               <div className="p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Describe your ideal designer</h2>
-                  <p className="text-gray-600">Tell us about the role, skills, and experience you're looking for</p>
-                </div>
-                
                 <div className="relative">
                   <Textarea
                     id="role-description"
                     placeholder="We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus..."
                     value={roleDescription}
                     onChange={(e) => setRoleDescription(e.target.value)}
-                    rows={8}
-                    className="w-full border-0 border-b-2 border-gray-200 rounded-none bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:border-primary focus:ring-0 resize-none px-0 py-4"
+                    rows={5}
+                    className="w-full border-0 bg-transparent text-base leading-relaxed placeholder:text-gray-400 focus:ring-0 resize-none px-0 py-4"
                     style={{ 
                       boxShadow: 'none',
                       outline: 'none'

@@ -187,6 +187,17 @@ export default function Navigation() {
                       >
                         Lists
                       </Link>
+                      <Link
+                        href="/profile"
+                        className={`text-lg py-2 px-4 rounded transition-colors ${
+                          location === "/profile" 
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Profile Settings
+                      </Link>
                       {user.isAdmin && (
                         <Link
                           href="/components"

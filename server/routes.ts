@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { designers, lists, listDesigners, conversations, messages } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { enrichDesignerProfile, generateDesignerSkills, type DesignerEnrichmentData } from "./enrichment";
@@ -1442,6 +1442,89 @@ If you're asking questions or don't have enough info yet, don't include the MATC
         success: false,
         error: error.message || 'Failed to process CSV file'
       });
+    }
+  }));
+
+  // Profile management routes
+  app.put("/api/profile", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { username } = req.body;
+      const userId = req.user.id;
+
+      // Validate username if provided
+      if (username !== undefined) {
+        if (username && username.trim().length < 2) {
+          return res.status(400).json({ error: "Username must be at least 2 characters long" });
+        }
+
+        // Check if username is already taken (excluding current user)
+        if (username && username.trim()) {
+          const existingUser = await db.query.users.findFirst({
+            where: and(
+              eq(users.username, username.trim()),
+              ne(users.id, userId)
+            ),
+          });
+
+          if (existingUser) {
+            return res.status(400).json({ error: "Username is already taken" });
+          }
+        }
+      }
+
+      // Update user profile
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          ...(username !== undefined && { username: username?.trim() || null }),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error: any) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  }));
+
+  app.post("/api/profile/photo", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "No photo file provided" });
+    }
+
+    try {
+      const userId = req.user.id;
+
+      // Get existing user to clean up old profile photo
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      const oldFilename = existingUser?.profilePhotoUrl;
+      const photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
+
+      // Update user's profile photo URL
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          profilePhotoUrl: photoUrl,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json({ profilePhotoUrl: updatedUser.profilePhotoUrl });
+    } catch (error: any) {
+      console.error("Profile photo upload error:", error);
+      res.status(500).json({ error: "Failed to upload profile photo" });
     }
   }));
 

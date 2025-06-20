@@ -54,6 +54,24 @@ async function uploadProfilePhoto(file: File) {
   return response.json();
 }
 
+async function updateWorkspace(data: WorkspaceUpdateData) {
+  const response = await fetch('/api/workspaces/update', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
 export default function ProfilePage() {
   const { user } = useUser();
   const [workspaceName, setWorkspaceName] = useState("");
@@ -198,10 +216,11 @@ export default function ProfilePage() {
   };
 
   const getUserInitials = () => {
-    if (user?.username) {
-      return user.username.substring(0, 2).toUpperCase();
+    if (!user) return 'U';
+    if (userWorkspace?.name) {
+      return userWorkspace.name.substring(0, 2).toUpperCase();
     }
-    if (user?.email) {
+    if (user.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
     return 'U';
@@ -267,7 +286,10 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={user.profilePhotoUrl || undefined} alt="Profile photo" />
+                <AvatarImage 
+                  src={profilePhoto ? URL.createObjectURL(profilePhoto) : user.profilePhotoUrl || undefined} 
+                  alt="Profile photo" 
+                />
                 <AvatarFallback className="text-lg">
                   {getUserInitials()}
                 </AvatarFallback>
@@ -277,7 +299,7 @@ export default function ProfilePage() {
                 variant="secondary"
                 className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
+                disabled={uploadPhotoMutation.isPending}
               >
                 <Camera className="w-4 h-4" />
               </Button>

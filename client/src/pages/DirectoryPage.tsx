@@ -119,7 +119,7 @@ export default function DirectoryPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Design Talent Match Directory</h1>
           <div className="flex gap-2">

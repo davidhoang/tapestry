@@ -118,7 +118,7 @@ export default function MatchmakerPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2">
             <Brain className="h-8 w-8 text-primary" />

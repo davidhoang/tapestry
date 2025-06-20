@@ -107,6 +107,11 @@ export default function Navigation() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] bg-black border-white/20">
+                <SheetHeader>
+                  <VisuallyHidden>
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                  </VisuallyHidden>
+                </SheetHeader>
                 <div className="flex flex-col space-y-4 mt-6">
                   {user ? (
                     <>
@@ -192,6 +197,12 @@ export default function Navigation() {
       {/* Auth Dialog */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
         <DialogContent className="max-w-sm p-0">
+          <DialogHeader>
+            <VisuallyHidden>
+              <DialogTitle>Authentication</DialogTitle>
+              <DialogDescription>Sign in or create an account to access the application</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
           <AuthPage />
         </DialogContent>
       </Dialog>

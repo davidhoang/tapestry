@@ -259,10 +259,13 @@ export default function ChatInterface({ conversation, onRecommendationsChange }:
                 Create List from Selected ({selectedDesigners.size})
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-describedby="create-list-description">
               <DialogHeader>
                 <DialogTitle>Create Designer List</DialogTitle>
               </DialogHeader>
+              <div id="create-list-description" className="sr-only">
+                Create a new list to organize selected designers from your matchmaker conversation.
+              </div>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="list-name">List Name</Label>

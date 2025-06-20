@@ -14,6 +14,7 @@ import PublicListPage from "./pages/PublicListPage";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
+import WorkspacePage from "./pages/WorkspacePage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
@@ -61,14 +62,17 @@ function App() {
               {user ? (
                 <>
                   <Route path="/" component={MatchmakerPage} />
-                  <Route path="/matchmaker" component={MatchmakerPage} />
-          <Route path="/chat" component={MatchmakerChatPage} />
-                  <Route path="/directory" component={DirectoryPage} />
-                  <Route path="/designer/:slug" component={DesignerDetailsPage} />
-                  <Route path="/lists" component={ListsPage} />
                   <Route path="/profile" component={ProfilePage} />
+                  <Route path="/workspaces" component={WorkspacePage} />
                   <Route path="/components" component={ComponentsPage} />
                   {user.isAdmin && <Route path="/admin" component={AdminPage} />}
+                  
+                  {/* Workspace-specific routes */}
+                  <Route path="/:workspaceSlug" component={DirectoryPage} />
+                  <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
+                  <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
+                  <Route path="/:workspaceSlug/lists" component={ListsPage} />
+                  <Route path="/:workspaceSlug/matchmaker" component={MatchmakerChatPage} />
                 </>
               ) : (
                 <Route path="*" component={HomePage} />

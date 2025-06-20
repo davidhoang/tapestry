@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
 import Navigation from "@/components/Navigation";
+import { Link, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +37,7 @@ import {
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { useForm } from "react-hook-form";
 import { Loader2, Plus, Trash, ListPlus, Sparkles } from "lucide-react";
+import { slugify } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import { SelectDesigner } from "@db/schema";
@@ -97,6 +99,7 @@ const designerSchema = z.object({
 });
 
 export default function DirectoryPage() {
+  const { workspaceSlug } = useParams();
   const { data: designers, isLoading } = useDesigners();
   const deleteDesigners = useDeleteDesigners();
   const [searchTerm, setSearchTerm] = useState("");

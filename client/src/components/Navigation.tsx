@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useUser } from "../hooks/use-user";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +34,20 @@ export default function Navigation() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Get user's workspace
+  const { data: workspaces } = useQuery({
+    queryKey: ["/api/workspaces"],
+    queryFn: async () => {
+      const response = await fetch("/api/workspaces");
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
+  const userWorkspace = workspaces?.[0];
+  const workspaceSlug = userWorkspace?.slug || "david-hoang";
+
   const getUserInitials = () => {
     if (!user) return 'U';
     if (user.username) {
@@ -54,20 +69,20 @@ export default function Navigation() {
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
               <Link
-                href="/matchmaker"
-                className={location === "/matchmaker" || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                href={`/${workspaceSlug}/matchmaker`}
+                className={location === `/${workspaceSlug}/matchmaker` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Matchmaker
               </Link>
               <Link
-                href="/directory"
-                className={location === "/directory" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                href={`/${workspaceSlug}/directory`}
+                className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Directory
               </Link>
               <Link
-                href="/lists"
-                className={location === "/lists" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                href={`/${workspaceSlug}/lists`}
+                className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Lists
               </Link>
@@ -155,9 +170,9 @@ export default function Navigation() {
                   {user ? (
                     <>
                       <Link
-                        href="/matchmaker"
+                        href={`/${workspaceSlug}/matchmaker`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === "/matchmaker" || location === "/" 
+                          location === `/${workspaceSlug}/matchmaker`
                             ? "text-gray-900 bg-gray-100 font-bold" 
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}
@@ -166,9 +181,9 @@ export default function Navigation() {
                         Matchmaker
                       </Link>
                       <Link
-                        href="/directory"
+                        href={`/${workspaceSlug}/directory`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === "/directory" 
+                          location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}`
                             ? "text-gray-900 bg-gray-100 font-bold" 
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}
@@ -177,9 +192,9 @@ export default function Navigation() {
                         Directory
                       </Link>
                       <Link
-                        href="/lists"
+                        href={`/${workspaceSlug}/lists`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === "/lists" 
+                          location === `/${workspaceSlug}/lists`
                             ? "text-gray-900 bg-gray-100 font-bold" 
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}

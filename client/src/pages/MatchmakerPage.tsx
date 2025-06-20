@@ -203,10 +203,7 @@ export default function MatchmakerPage() {
                           Finding matches...
                         </>
                       ) : (
-                        <>
-                          <Star className="mr-2 h-4 w-4" />
-                          Find matches
-                        </>
+                        "Find matches"
                       )}
                     </Button>
                   </div>
@@ -216,13 +213,16 @@ export default function MatchmakerPage() {
           </div>
 
           {analysis && (
-            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden p-6 mt-6">
-              <div className="flex items-center gap-2 text-xl font-semibold mb-4">
-                <Star className="h-5 w-5 text-primary" />
-                AI Analysis
-              </div>
-              <p className="text-gray-700 leading-relaxed text-base">{analysis}</p>
-            </div>
+            <Card className="shadow-lg mt-6">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl">
+                  AI Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed text-base">{analysis}</p>
+              </CardContent>
+            </Card>
           )}
 
           {recommendations.length === 0 && analysis && (

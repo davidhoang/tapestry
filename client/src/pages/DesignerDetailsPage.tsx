@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil } from "lucide-react";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import MDEditor from "@uiw/react-md-editor";
 import { useDesigner } from "@/hooks/use-designers";
 import { useState } from "react";

@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import MDEditor from "@uiw/react-md-editor";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { useForm } from "react-hook-form";
 import { Loader2, Plus, Trash, ListPlus, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";

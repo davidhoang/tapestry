@@ -893,7 +893,10 @@ function ViewDesignerDialog({
               <div>
                 <h3 className="font-medium mb-2">Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {designer.skills.map((skill, index) => (
+                  {(designer.skills && typeof designer.skills === 'string' 
+                    ? designer.skills.split(',').map(s => s.trim()).filter(s => s)
+                    : []
+                  ).map((skill, index) => (
                     <div
                       key={index}
                       className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"

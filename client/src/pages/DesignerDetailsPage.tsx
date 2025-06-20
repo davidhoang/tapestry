@@ -527,7 +527,10 @@ export default function DesignerDetailsPage() {
               <div className="space-y-6">
                 <h2 className="text-3xl font-bold">Skills & Expertise</h2>
                 <div className="flex flex-wrap gap-3">
-                  {designer.skills.map((skill, i) => (
+                  {(designer.skills && typeof designer.skills === 'string' 
+                    ? designer.skills.split(',').map(s => s.trim()).filter(s => s)
+                    : []
+                  ).map((skill, i) => (
                     <span 
                       key={i} 
                       className="text-base hover:text-foreground transition-colors cursor-default designer-skills-text"

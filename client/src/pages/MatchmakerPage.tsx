@@ -113,20 +113,28 @@ export default function MatchmakerPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Background with cover image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80')`
+        }}
+      />
+      
       <Navigation />
       
-      <div className={`flex transition-all duration-300 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
+      <div className={`flex transition-all duration-300 relative z-10 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
         <div className="flex-1 container mx-auto px-4 pt-24 pb-8 max-w-4xl">
           <div className="text-center space-y-6 mb-8">
-            <h1 className="text-4xl font-bold tracking-tight">AI Design Matchmaker</h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
+            <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">AI Design Matchmaker</h1>
+            <p className="text-xl text-gray-200 leading-relaxed drop-shadow">
               Paste your role description and let AI find the perfect designer matches from your database
             </p>
           </div>
 
           <div className="relative">
-            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
               <div className="p-8">
                 <div className="relative">
                   <Textarea
@@ -171,209 +179,154 @@ export default function MatchmakerPage() {
           </div>
 
           {analysis && (
-            <Card className="shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Star className="h-5 w-5 text-primary" />
-                  AI Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed text-base">{analysis}</p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden p-6 mt-6">
+              <div className="flex items-center gap-2 text-xl font-semibold mb-4">
+                <Star className="h-5 w-5 text-primary" />
+                AI Analysis
+              </div>
+              <p className="text-gray-700 leading-relaxed text-base">{analysis}</p>
+            </div>
           )}
 
           {recommendations.length === 0 && analysis && (
-            <Card className="shadow-lg">
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground text-lg">No suitable matches found for this role description.</p>
-                <p className="text-sm text-muted-foreground mt-2">Try adjusting your requirements or adding more designers to your database.</p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden p-6 mt-6">
+              <div className="text-center py-8">
+                <div className="text-gray-500 text-lg">No matches found for this role description.</div>
+                <div className="text-gray-400 text-sm mt-2">Try adjusting your requirements or adding more details.</div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Recommendations Sidebar */}
         {recommendations.length > 0 && (
-          <div className="fixed right-0 top-16 bottom-0 w-96 bg-background border-l border-border shadow-lg z-30 flex flex-col">
-            <div className="p-6 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wide font-medium">Results</p>
-                  <h2 className="text-xl font-semibold">
-                    {recommendations.length} Matches
-                  </h2>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setRecommendations([]);
-                    setAnalysis("");
-                    setSelectedDesigners(new Set());
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  ×
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-4">
-                {recommendations.map((recommendation) => {
-                  const { designer, matchScore, reasoning, matchedSkills, concerns } = recommendation;
-                  const isSelected = selectedDesigners.has(designer.id);
-
-                  return (
-                    <Card key={designer.id} className={`transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleDesignerSelection(designer.id)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-sm truncate">{designer.name}</h3>
-                              <Badge className={`${getMatchScoreColor(matchScore)} text-white text-xs`}>
-                                {matchScore}%
-                              </Badge>
-                            </div>
-                            {designer.title && (
-                              <p className="text-xs text-muted-foreground truncate">{designer.title}</p>
-                            )}
-                            {designer.company && (
-                              <p className="text-xs text-muted-foreground truncate">{designer.company}</p>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="pt-0 space-y-3">
+          <div className="fixed right-0 top-0 h-full w-96 bg-white/95 backdrop-blur-sm border-l border-white/20 shadow-xl overflow-y-auto z-20">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Recommended Designers</h2>
+                {selectedDesigners.size > 0 && (
+                  <Dialog open={showCreateList} onOpenChange={setShowCreateList}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="rounded-full">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Create List ({selectedDesigners.size})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create New List</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
                         <div>
-                          <h4 className="font-medium text-green-600 text-xs mb-1">Match Reasoning:</h4>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{reasoning}</p>
+                          <Label htmlFor="list-name">List Name</Label>
+                          <Input
+                            id="list-name"
+                            value={listName}
+                            onChange={(e) => setListName(e.target.value)}
+                            placeholder="e.g., Senior Product Designers"
+                          />
                         </div>
-
-                        {matchedSkills && matchedSkills.length > 0 && (
-                          <div>
-                            <h4 className="font-medium text-xs mb-1">Key Skills:</h4>
-                            <div className="flex flex-wrap gap-1">
-                              {matchedSkills.slice(0, 3).map((skill) => (
-                                <Badge key={skill} variant="secondary" className="text-xs px-1 py-0">
-                                  {skill}
-                                </Badge>
-                              ))}
-                              {matchedSkills.length > 3 && (
-                                <Badge variant="outline" className="text-xs px-1 py-0">
-                                  +{matchedSkills.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {concerns && (
-                          <div>
-                            <h4 className="font-medium text-orange-600 text-xs mb-1">Considerations:</h4>
-                            <p className="text-xs text-muted-foreground leading-relaxed">{concerns}</p>
-                          </div>
-                        )}
-
-                        <div className="flex justify-between items-center pt-2">
-                          <div className="flex gap-1">
-                            {designer.portfolioUrl && (
-                              <Button variant="outline" size="sm" asChild className="h-7 w-7 p-0">
-                                <a href={designer.portfolioUrl} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              </Button>
-                            )}
-                            {designer.email && (
-                              <Button variant="outline" size="sm" asChild className="h-7 w-7 p-0">
-                                <a href={`mailto:${designer.email}`}>
-                                  <Mail className="h-3 w-3" />
-                                </a>
-                              </Button>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            {designer.location && (
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                <span className="truncate max-w-20">{designer.location}</span>
-                              </div>
-                            )}
-                          </div>
+                        <div>
+                          <Label htmlFor="list-description">Description (optional)</Label>
+                          <Textarea
+                            id="list-description"
+                            value={listDescription}
+                            onChange={(e) => setListDescription(e.target.value)}
+                            placeholder="Brief description of this list..."
+                            rows={3}
+                          />
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => setShowCreateList(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleCreateList} disabled={!listName.trim() || createList.isPending}>
+                            {createList.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Creating...
+                              </>
+                            ) : (
+                              "Create List"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
-            </div>
 
-            {/* Floating Create List Button */}
-            {selectedDesigners.size > 0 && (
-              <div className="p-6 border-t border-border bg-background">
-                <Dialog open={showCreateList} onOpenChange={setShowCreateList}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create List ({selectedDesigners.size})
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create Designer List</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="list-name">List Name</Label>
-                        <Input
-                          id="list-name"
-                          value={listName}
-                          onChange={(e) => setListName(e.target.value)}
-                          placeholder="Senior Product Designer Candidates"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="list-description">Description (Optional)</Label>
-                        <Textarea
-                          id="list-description"
-                          value={listDescription}
-                          onChange={(e) => setListDescription(e.target.value)}
-                          placeholder="Candidates for our B2B SaaS product designer role..."
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowCreateList(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleCreateList}
-                          disabled={createList.isPending}
-                        >
-                          {createList.isPending ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="mr-2 h-4 w-4" />
+              <div className="space-y-4">
+                {recommendations.map((rec) => (
+                  <div key={rec.designer.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedDesigners.has(rec.designer.id)}
+                        onCheckedChange={(checked) => {
+                          const newSelected = new Set(selectedDesigners);
+                          if (checked) {
+                            newSelected.add(rec.designer.id);
+                          } else {
+                            newSelected.delete(rec.designer.id);
+                          }
+                          setSelectedDesigners(newSelected);
+                        }}
+                      />
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-medium text-gray-900 truncate">{rec.designer.name}</h3>
+                            {rec.designer.title && (
+                              <p className="text-sm text-gray-600">{rec.designer.title}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            <div className={`w-2 h-2 rounded-full ${getMatchScoreColor(rec.matchScore)}`} />
+                            <span className="text-xs font-medium text-gray-700">{rec.matchScore}%</span>
+                          </div>
+                        </div>
+
+                        {rec.designer.location && (
+                          <div className="flex items-center gap-1 mb-2">
+                            <MapPin className="h-3 w-3 text-gray-400" />
+                            <span className="text-xs text-gray-600">{rec.designer.location}</span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {rec.designer.skills?.slice(0, 3).map((skill, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs px-2 py-0.5">
+                              #{skill}
+                            </Badge>
+                          ))}
+                          {rec.designer.skills && rec.designer.skills.length > 3 && (
+                            <Badge variant="outline" className="text-xs px-2 py-0.5">
+                              +{rec.designer.skills.length - 3}
+                            </Badge>
                           )}
-                          Create List
-                        </Button>
+                        </div>
+
+                        <p className="text-xs text-gray-600 line-clamp-2 mb-3">{rec.reasoning}</p>
+
+                        <div className="flex gap-2">
+                          {rec.designer.email && (
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                              <Mail className="h-3 w-3 mr-1" />
+                              Contact
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                            <User className="h-3 w-3 mr-1" />
+                            View Profile
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

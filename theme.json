@@ -2,5 +2,12 @@
   "variant": "professional",
   "primary": "#C8944B",
   "appearance": "light",
-  "radius": 0.5
+  "radius": 0.5,
+  "customColors": {
+    "warmNeutral": "#F5F2ED",
+    "richBrown": "#8B5A2B",
+    "softCream": "#FBF8F3",
+    "deepGold": "#B8843F",
+    "mutedTan": "#E6D5B7"
+  }
 }

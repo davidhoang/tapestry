@@ -126,20 +126,33 @@ export default function ComponentsPage() {
     }
   ];
 
-  // Color palette with actual theme colors
+  // Color palette with actual theme colors and suggested improvements
   const colorPalette = [
     {
-      name: "Primary",
+      name: "Primary & Variants",
       colors: [
-        { name: "Primary", class: "bg-primary", text: "text-primary-foreground" },
-        { name: "Primary Foreground", class: "bg-primary-foreground border", text: "text-primary" }
+        { name: "Primary (#C8944B)", class: "bg-primary", text: "text-primary-foreground" },
+        { name: "Primary Foreground", class: "bg-primary-foreground border", text: "text-primary" },
+        { name: "Deep Gold", class: "bg-[#B8843F]", text: "text-white" },
+        { name: "Rich Brown", class: "bg-[#8B5A2B]", text: "text-white" }
       ]
     },
     {
-      name: "Secondary", 
+      name: "Warm Neutrals", 
+      colors: [
+        { name: "Soft Cream", class: "bg-[#FBF8F3] border", text: "text-gray-800" },
+        { name: "Warm Neutral", class: "bg-[#F5F2ED] border", text: "text-gray-800" },
+        { name: "Muted Tan", class: "bg-[#E6D5B7]", text: "text-gray-800" },
+        { name: "Stone", class: "bg-[#D4C4A8]", text: "text-gray-800" }
+      ]
+    },
+    {
+      name: "System Colors",
       colors: [
         { name: "Secondary", class: "bg-secondary", text: "text-secondary-foreground" },
-        { name: "Secondary Foreground", class: "bg-secondary-foreground border", text: "text-secondary" }
+        { name: "Muted", class: "bg-muted", text: "text-muted-foreground" },
+        { name: "Accent", class: "bg-accent", text: "text-accent-foreground" },
+        { name: "Card", class: "bg-card border", text: "text-card-foreground" }
       ]
     },
     {
@@ -150,31 +163,12 @@ export default function ComponentsPage() {
       ]
     },
     {
-      name: "Muted",
-      colors: [
-        { name: "Muted", class: "bg-muted", text: "text-muted-foreground" },
-        { name: "Muted Foreground", class: "bg-muted-foreground", text: "text-muted" }
-      ]
-    },
-    {
-      name: "Accent",
-      colors: [
-        { name: "Accent", class: "bg-accent", text: "text-accent-foreground" },
-        { name: "Accent Foreground", class: "bg-accent-foreground border", text: "text-accent" }
-      ]
-    },
-    {
-      name: "Card",
-      colors: [
-        { name: "Card", class: "bg-card border", text: "text-card-foreground" },
-        { name: "Card Foreground", class: "bg-card-foreground", text: "text-card" }
-      ]
-    },
-    {
-      name: "Destructive",
+      name: "Status Colors",
       colors: [
         { name: "Destructive", class: "bg-destructive", text: "text-destructive-foreground" },
-        { name: "Destructive Foreground", class: "bg-destructive-foreground border", text: "text-destructive" }
+        { name: "Success", class: "bg-green-600", text: "text-white" },
+        { name: "Warning", class: "bg-amber-500", text: "text-white" },
+        { name: "Info", class: "bg-blue-600", text: "text-white" }
       ]
     },
     {

@@ -65,6 +65,7 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "nav-cream": "#FFF0EC",
       },
       keyframes: {
         "accordion-down": {

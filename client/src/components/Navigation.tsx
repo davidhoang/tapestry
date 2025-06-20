@@ -33,29 +33,29 @@ export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="border-b border-white/20 bg-black fixed top-0 left-0 right-0 z-50">
+    <nav className="border-b border-gray-200 bg-nav-cream fixed top-0 left-0 right-0 z-50">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 mx-auto">
         <div className="flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold text-white">Design Talent Match</span>
+            <span className="font-bold text-gray-900">Design Talent Match</span>
           </Link>
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
               <Link
                 href="/matchmaker"
-                className={location === "/matchmaker" || location === "/" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
+                className={location === "/matchmaker" || location === "/" ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Matchmaker
               </Link>
               <Link
                 href="/directory"
-                className={location === "/directory" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
+                className={location === "/directory" ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Directory
               </Link>
               <Link
                 href="/lists"
-                className={location === "/lists" ? "text-white" : "text-white/60 hover:text-white/80 transition-colors"}
+                className={location === "/lists" ? "text-gray-900 font-medium" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Lists
               </Link>
@@ -69,7 +69,7 @@ export default function Navigation() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                  <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-gray-100">
                     <UserCircle className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -92,7 +92,7 @@ export default function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="default" onClick={() => setShowAuthDialog(true)} className="bg-white text-black hover:bg-gray-100 border-none transition-colors">
+              <Button variant="default" onClick={() => setShowAuthDialog(true)} className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
                 Sign in
               </Button>
             )}
@@ -102,11 +102,11 @@ export default function Navigation() {
           <div className="md:hidden">
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-gray-100">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] bg-black border-white/20">
+              <SheetContent side="right" className="w-[300px] bg-nav-cream border-gray-200">
                 <SheetHeader>
                   <VisuallyHidden>
                     <SheetTitle>Navigation Menu</SheetTitle>
@@ -119,8 +119,8 @@ export default function Navigation() {
                         href="/matchmaker"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/matchmaker" || location === "/" 
-                            ? "text-white bg-white/10" 
-                            : "text-white/60 hover:text-white hover:bg-white/5"
+                            ? "text-gray-900 bg-gray-100 font-medium" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -130,8 +130,8 @@ export default function Navigation() {
                         href="/directory"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/directory" 
-                            ? "text-white bg-white/10" 
-                            : "text-white/60 hover:text-white hover:bg-white/5"
+                            ? "text-gray-900 bg-gray-100 font-medium" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -141,8 +141,8 @@ export default function Navigation() {
                         href="/lists"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/lists" 
-                            ? "text-white bg-white/10" 
-                            : "text-white/60 hover:text-white hover:bg-white/5"
+                            ? "text-gray-900 bg-gray-100 font-medium" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -150,7 +150,7 @@ export default function Navigation() {
                       </Link>
                       <Link
                         href="/components"
-                        className="text-white/60 hover:text-white hover:bg-white/5 text-lg py-2 px-4 rounded transition-colors"
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Components
@@ -158,7 +158,7 @@ export default function Navigation() {
                       {user.isAdmin && (
                         <Link
                           href="/admin"
-                          className="text-white/60 hover:text-white hover:bg-white/5 text-lg py-2 px-4 rounded transition-colors"
+                          className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           Database Admin
@@ -170,7 +170,7 @@ export default function Navigation() {
                           logout();
                           setMobileMenuOpen(false);
                         }}
-                        className="text-white/60 hover:text-white hover:bg-white/5 text-lg py-2 px-4 rounded transition-colors justify-start"
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors justify-start"
                       >
                         Logout
                       </Button>
@@ -182,7 +182,7 @@ export default function Navigation() {
                         setShowAuthDialog(true);
                         setMobileMenuOpen(false);
                       }} 
-                      className="bg-white text-black hover:bg-gray-100 border-none text-lg py-2 px-4 rounded justify-start transition-colors"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 border-none text-lg py-2 px-4 rounded justify-start transition-colors"
                     >
                       Sign in
                     </Button>

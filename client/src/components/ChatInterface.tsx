@@ -179,52 +179,12 @@ export default function ChatInterface({ conversation, onRecommendationsChange }:
                 </p>
               </div>
               
+              {/* Indicator for recommendations - shows on all screen sizes */}
               {msg.role === "assistant" && msg.recommendations && (
-                <div className="mt-3 space-y-2 hidden min-[769px]:block">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    Designer Matches:
-                  </p>
-                  {msg.recommendations.map((rec: any) => {
-                    const designer: SelectDesigner = rec.designer;
-                    const isSelected = selectedDesigners.has(designer.id);
-                    
-                    return (
-                      <Card key={designer.id} className={`text-xs ${isSelected ? 'ring-1 ring-primary' : ''}`}>
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-2">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleDesignerSelection(designer.id)}
-                              className="mt-0.5"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium truncate text-sm">{designer.name}</h4>
-                                <Badge className={`${getMatchScoreColor(rec.matchScore)} text-white text-xs`}>
-                                  {rec.matchScore}%
-                                </Badge>
-                              </div>
-                              {designer.title && (
-                                <p className="text-xs text-muted-foreground truncate">{designer.title}</p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {rec.reasoning}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-              
-              {/* Mobile indicator for recommendations */}
-              {msg.role === "assistant" && msg.recommendations && (
-                <div className="mt-3 max-[768px]:block hidden">
+                <div className="mt-3">
                   <div className="bg-muted/50 border border-border rounded-lg p-3">
                     <p className="text-xs text-muted-foreground font-medium">
-                      ✨ {msg.recommendations.length} designer matches found - see below
+                      ✨ {msg.recommendations.length} designer matches found - see recommendations section
                     </p>
                   </div>
                 </div>

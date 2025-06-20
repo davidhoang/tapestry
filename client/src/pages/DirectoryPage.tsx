@@ -193,22 +193,18 @@ export default function DirectoryPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDesigners.map((designer) => (
-              <div key={designer.id} className="relative">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(designer.id)}
-                  onChange={() => toggleDesignerSelection(designer.id)}
-                  className="absolute top-4 left-4 z-10 w-4 h-4 text-primary bg-background border-2 border-muted-foreground rounded focus:ring-primary focus:ring-2"
-                />
-                <DesignerCard 
-                  designer={designer} 
-                  onEdit={setDesignerToEdit}
-                  onEnrich={(designer) => {
-                    setEnrichmentDesigner(designer);
-                    setShowEnrichment(true);
-                  }}
-                />
-              </div>
+              <DesignerCard 
+                key={designer.id}
+                designer={designer} 
+                onEdit={setDesignerToEdit}
+                onEnrich={(designer) => {
+                  setEnrichmentDesigner(designer);
+                  setShowEnrichment(true);
+                }}
+                showCheckbox={true}
+                isSelected={selectedIds.includes(designer.id)}
+                onToggleSelect={toggleDesignerSelection}
+              />
             ))}
           </div>
         )}

@@ -39,6 +39,19 @@ const upload = multer({
   },
 });
 
+// Middleware to check if user is admin
+const requireAdmin = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  next();
+};
+
 // Add error handler for database operations
 const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
   return async (req: any, res: any) => {

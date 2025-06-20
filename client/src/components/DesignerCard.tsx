@@ -34,7 +34,9 @@ export default function DesignerCard({
   const [isSkillsExpanded, setIsSkillsExpanded] = useState(false);
   
   // Parse skills string into array and check if skills overflow one line
-  const skillsArray = designer.skills ? designer.skills.split(',').map(s => s.trim()).filter(s => s) : [];
+  const skillsArray = (designer.skills && typeof designer.skills === 'string') 
+    ? designer.skills.split(',').map(s => s.trim()).filter(s => s) 
+    : [];
   const shouldShowExpansion = skillsArray.length > 3;
   const displayedSkills = isSkillsExpanded ? skillsArray : skillsArray.slice(0, 3);
 

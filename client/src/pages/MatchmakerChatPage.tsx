@@ -173,7 +173,8 @@ export default function MatchmakerChatPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className={`flex transition-all duration-300 ${currentRecommendations.length > 0 ? 'pr-96' : ''}`}>
+      {/* Desktop Layout */}
+      <div className={`hidden lg:flex transition-all duration-300 ${currentRecommendations.length > 0 ? 'pr-96' : ''}`}>
         <div className="flex-1 flex flex-col h-screen pt-16">
           <div className="flex-1">
             <ChatInterface 
@@ -183,7 +184,7 @@ export default function MatchmakerChatPage() {
           </div>
         </div>
 
-        {/* Recommendations Sidebar */}
+        {/* Desktop Recommendations Sidebar */}
         {currentRecommendations.length > 0 && (
           <div className="fixed right-0 top-16 bottom-0 w-96 bg-background border-l border-border shadow-lg z-30 flex flex-col">
             <div className="p-6 border-b border-border">
@@ -361,6 +362,185 @@ export default function MatchmakerChatPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <div className="flex flex-col h-screen pt-16">
+          {/* Chat Interface */}
+          <div className="flex-1">
+            <ChatInterface 
+              conversation={conversation.data}
+              onRecommendationsChange={setCurrentRecommendations}
+            />
+          </div>
+
+          {/* Mobile Recommendations Section */}
+          {currentRecommendations.length > 0 && (
+            <div className="bg-background border-t border-border">
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide font-medium">Results</p>
+                    <h2 className="text-lg font-semibold">
+                      {currentRecommendations.length} Matches
+                    </h2>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCurrentRecommendations([])}
+                    className="h-8 w-8 p-0"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
+
+              <div className="max-h-80 overflow-y-auto p-4">
+                <div className="space-y-3">
+                  {currentRecommendations.map((recommendation) => {
+                    const { designer, matchScore, reasoning, matchedSkills, concerns } = recommendation;
+                    const isSelected = selectedDesigners.has(designer.id);
+
+                    return (
+                      <Card key={designer.id} className={`transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+                        <CardContent className="p-3">
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleDesignerSelection(designer.id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-sm truncate">{designer.name}</h3>
+                                <Badge className={`${getMatchScoreColor(matchScore)} text-white text-xs`}>
+                                  {matchScore}%
+                                </Badge>
+                              </div>
+                              {designer.title && (
+                                <p className="text-xs text-muted-foreground truncate">{designer.title}</p>
+                              )}
+                              {designer.company && (
+                                <p className="text-xs text-muted-foreground truncate">{designer.company}</p>
+                              )}
+                              
+                              <div className="mt-2">
+                                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{reasoning}</p>
+                              </div>
+
+                              {matchedSkills.length > 0 && (
+                                <div className="mt-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {matchedSkills.slice(0, 3).map((skill) => (
+                                      <Badge key={skill} variant="secondary" className="text-xs px-1 py-0">
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                    {matchedSkills.length > 3 && (
+                                      <Badge variant="outline" className="text-xs px-1 py-0">
+                                        +{matchedSkills.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex justify-between items-center mt-2">
+                                <div className="flex gap-1">
+                                  {designer.portfolioUrl && (
+                                    <Button variant="outline" size="sm" asChild className="h-6 w-6 p-0">
+                                      <a href={designer.portfolioUrl} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {designer.email && (
+                                    <Button variant="outline" size="sm" asChild className="h-6 w-6 p-0">
+                                      <a href={`mailto:${designer.email}`}>
+                                        <Mail className="h-3 w-3" />
+                                      </a>
+                                    </Button>
+                                  )}
+                                </div>
+                                
+                                {designer.location && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <MapPin className="h-3 w-3" />
+                                    <span className="truncate max-w-20">{designer.location}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mobile Create List Button */}
+              {selectedDesigners.size > 0 && (
+                <div className="p-4 border-t border-border bg-background">
+                  <Dialog open={showCreateList} onOpenChange={setShowCreateList}>
+                    <DialogTrigger asChild>
+                      <Button className="w-full" size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create List ({selectedDesigners.size})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create Designer List</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="mobile-list-name">List Name</Label>
+                          <Input
+                            id="mobile-list-name"
+                            value={listName}
+                            onChange={(e) => setListName(e.target.value)}
+                            placeholder="Senior Product Designer Candidates"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="mobile-list-description">Description (Optional)</Label>
+                          <Textarea
+                            id="mobile-list-description"
+                            value={listDescription}
+                            onChange={(e) => setListDescription(e.target.value)}
+                            placeholder="Candidates from AI matchmaker conversation..."
+                            rows={3}
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowCreateList(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleCreateList}
+                            disabled={createList.isPending}
+                          >
+                            {createList.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Plus className="mr-2 h-4 w-4" />
+                            )}
+                            Create List
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

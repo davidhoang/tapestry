@@ -14,7 +14,7 @@ import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, Shuffle } from "
 import Navigation from "../components/Navigation";
 
 export default function MatchmakerPage() {
-  const [roleDescription, setRoleDescription] = useState("");
+  const [roleDescription, setRoleDescription] = useState("We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus...");
   const [recommendations, setRecommendations] = useState<MatchRecommendation[]>([]);
   const [analysis, setAnalysis] = useState("");
   const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(new Set());

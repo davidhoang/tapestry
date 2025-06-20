@@ -132,6 +132,7 @@ export function setupAuth(app: Express) {
         .values({
           email,
           password: hashedPassword,
+          isAdmin: email === 'david@davidhoang.com',
         })
         .returning();
 

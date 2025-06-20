@@ -74,11 +74,13 @@ export default function Navigation() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/components" className="flex items-center w-full">
-                      Components
-                    </Link>
-                  </DropdownMenuItem>
+                  {user.isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/components" className="flex items-center w-full">
+                        Components
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin" className="flex items-center w-full">
@@ -148,13 +150,15 @@ export default function Navigation() {
                       >
                         Lists
                       </Link>
-                      <Link
-                        href="/components"
-                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Components
-                      </Link>
+                      {user.isAdmin && (
+                        <Link
+                          href="/components"
+                          className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Components
+                        </Link>
+                      )}
                       {user.isAdmin && (
                         <Link
                           href="/admin"

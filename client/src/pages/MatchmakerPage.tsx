@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Brain, Star, ExternalLink, Plus, Mail, User, MapPin, DollarSign, Clock } from "lucide-react";
+import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, DollarSign, Clock } from "lucide-react";
 import Navigation from "../components/Navigation";
 
 export default function MatchmakerPage() {
@@ -119,38 +119,37 @@ export default function MatchmakerPage() {
       <Navigation />
       
       <div className={`flex transition-all duration-300 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
-        <div className="flex-1 container mx-auto px-4 pt-24 pb-8 space-y-8">
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <Brain className="h-8 w-8 text-primary" />
-              <h1 className="text-4xl font-bold">AI Design Matchmaker</h1>
-            </div>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <div className="flex-1 container mx-auto px-4 pt-24 pb-8 max-w-4xl">
+          <div className="text-center space-y-6 mb-8">
+            <h1 className="text-4xl font-bold tracking-tight">AI Design Matchmaker</h1>
+            <p className="text-xl text-muted-foreground leading-relaxed">
               Paste your role description and let AI find the perfect designer matches from your database
             </p>
           </div>
 
-          <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle>Role Description</CardTitle>
+          <Card className="shadow-lg">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-2xl">Role Description</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="role-description">Describe the role, project, or ideal candidate</Label>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="role-description" className="text-base font-medium">
+                  Describe the role, project, or ideal candidate
+                </Label>
                 <Textarea
                   id="role-description"
                   placeholder="We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus..."
                   value={roleDescription}
                   onChange={(e) => setRoleDescription(e.target.value)}
                   rows={6}
-                  className="resize-none"
+                  className="resize-none text-base leading-relaxed"
                 />
               </div>
               
               <Button
                 onClick={handleAnalyze}
                 disabled={matchmaker.isPending || !roleDescription.trim()}
-                className="w-full"
+                className="w-full h-12 text-base font-medium"
                 size="lg"
               >
                 {matchmaker.isPending ? (
@@ -159,33 +158,31 @@ export default function MatchmakerPage() {
                     Analyzing with AI...
                   </>
                 ) : (
-                  <>
-                    <Brain className="mr-2 h-4 w-4" />
-                    Find Matches
-                  </>
+                  "Find Matches"
                 )}
               </Button>
             </CardContent>
           </Card>
 
           {analysis && (
-            <Card className="max-w-4xl mx-auto">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5" />
+            <Card className="shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Star className="h-5 w-5 text-primary" />
                   AI Analysis
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground leading-relaxed">{analysis}</p>
+                <p className="text-muted-foreground leading-relaxed text-base">{analysis}</p>
               </CardContent>
             </Card>
           )}
 
           {recommendations.length === 0 && analysis && (
-            <Card className="max-w-4xl mx-auto">
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">No suitable matches found for this role description.</p>
+            <Card className="shadow-lg">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground text-lg">No suitable matches found for this role description.</p>
+                <p className="text-sm text-muted-foreground mt-2">Try adjusting your requirements or adding more designers to your database.</p>
               </CardContent>
             </Card>
           )}

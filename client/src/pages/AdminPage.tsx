@@ -158,7 +158,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
+    <div className="container mx-auto pt-20 pb-8 px-4 max-w-6xl">
       <div className="flex items-center gap-2 mb-8">
         <Database className="h-6 w-6" />
         <h1 className="text-3xl font-bold">Database Admin</h1>

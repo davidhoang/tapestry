@@ -83,6 +83,15 @@ export default function DesignerCard({
               <Pencil className="h-4 w-4 text-white" />
             </button>
           )}
+          
+          {/* Open to Roles badge - positioned below cover image */}
+          {designer.available && (
+            <div className="absolute -bottom-2 right-3 z-10">
+              <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200 shadow-sm">
+                Open to Roles
+              </Badge>
+            </div>
+          )}
         </div>
         
         <CardHeader className="space-y-1 pb-4">
@@ -151,11 +160,7 @@ export default function DesignerCard({
                 )}
               </div>
             </div>
-            {designer.available && (
-              <div className="pt-2">
-                <Badge variant="secondary">Open to Roles</Badge>
-              </div>
-            )}
+
           </div>
         </CardContent>
       </Card>

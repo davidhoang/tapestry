@@ -66,48 +66,11 @@ export function setupAuth(app: Express) {
       },
       async (email, password, done) => {
         try {
-          // Temporary hardcoded user for testing until DB is fixed
-          if (email === 'david@davidhoang.com' && password === 'password') {
-            const tempUser = {
-              id: 1,
-              email: 'david@davidhoang.com',
-              password: 'hashed_password',
-              username: 'David Hoang',
-              photoUrl: null,
-              isAdmin: true,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
-            return done(null, tempUser);
-          }
-
-          // Try database connection with error handling
-          let user;
-          try {
-            const [dbUser] = await db
-              .select()
-              .from(users)
-              .where(eq(users.email, email))
-              .limit(1);
-            user = dbUser;
-          } catch (dbError) {
-            console.error('Database connection error:', dbError);
-            // Fall back to hardcoded user if DB fails
-            if (email === 'david@davidhoang.com' && password === 'password') {
-              const tempUser = {
-                id: 1,
-                email: 'david@davidhoang.com',
-                password: 'hashed_password',
-                username: 'David Hoang',
-                photoUrl: null,
-                isAdmin: true,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              };
-              return done(null, tempUser);
-            }
-            return done(null, false, { message: "Database connection error. Please try again." });
-          }
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
           if (!user) {
             return done(null, false, { message: "Incorrect email." });
@@ -118,7 +81,6 @@ export function setupAuth(app: Express) {
           }
           return done(null, user);
         } catch (err) {
-          console.error('Authentication error:', err);
           return done(err);
         }
       }
@@ -131,21 +93,6 @@ export function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      // Handle temporary user
-      if (id === 1) {
-        const tempUser = {
-          id: 1,
-          email: 'david@davidhoang.com',
-          password: 'hashed_password',
-          username: 'David Hoang',
-          photoUrl: null,
-          isAdmin: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        return done(null, tempUser);
-      }
-
       const [user] = await db
         .select()
         .from(users)
@@ -153,21 +100,6 @@ export function setupAuth(app: Express) {
         .limit(1);
       done(null, user);
     } catch (err) {
-      console.error('Deserialization error:', err);
-      // Fall back to temp user if DB fails
-      if (id === 1) {
-        const tempUser = {
-          id: 1,
-          email: 'david@davidhoang.com',
-          password: 'hashed_password',
-          username: 'David Hoang',
-          photoUrl: null,
-          isAdmin: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        return done(null, tempUser);
-      }
       done(err);
     }
   });

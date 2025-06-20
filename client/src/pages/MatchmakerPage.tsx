@@ -22,6 +22,13 @@ export default function MatchmakerPage() {
   const [listName, setListName] = useState("");
   const [listDescription, setListDescription] = useState("");
   
+  // Random background image selection
+  const [backgroundImage] = useState(() => {
+    const imageCount = 18; // We have img-cover-1.png through img-cover-18.png
+    const randomNumber = Math.floor(Math.random() * imageCount) + 1;
+    return `/images/card-covers/img-cover-${randomNumber}.png`;
+  });
+  
   const matchmaker = useMatchmaker();
   const createList = useCreateList();
   const { toast } = useToast();
@@ -114,11 +121,11 @@ export default function MatchmakerPage() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Background with cover image */}
+      {/* Background with random cover image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80')`
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('${backgroundImage}')`
         }}
       />
       

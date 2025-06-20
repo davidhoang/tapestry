@@ -43,7 +43,7 @@ export default function DesignerCard({
         onClick={() => setLocation(`/designer/${designer.id}`)}
       >
         {/* Cover Image */}
-        <div className="relative h-24 overflow-hidden">
+        <div className="relative h-16 overflow-hidden">
           <img 
             src={getDesignerCoverImage(designer.id)} 
             alt="Cover"

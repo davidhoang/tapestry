@@ -1,8 +1,11 @@
-# Design Matchmaker
+# Tapestry: Intelligent Design Matchmaking
 
-A Proof of Concept experiment.
-
-## Overview
-This is an experimental app created by David Hoang.
+Tapestry is a  [Proof of Concept](http://www.proofofconcept.pub) experiment.
 
 Problem statement: I get reached out by a lot of people in my network asking for recommendations of designers. Though I'd like to help, this is time consuming and often results in me needing to manually go through a repository of talent.
+
+## Product screenshots
+
+![Tapestry](https://github.com/user-attachments/assets/37dc4c69-247e-4977-9786-c6fd7747041d)
+
+![Tapestry 2](https://github.com/user-attachments/assets/992034eb-8c84-4f7a-ba82-a174b156475e)

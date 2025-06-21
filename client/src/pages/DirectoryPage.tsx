@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -36,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, ListPlus, Sparkles } from "lucide-react";
+import { Loader2, Plus, Trash, ListPlus, Sparkles, Grid3X3, List } from "lucide-react";
 import { slugify } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
@@ -217,7 +218,7 @@ export default function DirectoryPage() {
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        ) : (
+        ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
             {filteredDesigners.map((designer) => (
               <DesignerCard 
@@ -229,6 +230,22 @@ export default function DirectoryPage() {
                   setShowEnrichment(true);
                 }}
                 showCheckbox={true}
+                isSelected={selectedIds.includes(designer.id)}
+                onToggleSelect={toggleDesignerSelection}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredDesigners.map((designer) => (
+              <DesignerListItem
+                key={designer.id}
+                designer={designer}
+                onEdit={setDesignerToEdit}
+                onEnrich={(designer) => {
+                  setEnrichmentDesigner(designer);
+                  setShowEnrichment(true);
+                }}
                 isSelected={selectedIds.includes(designer.id)}
                 onToggleSelect={toggleDesignerSelection}
               />

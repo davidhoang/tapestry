@@ -227,7 +227,7 @@ export default function ProfilePage() {
                 className="gap-2"
               >
                 <Upload className="w-4 h-4" />
-                {uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload Photo'}
+                {uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload photo'}
               </Button>
               <p className="text-sm text-muted-foreground mt-2">
                 JPG, PNG or GIF. Max 5MB.

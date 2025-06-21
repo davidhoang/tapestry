@@ -656,7 +656,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                 </>
               ) : (
                 <>
-                  AI Enrich Profile
+                  AI enrich profile
                 </>
               )}
             </Button>
@@ -885,7 +885,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                         </>
                       ) : (
                         <>
-                          AI Suggest
+                          AI suggest
                         </>
                       )}
                     </Button>

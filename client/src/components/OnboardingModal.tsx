@@ -186,7 +186,7 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
               </Button>
             ) : (
               <Button onClick={completeOnboarding} size="sm">
-                Get Started
+                Get started
               </Button>
             )}
           </div>

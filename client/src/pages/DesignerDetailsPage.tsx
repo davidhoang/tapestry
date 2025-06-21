@@ -269,7 +269,7 @@ export default function DesignerDetailsPage() {
                         className="flex items-center gap-2"
                       >
                         <Upload className="h-4 w-4" />
-                        {photoPreview || designer.photoUrl ? "Change Photo" : "Upload Photo"}
+                        {photoPreview || designer.photoUrl ? "Change photo" : "Upload photo"}
                       </Button>
                       
                       <input

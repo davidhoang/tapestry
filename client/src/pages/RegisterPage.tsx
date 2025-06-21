@@ -98,7 +98,7 @@ export default function RegisterPage() {
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/auth">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Login
+                  Back to login
                 </Link>
               </Button>
             </div>

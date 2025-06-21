@@ -13,6 +13,7 @@ type RegisterFormData = {
   email: string;
   password: string;
   confirmPassword: string;
+  workspaceName: string;
 };
 
 export default function RegisterPage() {
@@ -26,6 +27,7 @@ export default function RegisterPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      workspaceName: "",
     },
   });
 
@@ -43,6 +45,15 @@ export default function RegisterPage() {
       toast({
         title: "Error",
         description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!data.workspaceName.trim()) {
+      toast({
+        title: "Error",
+        description: "Workspace name is required",
         variant: "destructive",
       });
       return;

@@ -14,10 +14,6 @@ interface ProfileUpdateData {
   profilePhotoUrl?: string;
 }
 
-interface WorkspaceUpdateData {
-  name: string;
-}
-
 async function updateProfile(data: ProfileUpdateData) {
   const response = await fetch('/api/profile', {
     method: 'PUT',
@@ -44,24 +40,6 @@ async function uploadProfilePhoto(file: File) {
     method: 'POST',
     credentials: 'include',
     body: formData,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message);
-  }
-
-  return response.json();
-}
-
-async function updateWorkspace(data: WorkspaceUpdateData) {
-  const response = await fetch('/api/workspaces/update', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(data),
   });
 
   if (!response.ok) {

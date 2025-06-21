@@ -63,6 +63,7 @@ export default function PdfImport() {
       const response = await fetch('/api/import/pdf/process', {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -82,6 +83,7 @@ export default function PdfImport() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ contacts }),
+        credentials: 'include',
       });
       
       if (!response.ok) {

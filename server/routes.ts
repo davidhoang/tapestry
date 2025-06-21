@@ -271,23 +271,37 @@ export function registerRoutes(app: Express): Server {
   // Get all unique skills
   app.get("/api/skills", withErrorHandler(async (_req, res) => {
     try {
-      const result = await db.execute(sql`
-        WITH skill_arrays AS (
-          SELECT ARRAY(
-            SELECT DISTINCT jsonb_array_elements_text(skills::jsonb)
-            FROM designers
-            WHERE skills IS NOT NULL
-            ORDER BY 1
-          ) AS skills
-        )
-        SELECT skills FROM skill_arrays;
-      `);
+      // Fetch all designers with skills and process in JavaScript
+      const designers = await db.query.designers.findMany({
+        columns: {
+          skills: true,
+        },
+      });
 
-      // Add logging to check the response format
-      console.log('Skills API Response:', result.rows[0]?.skills);
+      const allSkills = new Set<string>();
 
-      // Ensure we return an array, even if empty
-      const skills = result.rows[0]?.skills || [];
+      designers.forEach(designer => {
+        if (designer.skills) {
+          // Handle both array and string formats
+          if (Array.isArray(designer.skills)) {
+            designer.skills.forEach(skill => {
+              if (skill && typeof skill === 'string') {
+                allSkills.add(skill.trim());
+              }
+            });
+          } else if (typeof designer.skills === 'string') {
+            // Handle comma-separated string format
+            designer.skills.split(',').forEach(skill => {
+              const trimmedSkill = skill.trim();
+              if (trimmedSkill) {
+                allSkills.add(trimmedSkill);
+              }
+            });
+          }
+        }
+      });
+
+      const skills = Array.from(allSkills).sort();
       res.json(skills);
     } catch (err) {
       console.error('Error fetching skills:', err);

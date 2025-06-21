@@ -232,7 +232,7 @@ export default function DirectoryPage() {
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
-                  Add Designer
+                  Add designer
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -241,12 +241,12 @@ export default function DirectoryPage() {
                   <DialogTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <Plus className="mr-2 h-4 w-4" />
-                      Add Designer
+                      Add designer
                     </DropdownMenuItem>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
                     <DialogHeader className="flex-shrink-0">
-                      <DialogTitle>Add New Designer</DialogTitle>
+                      <DialogTitle>Add new designer</DialogTitle>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto pr-2">
                       <AddDesignerDialog designer={null} onClose={() => {}} />
@@ -929,7 +929,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                 {(createDesigner.isPending || updateDesigner.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                {designer ? 'Update Designer' : 'Create Designer'}
+                {designer ? 'Update designer' : 'Create designer'}
               </Button>
             </div>
           </form>

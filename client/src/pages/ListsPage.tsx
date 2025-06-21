@@ -839,7 +839,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
             {(updateList.isPending || addDesigner.isPending) && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Save All Changes
+            Save changes
           </Button>
         </div>
       </DialogContent>

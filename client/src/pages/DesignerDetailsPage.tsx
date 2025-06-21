@@ -306,7 +306,7 @@ export default function DesignerDetailsPage() {
                         console.log('Form values:', form.getValues());
                       }}
                     >
-                      {updateDesigner.isPending ? "Saving..." : "Save Changes"}
+                      {updateDesigner.isPending ? "Saving..." : "Save changes"}
                     </Button>
                   </div>
                 </div>

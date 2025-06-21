@@ -343,7 +343,7 @@ export default function PdfImport() {
                   onClick={handleImportContacts}
                   disabled={importContactsMutation.isPending}
                 >
-                  {importContactsMutation.isPending ? 'Importing...' : 'Import All Contacts'}
+                  {importContactsMutation.isPending ? 'Importing...' : 'Import all contacts'}
                 </Button>
               </div>
             )}

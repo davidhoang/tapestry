@@ -109,6 +109,7 @@ export default function DirectoryPage() {
   const [showAddToListDialog, setShowAddToListDialog] = useState(false);
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [enrichmentDesigner, setEnrichmentDesigner] = useState<SelectDesigner | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
 
@@ -162,6 +163,26 @@ export default function DirectoryPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Directory</h1>
           <div className="flex gap-2">
+            {/* View Toggle */}
+            <div className="flex border rounded-lg">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="rounded-r-none"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+            
             {selectedIds.length > 0 && (
               <>
                 <Button 

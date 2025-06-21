@@ -101,12 +101,11 @@ export default function MatchmakerPage() {
     }
 
     try {
-      const formData = new FormData();
-      formData.append("name", listName);
-      formData.append("description", listDescription);
-      formData.append("designerIds", JSON.stringify(Array.from(selectedDesigners)));
-
-      await createList.mutateAsync(formData);
+      await createList.mutateAsync({
+        name: listName,
+        description: listDescription,
+        designerIds: Array.from(selectedDesigners)
+      });
       
       toast({
         title: "Success",

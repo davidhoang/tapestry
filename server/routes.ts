@@ -471,20 +471,21 @@ export function registerRoutes(app: Express): Server {
     }
 
     const result = await db.transaction(async (tx) => {
+      const { designerIds, ...listData } = req.body;
       const [list] = await tx
         .insert(lists)
         .values({
-          ...req.body,
+          ...listData,
           userId: req.user.id,
           workspaceId: userWorkspace.id,
         })
         .returning();
 
       // If designerIds are provided, add them to the list
-      if (req.body.designerIds?.length) {
+      if (designerIds?.length) {
         await tx.insert(listDesigners)
           .values(
-            req.body.designerIds.map((designerId: number) => ({
+            designerIds.map((designerId: number) => ({
               listId: list.id,
               designerId,
             }))

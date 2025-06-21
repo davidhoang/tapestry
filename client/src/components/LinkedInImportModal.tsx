@@ -208,18 +208,15 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>LinkedIn PDF Import</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm text-muted-foreground">
-            Upload a PDF export from LinkedIn connections or search results. The system will automatically extract contact information including names, titles, companies, and LinkedIn profiles.
-          </div>
+      <div className="space-y-4">
+        <div className="text-sm text-muted-foreground">
+          Upload a PDF export from LinkedIn connections or search results. The system will automatically extract contact information including names, titles, companies, and LinkedIn profiles.
+        </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="pdf-file">Upload PDF File</Label>
           <div className="flex gap-4">
             <div className="flex-1">
-              <Label htmlFor="pdf-file">Upload PDF Files</Label>
               <Input
                 id="pdf-file"
                 type="file"
@@ -228,40 +225,39 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
                 onChange={handleFileUpload}
                 ref={fileInputRef}
                 disabled={isProcessing}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
             </div>
-            <div className="flex gap-2 items-end">
-              {batchResults.length > 0 && (
-                <Button variant="outline" onClick={clearData} disabled={isProcessing}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
-              )}
-            </div>
+            {batchResults.length > 0 && (
+              <Button variant="outline" onClick={clearData} disabled={isProcessing}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
+            )}
           </div>
-
-          {isProcessing && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Processing: {currentProcessingFile}</span>
-                <span>{Math.round(processingProgress)}%</span>
-              </div>
-              <Progress value={processingProgress} />
-            </div>
+          {selectedFiles && selectedFiles.length === 0 && (
+            <p className="text-sm text-muted-foreground">No files chosen</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {isProcessing && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Processing: {currentProcessingFile}</span>
+              <span>{Math.round(processingProgress)}%</span>
+            </div>
+            <Progress value={processingProgress} />
+          </div>
+        )}
+      </div>
 
       {batchResults.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Processing Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {batchResults.map((batchResult, index) => (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Processing Results
+          </h3>
+          {batchResults.map((batchResult, index) => (
               <div key={index} className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium flex items-center gap-2">
@@ -315,71 +311,66 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
             ))}
 
             <div className="flex justify-between items-center pt-4">
-              <div className="text-sm text-muted-foreground">
-                Total contacts found: {batchResults.reduce((sum, result) => sum + result.result.contacts.length, 0)}
-              </div>
-              <Button 
-                onClick={handleImportContacts}
-                disabled={batchResults.length === 0 || batchResults.every(r => r.result.contacts.length === 0) || importContactsMutation.isPending}
-              >
-                {importContactsMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Import All Contacts
-              </Button>
+            <div className="text-sm text-muted-foreground">
+              Total contacts found: {batchResults.reduce((sum, result) => sum + result.result.contacts.length, 0)}
             </div>
-          </CardContent>
-        </Card>
+            <Button 
+              onClick={handleImportContacts}
+              disabled={batchResults.length === 0 || batchResults.every(r => r.result.contacts.length === 0) || importContactsMutation.isPending}
+            >
+              {importContactsMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Import All Contacts
+            </Button>
+          </div>
+        </div>
       )}
 
       {importResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {importResult.success ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-red-500" />
-              )}
-              Import Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert variant={importResult.success ? "default" : "destructive"}>
-              <AlertDescription>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            {importResult.success ? (
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            )}
+            Import Results
+          </h3>
+          <Alert variant={importResult.success ? "default" : "destructive"}>
+            <AlertDescription>
                 {importResult.success 
                   ? `Successfully imported ${importResult.imported} contacts.`
                   : `Import completed with errors. ${importResult.imported} contacts imported.`
                 }
                 {importResult.skipped > 0 && ` ${importResult.skipped} contacts were skipped.`}
-              </AlertDescription>
-            </Alert>
+            </AlertDescription>
+          </Alert>
 
-            {importResult.errors && importResult.errors.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium">Errors:</h4>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {importResult.errors.map((error, index) => (
-                    <Alert key={index} variant="destructive">
-                      <AlertDescription>
-                        {error.contact}: {error.error}
-                      </AlertDescription>
-                    </Alert>
-                  ))}
-                </div>
+          {importResult.errors && importResult.errors.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium">Errors:</h4>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {importResult.errors.map((error, index) => (
+                  <Alert key={index} variant="destructive">
+                    <AlertDescription>
+                      {error.contact}: {error.error}
+                    </AlertDescription>
+                  </Alert>
+                ))}
               </div>
-            )}
-
-            <div className="flex gap-2">
-              <Button onClick={onClose}>
-                Close
-              </Button>
-              <Button variant="outline" onClick={clearData}>
-                Import More
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          <div className="flex gap-2">
+            <Button onClick={onClose}>
+              Close
+            </Button>
+            <Button variant="outline" onClick={clearData}>
+              Import More
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

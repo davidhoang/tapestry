@@ -14,7 +14,7 @@ export default function Footer() {
           </div>
           
           {/* Attribution */}
-          <div className="text-sm text-muted-foreground text-center sm:text-right">
+          <div className="text-sm text-muted-foreground text-center sm:text-right space-x-1">
             <a 
               href="https://www.proofofconcept.pub" 
               target="_blank" 
@@ -22,6 +22,15 @@ export default function Footer() {
               className="hover:text-foreground transition-colors underline"
             >
               A Proof of Concept experiment
+            </a>
+            <span>•</span>
+            <a 
+              href="https://github.com/davidhoang/tapestry/issues" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors underline"
+            >
+              Send Feedback
             </a>
           </div>
         </div>

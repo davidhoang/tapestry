@@ -8,7 +8,7 @@ import DirectoryPage from "./pages/DirectoryPage";
 import DesignerDetailsPage from "./pages/DesignerDetailsPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
-import MatchmakerChatPage from "./pages/MatchmakerChatPage";
+
 import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
 import AdminPage from "./pages/AdminPage";
@@ -72,7 +72,7 @@ function App() {
                   <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
                   <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
                   <Route path="/:workspaceSlug/lists" component={ListsPage} />
-                  <Route path="/:workspaceSlug/matchmaker" component={MatchmakerChatPage} />
+                  <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
                 </>
               ) : (
                 <Route path="*" component={HomePage} />

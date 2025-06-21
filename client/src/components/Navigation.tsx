@@ -70,7 +70,7 @@ export default function Navigation() {
             <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
               <Link
                 href={`/${workspaceSlug}/matchmaker`}
-                className={location === `/${workspaceSlug}/matchmaker` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                className={location === `/${workspaceSlug}/matchmaker` || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Matchmaker
               </Link>
@@ -172,7 +172,7 @@ export default function Navigation() {
                       <Link
                         href={`/${workspaceSlug}/matchmaker`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === `/${workspaceSlug}/matchmaker`
+                          location === `/${workspaceSlug}/matchmaker` || location === "/"
                             ? "text-gray-900 bg-gray-100 font-bold" 
                             : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                         }`}

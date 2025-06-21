@@ -1378,19 +1378,14 @@ Please analyze this role and recommend the best matching designers.`
   }));
 
   // PDF processing route for LinkedIn exports
-  app.post("/api/import/pdf/process", withErrorHandler(async (req, res) => {
+  app.post("/api/import/pdf/process", pdfUpload.single('pdf'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
-    const upload = pdfUpload.single('pdf');
-    upload(req, res, async (err) => {
-      if (err) {
-        return res.status(400).json({ error: "File upload error" });
-      }
-      
-      if (!req.file) {
-        return res.status(400).json({ error: "No PDF file uploaded" });
-      }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: "No PDF file uploaded" });
+    }
 
     try {
       const pdfBuffer = req.file.buffer;
@@ -1511,6 +1506,12 @@ Please analyze this role and recommend the best matching designers.`
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
     const { contacts } = req.body;
 
     if (!contacts || !Array.isArray(contacts)) {
@@ -1534,7 +1535,7 @@ Please analyze this role and recommend the best matching designers.`
             existingDesigner = await db.query.designers.findFirst({
               where: and(
                 eq(designers.email, contact.email),
-                eq(designers.userId, req.user.id)
+                eq(designers.workspaceId, userWorkspace.id)
               ),
             });
           }
@@ -1544,7 +1545,7 @@ Please analyze this role and recommend the best matching designers.`
               where: and(
                 eq(designers.name, contact.name),
                 eq(designers.company, contact.company),
-                eq(designers.userId, req.user.id)
+                eq(designers.workspaceId, userWorkspace.id)
               ),
             });
           }
@@ -1556,7 +1557,7 @@ Please analyze this role and recommend the best matching designers.`
 
           // Determine level based on title
           let level = 'Mid-level';
-          const titleLower = contact.title.toLowerCase();
+          const titleLower = (contact.title || '').toLowerCase();
           if (titleLower.includes('senior') || titleLower.includes('lead') || titleLower.includes('principal')) {
             level = 'Senior';
           } else if (titleLower.includes('junior') || titleLower.includes('intern') || titleLower.includes('entry')) {
@@ -1591,6 +1592,7 @@ Please analyze this role and recommend the best matching designers.`
             available: false,
             notes: `Imported from LinkedIn PDF - Confidence: ${Math.round(contact.confidence * 100)}%`,
             userId: req.user.id,
+            workspaceId: userWorkspace.id,
           };
 
           await db.insert(designers).values(designerData);

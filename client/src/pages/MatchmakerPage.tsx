@@ -148,9 +148,9 @@ export default function MatchmakerPage() {
       <div className={`flex transition-all duration-300 relative z-10 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
         <div className="flex-1 container mx-auto px-4 pt-24 pb-8 max-w-4xl">
           <div className="text-center space-y-6 mb-8">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900">AI Design Matchmaker</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900">Intelligent Match</h1>
             <p className="text-xl text-gray-700 leading-relaxed">
-              Paste your role description and let AI find the perfect designer matches from your database
+              Enter a description to Tapestry and it'll find the best candidate match
             </p>
           </div>
 

@@ -16,11 +16,14 @@ Problem statement: I get reached out by a lot of people in my network asking for
 
 ## Product screenshots
 
-![Tapestry](https://github.com/user-attachments/assets/37dc4c69-247e-4977-9786-c6fd7747041d)
+### Homepage
+![Tapestry 4](https://github.com/user-attachments/assets/515f5172-1d62-4b5e-b334-a812ba1e417f)
 
-![Tapestry 2](https://github.com/user-attachments/assets/992034eb-8c84-4f7a-ba82-a174b156475e)
+### Directory
+![Tapestry 2](https://github.com/user-attachments/assets/31c7b3bc-4af6-42c4-912e-53a0b83cded3)
 
-[![Watch the Loom video](https://cdn.loom.com/sessions/thumbnails/1967fe02ab1f418c811c14dfee97339e-with-play.gif)](https://www.loom.com/share/1967fe02ab1f418c811c14dfee97339e)
+### Intelligent match
+![Tapestry 3](https://github.com/user-attachments/assets/614a3940-8d8d-4c0a-a23d-584c013be155)
 
 ## Report bugs
 There are still many known bugs in the Alpha but if you spot them I would appreciate if you [submit an issue](https://github.com/davidhoang/tapestry/issues).

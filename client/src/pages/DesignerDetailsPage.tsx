@@ -22,9 +22,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SkillsInput from "@/components/SkillsInput";
 import { useToast } from "@/hooks/use-toast";
 import { getDesignerCoverImage } from "@/utils/coverImages";
+
+const EXPERIENCE_LEVELS = [
+  "Mid-level",
+  "Senior", 
+  "Staff",
+  "Senior Staff",
+  "Principal",
+  "Manager",
+  "Director",
+  "Senior Director",
+  "VP"
+];
 
 const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt: true, workspaceId: true });
 type FormData = z.infer<typeof formSchema>;
@@ -356,9 +375,23 @@ export default function DesignerDetailsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Level *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Senior, Staff, etc." {...field} />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {EXPERIENCE_LEVELS.map((level) => (
+                              <SelectItem key={level} value={level}>
+                                {level}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

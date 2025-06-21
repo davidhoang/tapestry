@@ -20,7 +20,7 @@ Problem statement: I get reached out by a lot of people in my network asking for
 
 ![Tapestry 2](https://github.com/user-attachments/assets/992034eb-8c84-4f7a-ba82-a174b156475e)
 
-<div style="position: relative; padding-bottom: 56.25%; height: 0;"><iframe src="https://www.loom.com/embed/1967fe02ab1f418c811c14dfee97339e?sid=6bb67302-339b-47d3-a55d-3f247aec066b" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div>
+[![Watch the Loom video](https://cdn.loom.com/sessions/thumbnails/1967fe02ab1f418c811c14dfee97339e-with-play.gif)](https://www.loom.com/share/1967fe02ab1f418c811c14dfee97339e)
 
 ## Report bugs
 There are still many known bugs in the Alpha but if you spot them I would appreciate if you [submit an issue](https://github.com/davidhoang/tapestry/issues).

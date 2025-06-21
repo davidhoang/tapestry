@@ -404,7 +404,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
       level: designer?.level || "",
       website: designer?.website || "",
       linkedIn: designer?.linkedIn || "",
-      skills: designer?.skills || [],
+      skills: Array.isArray(designer?.skills) ? designer.skills : [],
       notes: designer?.notes || "",
       available: designer?.available ?? false,
     },
@@ -421,7 +421,7 @@ function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
         level: designer.level,
         website: designer.website || "",
         linkedIn: designer.linkedIn || "",
-        skills: designer.skills || [],
+        skills: Array.isArray(designer.skills) ? designer.skills : [],
         notes: designer.notes || "",
         available: designer.available ?? false,
       });
@@ -855,7 +855,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
                   </div>
                   <FormControl>
                     <SkillsInput
-                      value={field.value}
+                      value={Array.isArray(field.value) ? field.value : []}
                       onChange={field.onChange}
                     />
                   </FormControl>

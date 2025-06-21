@@ -10,6 +10,8 @@ interface SkillsInputProps {
 }
 
 export default function SkillsInput({ value, onChange }: SkillsInputProps) {
+  // Ensure value is always an array
+  const skillsArray = Array.isArray(value) ? value : [];
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [allSkills, setAllSkills] = useState<string[]>([]);
@@ -46,7 +48,7 @@ export default function SkillsInput({ value, onChange }: SkillsInputProps) {
     const filtered = allSkills
       .filter(skill => 
         skill.toLowerCase().includes(inputLower) && 
-        !value.includes(skill)
+        !skillsArray.includes(skill)
       )
       .slice(0, 5); // Limit to 5 suggestions for one row
     setSuggestions(filtered);
@@ -56,27 +58,27 @@ export default function SkillsInput({ value, onChange }: SkillsInputProps) {
     if (e.key === "Enter" && input.trim()) {
       e.preventDefault();
       const trimmedInput = input.trim();
-      if (!value.includes(trimmedInput)) {
-        onChange([...value, trimmedInput]);
+      if (!skillsArray.includes(trimmedInput)) {
+        onChange([...skillsArray, trimmedInput]);
         // If it's a new skill, add it to allSkills
         if (!allSkills.includes(trimmedInput)) {
           setAllSkills(prev => [...prev, trimmedInput]);
         }
       }
       setInput("");
-    } else if (e.key === "Backspace" && !input && value.length > 0) {
+    } else if (e.key === "Backspace" && !input && skillsArray.length > 0) {
       // Remove the last tag when backspace is pressed on empty input
-      onChange(value.slice(0, -1));
+      onChange(skillsArray.slice(0, -1));
     }
   };
 
   const removeSkill = (skillToRemove: string) => {
-    onChange(value.filter((skill) => skill !== skillToRemove));
+    onChange(skillsArray.filter((skill) => skill !== skillToRemove));
   };
 
   const addSkill = (skill: string) => {
-    if (!value.includes(skill)) {
-      onChange([...value, skill]);
+    if (!skillsArray.includes(skill)) {
+      onChange([...skillsArray, skill]);
       setInput("");
       inputRef.current?.focus();
     }
@@ -85,7 +87,7 @@ export default function SkillsInput({ value, onChange }: SkillsInputProps) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {value.map((skill, index) => (
+        {skillsArray.map((skill, index) => (
           <Badge key={index} variant="secondary">
             {skill}
             <Button

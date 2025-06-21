@@ -17,8 +17,21 @@ const onboardingSlides: OnboardingSlide[] = [
   {
     id: "welcome",
     title: "Welcome to Tapestry",
-    description: "Your intelligent design talent matchmaker. Let's get you started on connecting with exceptional designers.",
+    description: "",
     icon: Sparkles,
+    content: (
+      <div className="w-full max-w-lg mx-auto">
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' /* 16:9 aspect ratio */ }}>
+          <iframe
+            src="https://www.loom.com/embed/1967fe02ab1f418c811c14dfee97339e"
+            className="absolute top-0 left-0 w-full h-full rounded-lg"
+            frameBorder="0"
+            allowFullScreen
+            title="Welcome to Tapestry"
+          />
+        </div>
+      </div>
+    ),
   },
   {
     id: "directory",

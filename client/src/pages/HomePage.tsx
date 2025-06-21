@@ -59,7 +59,7 @@ export default function HomePage() {
             whether you're building a team, curating talent lists, or seeking specialized expertise.
           </p>
           <Button asChild className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg">
-            <a href="mailto:david@davidhoang.com?subject=Tapestry Access Request">
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">
               Request Access
             </a>
           </Button>

@@ -983,3 +983,109 @@ function AddToListDialog({ open, onOpenChange, designerIds, onSuccess }: AddToLi
     </Dialog>
   );
 }
+
+// List view component for designers
+function DesignerListItem({ 
+  designer, 
+  onEdit,
+  onEnrich,
+  isSelected, 
+  onToggleSelect 
+}: {
+  designer: SelectDesigner;
+  onEdit: (designer: SelectDesigner) => void;
+  onEnrich: (designer: SelectDesigner) => void;
+  isSelected: boolean;
+  onToggleSelect: (id: number) => void;
+}) {
+  const skills = designer.skills || [];
+  
+  return (
+    <div className={`border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer ${
+      isSelected ? 'ring-2 ring-primary bg-primary/5' : 'bg-white'
+    }`}>
+      <div className="flex items-center space-x-4">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onToggleSelect(designer.id)}
+        />
+        
+        <div className="flex-shrink-0">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+            {designer.name.charAt(0)}
+          </div>
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                {designer.name}
+              </h3>
+              {designer.title && (
+                <p className="text-sm text-gray-600 truncate">
+                  {designer.title}
+                </p>
+              )}
+              {designer.company && (
+                <p className="text-sm text-gray-500 truncate">
+                  {designer.company}
+                </p>
+              )}
+            </div>
+            
+            <div className="ml-4 text-right flex flex-col items-end">
+              {designer.location && (
+                <p className="text-sm text-gray-500">
+                  {designer.location}
+                </p>
+              )}
+              {designer.available && (
+                <Badge variant="default" className="mt-1">
+                  Available
+                </Badge>
+              )}
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(designer);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEnrich(designer);
+                  }}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {skills && skills.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {skills.slice(0, 6).map((skill: string, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {skill}
+                </Badge>
+              ))}
+              {skills.length > 6 && (
+                <Badge variant="outline" className="text-xs">
+                  +{skills.length - 6} more
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

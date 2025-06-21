@@ -35,7 +35,7 @@ export default function HomePage() {
               Tapestry
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
-              Connect with exceptional design talent through intelligent matching
+              High touch design recruiting in the intelligence era.
             </p>
 
             <p className="text-sm text-white/70 text-center">

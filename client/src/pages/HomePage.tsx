@@ -135,7 +135,7 @@ export default function HomePage() {
           <img 
             src="/built-on-replit-badge.png" 
             alt="Built on Replit" 
-            className="w-[150px] h-auto rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
+            className="w-[90px] h-auto rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
           />
         </a>
       )}

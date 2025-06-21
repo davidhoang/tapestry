@@ -30,7 +30,7 @@ const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt
 type FormData = z.infer<typeof formSchema>;
 
 export default function DesignerDetailsPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, workspaceSlug } = useParams<{ slug: string; workspaceSlug: string }>();
   const [, setLocation] = useLocation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
@@ -171,7 +171,7 @@ export default function DesignerDetailsPage() {
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            onClick={() => setLocation("/directory")}
+            onClick={() => setLocation(`/${workspaceSlug}/directory`)}
             className="mb-8"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -200,7 +200,7 @@ export default function DesignerDetailsPage() {
         {/* Back Button */}
         <Button
           variant="ghost"
-          onClick={() => setLocation("/directory")}
+          onClick={() => setLocation(`/${workspaceSlug}/directory`)}
           className="absolute top-6 left-6 bg-background/80 backdrop-blur-sm hover:bg-background/90 text-foreground"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

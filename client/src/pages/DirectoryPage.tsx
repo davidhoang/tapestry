@@ -1074,7 +1074,7 @@ function DesignerListItem({
       return;
     }
     // Navigate to designer details page
-    window.location.href = `/designers/${designer.id}`;
+    window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
   };
   
   return (

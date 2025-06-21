@@ -324,6 +324,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get designer by slug
+  app.get("/api/designers/slug/:slug", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { slug } = req.params;
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.workspaceId, userWorkspace.id),
+          sql`LOWER(REPLACE(REPLACE(${designers.name}, ' ', '-'), '.', '')) = ${slug.toLowerCase()}`
+        ),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      res.json(designer);
+    } catch (err) {
+      console.error('Error fetching designer by slug:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
   app.get("/api/designers/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");

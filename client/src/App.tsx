@@ -67,6 +67,10 @@ function App() {
                   <Route path="/components" component={ComponentsPage} />
                   {user.isAdmin && <Route path="/admin" component={AdminPage} />}
                   
+                  {/* Legacy routes for backward compatibility */}
+                  <Route path="/designer/:slug" component={DesignerDetailsPage} />
+                  <Route path="/designers/:id" component={DesignerDetailsPage} />
+                  
                   {/* Workspace-specific routes */}
                   <Route path="/:workspaceSlug" component={DirectoryPage} />
                   <Route path="/:workspaceSlug/directory" component={DirectoryPage} />

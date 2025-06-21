@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SelectDesigner } from "@db/schema";
 import { Pencil, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { useState } from "react";
 import { getDesignerCoverImage } from "@/utils/coverImages";
 import { slugify } from "@/utils/slugify";
@@ -31,6 +31,7 @@ export default function DesignerCard({
   onToggleSelect 
 }: DesignerCardProps) {
   const [, setLocation] = useLocation();
+  const { workspaceSlug } = useParams();
   const [isSkillsExpanded, setIsSkillsExpanded] = useState(false);
   
   // Parse skills string into array and check if skills overflow one line
@@ -44,7 +45,7 @@ export default function DesignerCard({
     <>
       <Card 
         className="h-full relative cursor-pointer hover:shadow-md transition-shadow group overflow-hidden"
-        onClick={() => setLocation(`/designer/${slugify(designer.name)}`)}
+        onClick={() => setLocation(`/${workspaceSlug}/directory/${slugify(designer.name)}`)}
       >
         {/* Cover Image */}
         <div className="relative h-16 overflow-hidden">

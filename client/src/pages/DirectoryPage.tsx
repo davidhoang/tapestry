@@ -29,6 +29,12 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,10 +43,11 @@ import {
 } from "@/components/ui/select";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, ListPlus, Sparkles, Grid3X3, List, Edit } from "lucide-react";
+import { Loader2, Plus, Trash, ListPlus, Sparkles, Grid3X3, List, Edit, ChevronDown, Upload } from "lucide-react";
 import { slugify } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
+import LinkedInImportModal from "@/components/LinkedInImportModal";
 import { SelectDesigner } from "@db/schema";
 
 // Helper function to normalize LinkedIn URLs
@@ -110,6 +117,7 @@ export default function DirectoryPage() {
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [enrichmentDesigner, setEnrichmentDesigner] = useState<SelectDesigner | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showLinkedInImport, setShowLinkedInImport] = useState(false);
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
 
@@ -220,22 +228,37 @@ export default function DirectoryPage() {
                 </Button>
               </>
             )}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
                   Add Designer
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-                <DialogHeader className="flex-shrink-0">
-                  <DialogTitle>Add New Designer</DialogTitle>
-                </DialogHeader>
-                <div className="flex-1 overflow-y-auto pr-2">
-                  <AddDesignerDialog designer={null} onClose={() => {}} />
-                </div>
-              </DialogContent>
-            </Dialog>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Designer
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                    <DialogHeader className="flex-shrink-0">
+                      <DialogTitle>Add New Designer</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto pr-2">
+                      <AddDesignerDialog designer={null} onClose={() => {}} />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <DropdownMenuItem onClick={() => setShowLinkedInImport(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import LinkedIn
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

@@ -213,7 +213,7 @@ export default function DirectoryPage() {
                   onClick={() => setShowAddToListDialog(true)}
                 >
                   <ListPlus className="mr-2 h-4 w-4" />
-                  Add to List ({selectedIds.length})
+                  Add to list ({selectedIds.length})
                 </Button>
                 <Button 
                   variant="destructive" 
@@ -224,7 +224,7 @@ export default function DirectoryPage() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   <Trash className="mr-2 h-4 w-4" />
-                  Delete Selected ({selectedIds.length})
+                  Delete selected ({selectedIds.length})
                 </Button>
               </>
             )}
@@ -1027,7 +1027,7 @@ function AddToListDialog({ open, onOpenChange, designerIds, onSuccess }: AddToLi
                 {(createList.isPending || addDesignersToList.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Create List with Selected Designers
+                Create list with selected designers
               </Button>
             </div>
           </form>

@@ -1146,7 +1146,7 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
             <div className="flex justify-end">
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Email
+                Send email
               </Button>
             </div>
           </form>

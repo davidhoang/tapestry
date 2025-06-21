@@ -306,8 +306,8 @@ export default function AdminPage() {
         <Tabs defaultValue="database" className="space-y-6">
           <TabsList>
             <TabsTrigger value="database">Database</TabsTrigger>
-            <TabsTrigger value="import">CSV Import</TabsTrigger>
-            <TabsTrigger value="pdf-import">PDF Import</TabsTrigger>
+            <TabsTrigger value="import">CSV import</TabsTrigger>
+            <TabsTrigger value="pdf-import">PDF import</TabsTrigger>
             <TabsTrigger value="invites">Alpha Invites</TabsTrigger>
             <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
           </TabsList>

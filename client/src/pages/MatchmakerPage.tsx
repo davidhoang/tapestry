@@ -240,7 +240,7 @@ export default function MatchmakerPage() {
                     <DialogTrigger asChild>
                       <Button size="sm" className="rounded-full">
                         <Plus className="h-4 w-4 mr-1" />
-                        Create List ({selectedDesigners.size})
+                        Create list ({selectedDesigners.size})
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -278,7 +278,7 @@ export default function MatchmakerPage() {
                                 Creating...
                               </>
                             ) : (
-                              "Create List"
+                              "Create list"
                             )}
                           </Button>
                         </div>

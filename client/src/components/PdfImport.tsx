@@ -235,7 +235,7 @@ export default function PdfImport() {
       <Card>
         <CardHeader>
           <CardTitle>
-            LinkedIn PDF Import
+            LinkedIn PDF import
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

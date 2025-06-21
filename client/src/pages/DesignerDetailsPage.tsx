@@ -179,7 +179,7 @@ export default function DesignerDetailsPage() {
             className="mb-8"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Directory
+            Back to directory
           </Button>
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold mb-4">Designer Not Found</h1>
@@ -208,7 +208,7 @@ export default function DesignerDetailsPage() {
           className="absolute top-6 left-6 bg-background/80 backdrop-blur-sm hover:bg-background/90 text-foreground"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Directory
+          Back to directory
         </Button>
 
         {/* Available badge */}

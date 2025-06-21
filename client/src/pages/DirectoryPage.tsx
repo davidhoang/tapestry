@@ -124,10 +124,21 @@ export default function DirectoryPage() {
                             designer.company?.toLowerCase().includes(searchLower);
     
     // Search in skills
-    const skills = Array.isArray(designer.skills) ? designer.skills : 
-      (typeof designer.skills === 'string' ? 
-        (designer.skills.trim() ? JSON.parse(designer.skills) : []) : 
-        []);
+    const skills = (() => {
+      if (Array.isArray(designer.skills)) {
+        return designer.skills;
+      }
+      if (typeof designer.skills === 'string' && designer.skills.trim()) {
+        try {
+          // Try parsing as JSON first
+          return JSON.parse(designer.skills);
+        } catch {
+          // If JSON parsing fails, treat as comma-separated string
+          return designer.skills.split(',').map(s => s.trim()).filter(s => s);
+        }
+      }
+      return [];
+    })();
     const matchesSkills = skills.some(skill => 
       skill.toLowerCase().includes(searchLower)
     );
@@ -1002,10 +1013,21 @@ function DesignerListItem({
   isSelected: boolean;
   onToggleSelect: (id: number) => void;
 }) {
-  const skills = Array.isArray(designer.skills) ? designer.skills : 
-    (typeof designer.skills === 'string' ? 
-      (designer.skills.trim() ? JSON.parse(designer.skills) : []) : 
-      []);
+  const skills = (() => {
+    if (Array.isArray(designer.skills)) {
+      return designer.skills;
+    }
+    if (typeof designer.skills === 'string' && designer.skills.trim()) {
+      try {
+        // Try parsing as JSON first
+        return JSON.parse(designer.skills);
+      } catch {
+        // If JSON parsing fails, treat as comma-separated string
+        return designer.skills.split(',').map(s => s.trim()).filter(s => s);
+      }
+    }
+    return [];
+  })();
   
   return (
     <div className={`border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer ${

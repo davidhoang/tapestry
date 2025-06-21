@@ -26,7 +26,7 @@ import SkillsInput from "@/components/SkillsInput";
 import { useToast } from "@/hooks/use-toast";
 import { getDesignerCoverImage } from "@/utils/coverImages";
 
-const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt: true });
+const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt: true, workspaceId: true });
 type FormData = z.infer<typeof formSchema>;
 
 export default function DesignerDetailsPage() {
@@ -55,6 +55,7 @@ export default function DesignerDetailsPage() {
       skills: [],
       notes: "",
       available: false,
+      photoUrl: "",
     },
   });
 
@@ -69,9 +70,10 @@ export default function DesignerDetailsPage() {
         level: designer.level || "",
         website: designer.website || "",
         linkedIn: designer.linkedIn || "",
-        skills: designer.skills || [],
+        skills: Array.isArray(designer.skills) ? designer.skills : [],
         notes: designer.notes || "",
         available: designer.available || false,
+        photoUrl: designer.photoUrl || "",
       });
       setIsEditMode(true);
     }
@@ -117,6 +119,7 @@ export default function DesignerDetailsPage() {
     if (!designer) return;
 
     try {
+      console.log('Form submission data:', data);
       const formData = new FormData();
       formData.append('data', JSON.stringify(data));
       
@@ -137,10 +140,11 @@ export default function DesignerDetailsPage() {
       setIsEditMode(false);
       setSelectedPhoto(null);
       setPhotoPreview(null);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Form submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to update designer. Please try again.",
+        description: error?.message || "Failed to update designer. Please try again.",
         variant: "destructive",
       });
     }
@@ -293,7 +297,15 @@ export default function DesignerDetailsPage() {
                     <Button type="button" variant="outline" onClick={handleCancel}>
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={updateDesigner.isPending}>
+                    <Button 
+                      type="submit" 
+                      disabled={updateDesigner.isPending}
+                      onClick={() => {
+                        console.log('Save button clicked');
+                        console.log('Form errors:', form.formState.errors);
+                        console.log('Form values:', form.getValues());
+                      }}
+                    >
                       {updateDesigner.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                   </div>

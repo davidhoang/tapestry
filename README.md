@@ -19,3 +19,6 @@ Problem statement: I get reached out by a lot of people in my network asking for
 ![Tapestry](https://github.com/user-attachments/assets/37dc4c69-247e-4977-9786-c6fd7747041d)
 
 ![Tapestry 2](https://github.com/user-attachments/assets/992034eb-8c84-4f7a-ba82-a174b156475e)
+
+## Report bugs
+There are still many known bugs in the Alpha but if you spot them I would appreciate if you [submit an issue](https://github.com/davidhoang/tapestry/issues).

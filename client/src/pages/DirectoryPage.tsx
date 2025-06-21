@@ -1028,11 +1028,24 @@ function DesignerListItem({
     }
     return [];
   })();
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on checkbox or edit button
+    if ((e.target as HTMLElement).closest('input[type="checkbox"]') || 
+        (e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    // Navigate to designer details page
+    window.location.href = `/designers/${designer.id}`;
+  };
   
   return (
-    <div className={`relative border rounded-lg p-4 hover:shadow-md transition-all group ${
-      isSelected ? 'ring-2 ring-primary bg-primary/5' : 'bg-white'
-    }`}>
+    <div 
+      className={`relative border rounded-lg p-4 hover:shadow-md transition-all group cursor-pointer ${
+        isSelected ? 'ring-2 ring-primary bg-primary/5' : 'bg-white'
+      }`}
+      onClick={handleClick}
+    >
       {/* Checkbox in top-left */}
       <div className="absolute top-3 left-3">
         <Checkbox

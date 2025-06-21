@@ -74,7 +74,6 @@ async function updateWorkspace(data: WorkspaceUpdateData) {
 
 export default function ProfilePage() {
   const { user } = useUser();
-  const [workspaceName, setWorkspaceName] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -92,13 +91,6 @@ export default function ProfilePage() {
   });
 
   const userWorkspace = workspaces?.[0];
-
-  // Set workspace name when data loads
-  useEffect(() => {
-    if (userWorkspace?.name && workspaceName === "") {
-      setWorkspaceName(userWorkspace.name);
-    }
-  }, [userWorkspace?.name, workspaceName]);
 
   const updateProfileMutation = useMutation({
     mutationFn: updateProfile,
@@ -136,61 +128,37 @@ export default function ProfilePage() {
     },
   });
 
-  const updateWorkspaceMutation = useMutation({
-    mutationFn: updateWorkspace,
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Workspace name updated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate workspace name
-    if (!workspaceName.trim()) {
+    if (!profilePhoto) {
       toast({
-        title: "Error",
-        description: "Workspace name cannot be empty",
-        variant: "destructive",
+        title: "Info",
+        description: "No changes to save",
       });
       return;
     }
 
     try {
-      // Handle profile photo upload first (if any)
-      let profilePhotoUrl = user?.profilePhotoUrl;
+      // Handle profile photo upload
+      const result = await uploadPhotoMutation.mutateAsync(profilePhoto);
       
-      if (profilePhoto) {
-        const result = await uploadPhotoMutation.mutateAsync(profilePhoto);
-        profilePhotoUrl = result.profilePhotoUrl;
-      }
-
-      // Update profile if photo changed
-      if (profilePhoto) {
-        await updateProfileMutation.mutateAsync({
-          profilePhotoUrl,
-        });
-      }
-
-      // Update workspace name
-      await updateWorkspaceMutation.mutateAsync({
-        name: workspaceName.trim(),
+      // Update profile with new photo
+      await updateProfileMutation.mutateAsync({
+        profilePhotoUrl: result.profilePhotoUrl,
       });
+
+      // Reset the selected photo
+      setProfilePhoto(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
 
       toast({
         title: "Success",
-        description: "Changes saved successfully",
+        description: "Profile photo updated successfully",
       });
     } catch (error) {
       // Individual mutations already handle their own errors
@@ -328,42 +296,45 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Workspace Settings Card */}
+          {/* Workspace Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Workspace Settings</CardTitle>
+              <CardTitle>Workspace Information</CardTitle>
               <CardDescription>
-                Manage your workspace name and settings
+                Your workspace details
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="workspaceName">Workspace Name</Label>
+                <Label>Workspace Name</Label>
                 <Input
-                  id="workspaceName"
-                  type="text"
-                  value={workspaceName}
-                  onChange={(e) => setWorkspaceName(e.target.value)}
-                  placeholder="Enter your workspace name"
+                  value={userWorkspace?.name || "Loading..."}
+                  disabled
+                  className="bg-muted"
                 />
                 <p className="text-sm text-muted-foreground">
-                  This name will be used in your workspace URL: /{userWorkspace?.slug || 'your-workspace'}
+                  Your workspace URL: /{userWorkspace?.slug || 'loading'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Need to change your workspace name? Please contact support.
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Single Save Button */}
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={updateProfileMutation.isPending || uploadPhotoMutation.isPending || updateWorkspaceMutation.isPending}
-          >
-            {(updateProfileMutation.isPending || uploadPhotoMutation.isPending || updateWorkspaceMutation.isPending) && (
-              <Upload className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Save Changes
-          </Button>
+          {/* Save Button (only shows when photo is selected) */}
+          {profilePhoto && (
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={updateProfileMutation.isPending || uploadPhotoMutation.isPending}
+            >
+              {(updateProfileMutation.isPending || uploadPhotoMutation.isPending) && (
+                <Upload className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save Profile Photo
+            </Button>
+          )}
         </form>
       </div>
     </div>

@@ -1378,7 +1378,10 @@ Please analyze this role and recommend the best matching designers.`
   }));
 
   // PDF processing route for LinkedIn exports
-  app.post("/api/import/pdf/process", requireAdmin, pdfUpload.single('pdf'), withErrorHandler(async (req, res) => {
+  app.post("/api/import/pdf/process", pdfUpload.single('pdf'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
     if (!req.file) {
       return res.status(400).json({ error: "No PDF file uploaded" });
     }
@@ -1498,7 +1501,10 @@ Please analyze this role and recommend the best matching designers.`
   }));
 
   // PDF import route - imports processed contacts into database
-  app.post("/api/import/pdf/import", requireAdmin, withErrorHandler(async (req, res) => {
+  app.post("/api/import/pdf/import", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
     const { contacts } = req.body;
 
     if (!contacts || !Array.isArray(contacts)) {

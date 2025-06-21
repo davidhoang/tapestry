@@ -104,22 +104,10 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
           <DialogTitle>Onboarding</DialogTitle>
         </VisuallyHidden>
         
-        {/* Header with skip button */}
-        <div className="absolute top-4 left-4 z-10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={skipOnboarding}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Skip
-          </Button>
-        </div>
-
         {/* Main content */}
         <div className="relative min-h-[500px] flex flex-col">
           {/* Slide content */}
-          <div className="flex-1 p-8 pt-16 text-center">
+          <div className="flex-1 p-8 pt-8 text-center">
             <div className="max-w-md mx-auto space-y-6">
               {/* Icon */}
               <div className="flex justify-center">
@@ -143,26 +131,26 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
                 </div>
               )}
             </div>
-
-            {/* Progress dots - centered in content area */}
-            <div className="flex justify-center space-x-2 mt-8">
-              {onboardingSlides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={cn(
-                    "w-2 h-2 rounded-full transition-colors",
-                    index === currentSlide
-                      ? "bg-primary"
-                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                  )}
-                />
-              ))}
-            </div>
           </div>
 
-          {/* Navigation buttons - floating */}
-          <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center">
+          {/* Progress dots - at bottom of content area */}
+          <div className="flex justify-center space-x-2 pb-6">
+            {onboardingSlides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-colors",
+                  index === currentSlide
+                    ? "bg-primary"
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                )}
+              />
+            ))}
+          </div>
+
+          {/* Navigation buttons with border-top */}
+          <div className="border-t border-border px-6 py-4 flex justify-between items-center">
             {/* Back button - floating left */}
             {currentSlide > 0 ? (
               <Button

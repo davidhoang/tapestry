@@ -119,7 +119,7 @@ export default function DesignerDetailsPage() {
     if (!designer) return;
 
     try {
-      console.log('Form submission data:', data);
+
       const formData = new FormData();
       formData.append('data', JSON.stringify(data));
       
@@ -141,7 +141,7 @@ export default function DesignerDetailsPage() {
       setSelectedPhoto(null);
       setPhotoPreview(null);
     } catch (error: any) {
-      console.error('Form submission error:', error);
+
       toast({
         title: "Error",
         description: error?.message || "Failed to update designer. Please try again.",
@@ -300,11 +300,6 @@ export default function DesignerDetailsPage() {
                     <Button 
                       type="submit" 
                       disabled={updateDesigner.isPending}
-                      onClick={() => {
-                        console.log('Save button clicked');
-                        console.log('Form errors:', form.formState.errors);
-                        console.log('Form values:', form.getValues());
-                      }}
                     >
                       {updateDesigner.isPending ? "Saving..." : "Save changes"}
                     </Button>

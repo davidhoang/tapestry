@@ -967,12 +967,12 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Create List
+          Create list
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Create New List</DialogTitle>
+          <DialogTitle>Create new list</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto pr-2">
           <Form {...form}>

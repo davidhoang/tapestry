@@ -14,6 +14,84 @@ Problem statement: I get reached out by a lot of people in my network asking for
 - Frontend: React with Tailwind CSS
 - Database: PostgreSQL (Replit's built-in)
 
+## Initial prompt
+
+```
+Design Matchmaker: A web application for creating and sharing curated listsDesign Matchmaker: A web application for creating and sharing curated lists of recommended designers.
+
+Core features:
+
+User authentication and profile management
+AI-powered designer recommendation system
+Directory page for adding and managing talent profiles
+Ability to create and share designer lists via email or private link
+Autocomplete functionality for skills tags
+Option to add custom fields when entering talent information
+Technical requirements:
+
+Backend: Flask (Python)
+Frontend: React with Tailwind CSS
+Database: PostgreSQL (Replit's built-in)
+External services: SendGrid for email delivery, OpenAI for AI recommendations
+Pages:
+
+Marketing homepage (logged-out state)
+AI Matchmaker page
+Directory page for talent management
+Directory data fields:
+
+Personal info (name, title, location, company)
+Professional details (level, website, LinkedIn, email)
+Skills (multi-item tags with autocomplete)
+Availability status
+Description (markdown-enabled)
+UI/Style:
+
+Modern, professional design with a focus on typography and whitespace
+Intuitive form layouts with smooth transitions and helpful tooltips
+Color palette inspired by design tools: muted grays, vibrant accents, and a dash of creativity
+Use Replit's built-in Postgres database.
+
+Add AI features using OpenAI. of recommended designers.
+
+Core features:
+
+User authentication and profile management
+AI-powered designer recommendation system
+Directory page for adding and managing talent profiles
+Ability to create and share designer lists via email or private link
+Autocomplete functionality for skills tags
+Option to add custom fields when entering talent information
+Technical requirements:
+
+Backend: Flask (Python)
+Frontend: React with Tailwind CSS
+Database: PostgreSQL (Replit's built-in)
+External services: SendGrid for email delivery, OpenAI for AI recommendations
+Pages:
+
+Marketing homepage (logged-out state)
+AI Matchmaker page
+Directory page for talent management
+Directory data fields:
+
+Personal info (name, title, location, company)
+Professional details (level, website, LinkedIn, email)
+Skills (multi-item tags with autocomplete)
+Availability status
+Description (markdown-enabled)
+UI/Style:
+
+Modern, professional design with a focus on typography and whitespace
+Intuitive form layouts with smooth transitions and helpful tooltips
+Color palette inspired by design tools: muted grays, vibrant accents, and a dash of creativity
+Use Replit's built-in Postgres database.
+
+Add AI features using OpenAI.
+
+
+```
+
 ## Product screenshots
 
 ### Homepage

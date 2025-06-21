@@ -360,6 +360,21 @@ export default function DirectoryPage() {
             setEnrichmentDesigner(null);
           }}
         />
+
+        {/* LinkedIn Import Modal */}
+        <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
+          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Import LinkedIn PDF
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto">
+              <LinkedInImportModal onClose={() => setShowLinkedInImport(false)} />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -50,13 +50,11 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!data.workspaceName.trim()) {
-      toast({
-        title: "Error",
-        description: "Workspace name is required",
-        variant: "destructive",
-      });
-      return;
+    // Auto-generate workspace name if not provided
+    let workspaceName = data.workspaceName.trim();
+    if (!workspaceName) {
+      const emailPrefix = data.email.split('@')[0];
+      workspaceName = `${emailPrefix}'s Workspace`;
     }
 
     setIsLoading(true);
@@ -64,6 +62,7 @@ export default function RegisterPage() {
       const result = await register({
         email: data.email,
         password: data.password,
+        workspaceName: workspaceName,
       });
       
       if (result.ok) {
@@ -161,6 +160,23 @@ export default function RegisterPage() {
                           placeholder="Confirm your password"
                           {...field}
                           required
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="workspaceName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Workspace Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="My Design Studio"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />

@@ -114,6 +114,7 @@ export function setupAuth(app: Express) {
       }
 
       const { email, password } = result.data;
+      const { workspaceName } = req.body;
 
       const [existingUser] = await db
         .select()
@@ -127,6 +128,7 @@ export function setupAuth(app: Express) {
 
       const hashedPassword = await crypto.hash(password);
 
+      // Create user and workspace in a single transaction
       const [newUser] = await db
         .insert(users)
         .values({
@@ -135,6 +137,32 @@ export function setupAuth(app: Express) {
           isAdmin: email === 'david@davidhoang.com',
         })
         .returning();
+
+      // Auto-generate workspace name if not provided
+      let finalWorkspaceName = workspaceName?.trim();
+      if (!finalWorkspaceName) {
+        const emailPrefix = email.split('@')[0];
+        finalWorkspaceName = `${emailPrefix}'s Workspace`;
+      }
+
+      // Create workspace for the new user
+      const [newWorkspace] = await db
+        .insert(workspaces)
+        .values({
+          name: finalWorkspaceName,
+          slug: finalWorkspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
+          description: `Personal workspace for ${email}`,
+        })
+        .returning();
+
+      // Add user as admin member of the workspace
+      await db
+        .insert(workspaceMembers)
+        .values({
+          workspaceId: newWorkspace.id,
+          userId: newUser.id,
+          role: 'admin',
+        });
 
       req.login(newUser, (err) => {
         if (err) {

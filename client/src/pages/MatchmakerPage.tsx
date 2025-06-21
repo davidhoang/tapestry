@@ -328,16 +328,35 @@ export default function MatchmakerPage() {
                         )}
 
                         <div className="flex flex-wrap gap-1 mb-3">
-                          {rec.designer.skills?.slice(0, 3).map((skill, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs px-2 py-0.5">
-                              #{skill}
-                            </Badge>
-                          ))}
-                          {rec.designer.skills && rec.designer.skills.length > 3 && (
-                            <Badge variant="outline" className="text-xs px-2 py-0.5">
-                              +{rec.designer.skills.length - 3}
-                            </Badge>
-                          )}
+                          {(() => {
+                            const skills = (() => {
+                              if (Array.isArray(rec.designer.skills)) {
+                                return rec.designer.skills;
+                              }
+                              if (typeof rec.designer.skills === 'string' && rec.designer.skills.trim()) {
+                                try {
+                                  return JSON.parse(rec.designer.skills);
+                                } catch {
+                                  return rec.designer.skills.split(',').map(s => s.trim()).filter(s => s);
+                                }
+                              }
+                              return [];
+                            })();
+                            return (
+                              <>
+                                {skills.slice(0, 3).map((skill, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs px-2 py-0.5">
+                                    #{skill}
+                                  </Badge>
+                                ))}
+                                {skills.length > 3 && (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                    +{skills.length - 3}
+                                  </Badge>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
 
                         <p className="text-xs text-gray-600 line-clamp-2 mb-3">{rec.reasoning}</p>

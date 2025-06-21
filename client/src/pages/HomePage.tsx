@@ -38,7 +38,7 @@ export default function HomePage() {
               High touch design recruiting in the intelligence era.
             </p>
 
-            <p className="text-sm text-white/70 text-center">
+            <p className="text-base text-white/70 text-center">
               A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
             </p>
 

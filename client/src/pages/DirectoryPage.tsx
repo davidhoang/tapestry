@@ -244,7 +244,7 @@ export default function DirectoryPage() {
                       Add designer
                     </DropdownMenuItem>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+                  <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
                     <DialogHeader className="flex-shrink-0">
                       <DialogTitle>Add new designer</DialogTitle>
                     </DialogHeader>
@@ -920,11 +920,12 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
               )}
             />
 
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
+            <div className="flex flex-col space-y-3 sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-2">
+              <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>
               <Button 
                 type="submit" 
                 disabled={createDesigner.isPending || updateDesigner.isPending}
+                className="w-full sm:w-auto"
               >
                 {(createDesigner.isPending || updateDesigner.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

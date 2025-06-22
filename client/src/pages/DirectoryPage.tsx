@@ -331,7 +331,7 @@ export default function DirectoryPage() {
             }
           }}
         >
-          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit Designer</DialogTitle>
             </DialogHeader>

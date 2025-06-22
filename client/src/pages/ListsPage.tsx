@@ -348,7 +348,7 @@ function ViewListDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-2xl">{list.name}</DialogTitle>
             <p className="text-muted-foreground">{list.description}</p>
@@ -860,7 +860,7 @@ function ViewDesignerDialog({
 }: ViewDesignerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
         </DialogHeader>

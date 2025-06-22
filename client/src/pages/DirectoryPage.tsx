@@ -182,7 +182,7 @@ export default function DirectoryPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
+      <div className="container mx-auto px-4 sm:px-6 pt-20 pb-8 space-y-6 sm:space-y-8">
         <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
           <h1 className="text-2xl sm:text-3xl font-bold">Directory</h1>
           <div className="flex flex-wrap gap-2">
@@ -1083,7 +1083,7 @@ function DesignerListItem({
   
   return (
     <div 
-      className={`relative border rounded-lg p-4 hover:shadow-md transition-all group cursor-pointer ${
+      className={`relative border rounded-lg p-4 sm:p-6 hover:shadow-md transition-all group cursor-pointer ${
         isSelected ? 'ring-2 ring-primary bg-primary/5' : 'bg-white'
       }`}
       onClick={handleClick}
@@ -1111,16 +1111,16 @@ function DesignerListItem({
         </Button>
       </div>
 
-      <div className="flex items-start space-x-4 pl-8">
+      <div className="flex items-start space-x-4 pl-8 sm:pl-10">
         <div className="flex-shrink-0">
           {designer.photoUrl ? (
             <img 
               src={designer.photoUrl} 
               alt={designer.name}
-              className="w-12 h-12 rounded-full object-cover"
+              className="w-14 h-14 sm:w-12 sm:h-12 rounded-full object-cover"
             />
           ) : (
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+            <div className="w-14 h-14 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
               {designer.name.charAt(0)}
             </div>
           )}
@@ -1128,7 +1128,7 @@ function DesignerListItem({
         
         <div className="flex-1 min-w-0">
           {/* Name */}
-          <h3 className="text-lg font-semibold text-gray-900 truncate">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
             {designer.name}
           </h3>
           

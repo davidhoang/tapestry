@@ -183,9 +183,9 @@ export default function DirectoryPage() {
     <div>
       <Navigation />
       <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Directory</h1>
-          <div className="flex gap-2">
+        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">Directory</h1>
+          <div className="flex flex-wrap gap-2">
             {/* View Toggle */}
             <div className="flex border rounded-lg">
               <Button
@@ -211,28 +211,31 @@ export default function DirectoryPage() {
                 <Button 
                   variant="secondary"
                   onClick={() => setShowAddToListDialog(true)}
+                  className="min-h-[44px]"
                 >
                   <ListPlus className="mr-2 h-4 w-4" />
-                  Add to list ({selectedIds.length})
+                  <span className="hidden sm:inline">Add to list</span> ({selectedIds.length})
                 </Button>
                 <Button 
                   variant="destructive" 
                   onClick={handleDeleteSelected}
                   disabled={deleteDesigners.isPending}
+                  className="min-h-[44px]"
                 >
                   {deleteDesigners.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   <Trash className="mr-2 h-4 w-4" />
-                  Delete selected ({selectedIds.length})
+                  <span className="hidden sm:inline">Delete selected</span> ({selectedIds.length})
                 </Button>
               </>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 min-h-[44px]">
                   <Plus className="h-4 w-4" />
-                  Add designer
+                  <span className="hidden sm:inline">Add designer</span>
+                  <span className="sm:hidden">Add</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -278,7 +281,7 @@ export default function DirectoryPage() {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredDesigners.map((designer) => (
               <DesignerCard 
                 key={designer.id}
@@ -1102,7 +1105,7 @@ function DesignerListItem({
             e.stopPropagation();
             onEdit(designer);
           }}
-          className="h-8 w-8 p-0"
+          className="h-10 w-10 p-0 min-h-[44px]"
         >
           <Edit className="h-4 w-4" />
         </Button>

@@ -72,14 +72,14 @@ export default function DesignerCard({
               onClick={(e) => {
                 e.stopPropagation();
               }}
-              className="absolute top-3 left-3 z-10 w-4 h-4 text-primary bg-white border-2 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer shadow-sm"
+              className="absolute top-3 left-3 z-10 w-5 h-5 text-primary bg-white border-2 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer shadow-sm"
             />
           )}
           
           {/* Top-right edit button - only visible on hover */}
           {onEdit && (
             <button
-              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20 rounded-md backdrop-blur-sm"
+              className="absolute top-3 right-3 z-10 w-10 h-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20 rounded-md backdrop-blur-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(designer);

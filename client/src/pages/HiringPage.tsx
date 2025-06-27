@@ -10,8 +10,36 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Briefcase, Users, Sparkles, FileText } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
-import { MatchRecommendation } from "../hooks/use-matchmaker";
 import DesignerCard from "../components/DesignerCard";
+
+interface Designer {
+  id: number;
+  userId: number | null;
+  workspaceId: number;
+  name: string;
+  title: string;
+  location: string | null;
+  company: string | null;
+  level: string;
+  website: string | null;
+  linkedIn: string | null;
+  email: string | null;
+  photoUrl: string | null;
+  skills: string[];
+  available: boolean | null;
+  description: string | null;
+  notes: string | null;
+  createdAt: Date | null;
+}
+
+interface MatchRecommendation {
+  designerId: number;
+  matchScore: number;
+  reasoning: string;
+  matchedSkills: string[];
+  concerns?: string;
+  designer: Designer;
+}
 
 interface Job {
   id: number;
@@ -353,7 +381,18 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                       <div className="grid gap-4">
                         {matches.map((match) => (
                           <div key={match.designerId} className="border rounded-lg p-4">
-                            <DesignerCard designer={match.designer} />
+                            <div className="flex items-start gap-4">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-lg">{match.designer.name}</h3>
+                                <p className="text-muted-foreground">{match.designer.title}</p>
+                                {match.designer.company && (
+                                  <p className="text-sm text-muted-foreground">{match.designer.company}</p>
+                                )}
+                                {match.designer.description && (
+                                  <p className="text-sm mt-2">{match.designer.description}</p>
+                                )}
+                              </div>
+                            </div>
                             <div className="mt-4 space-y-2">
                               <div className="flex items-center justify-between">
                                 <Badge variant="secondary">

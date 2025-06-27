@@ -1920,16 +1920,16 @@ Please analyze this role and recommend the best matching designers.`
       });
     }
 
-    // Create a summary of all designers for OpenAI
+    // Create a summary of all designers for OpenAI using correct field names
     const designerSummaries = allDesigners.map(designer => ({
       id: designer.id,
       name: designer.name,
       title: designer.title,
       company: designer.company,
       skills: designer.skills,
-      bio: designer.bio,
-      experience: designer.experience,
-      portfolioUrl: designer.portfolioUrl
+      description: designer.description,
+      level: designer.level,
+      location: designer.location
     }));
 
     // Use OpenAI to analyze and recommend matches
@@ -1987,7 +1987,7 @@ Please analyze this job and recommend the best matching designers.`
           ...rec,
           designer
         };
-      }).filter((rec: any) => rec.designer); // Remove any recommendations where designer wasn't found
+      }).filter((rec: any) => rec.designer);
 
       res.json({
         analysis: analysis.analysis,

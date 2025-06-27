@@ -29,18 +29,16 @@ export default function AuthPage() {
   console.log('AuthPage rendering');
   
   return (
-    <div className="w-full p-4" style={{ minHeight: '300px' }}>
-      <div className="w-full max-w-md mx-auto">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-center">Sign in</h2>
-        </div>
-        <LoginForm />
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline">
-            Sign up here
-          </Link>
-        </div>
+    <div className="w-full">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-center">Sign in</h2>
+      </div>
+      <LoginForm />
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        Don't have an account?{" "}
+        <Link href="/register" className="text-primary hover:underline">
+          Sign up here
+        </Link>
       </div>
     </div>
   );
@@ -79,42 +77,68 @@ function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          required
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-      >
-        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        Sign In
-      </button>
-    </form>
+    <div className="bg-white">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label 
+            htmlFor="email" 
+            className="block text-sm font-medium text-gray-900 mb-2"
+            style={{ color: '#374151' }}
+          >
+            Email Address
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white"
+            style={{ 
+              backgroundColor: 'white',
+              border: '2px solid #d1d5db',
+              color: '#111827'
+            }}
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+        <div>
+          <label 
+            htmlFor="password" 
+            className="block text-sm font-medium text-gray-900 mb-2"
+            style={{ color: '#374151' }}
+          >
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white"
+            style={{ 
+              backgroundColor: 'white',
+              border: '2px solid #d1d5db',
+              color: '#111827'
+            }}
+            placeholder="Enter your password"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full py-3 px-4 rounded-md font-medium text-white flex items-center justify-center transition-colors"
+          style={{ 
+            backgroundColor: '#C8944B',
+            color: 'white'
+          }}
+        >
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Sign In
+        </button>
+      </form>
+    </div>
   );
 }
 

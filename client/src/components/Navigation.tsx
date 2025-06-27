@@ -263,12 +263,10 @@ export default function Navigation() {
 
       {/* Auth Dialog */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="max-w-sm p-0">
-          <DialogHeader>
-            <VisuallyHidden>
-              <DialogTitle>Authentication</DialogTitle>
-              <DialogDescription>Sign in or create an account to access the application</DialogDescription>
-            </VisuallyHidden>
+        <DialogContent className="max-w-md w-full mx-4 sm:mx-auto p-6 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Authentication</DialogTitle>
+            <DialogDescription>Sign in or create an account to access the application</DialogDescription>
           </DialogHeader>
           <AuthPage />
         </DialogContent>

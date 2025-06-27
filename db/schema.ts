@@ -100,6 +100,17 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const jobs = pgTable("jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(), // Markdown content
+  status: text("status").notNull().default("draft"), // "draft", "active", "paused", "closed"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],
@@ -110,6 +121,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   lists: many(lists),
   conversations: many(conversations),
   invitations: many(workspaceInvitations),
+  jobs: many(jobs),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -177,6 +189,17 @@ export const messageRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, { fields: [messages.conversationId], references: [conversations.id] }),
 }));
 
+export const jobRelations = relations(jobs, ({ one }) => ({
+  user: one(users, {
+    fields: [jobs.userId],
+    references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [jobs.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -226,3 +249,8 @@ export const insertMessageSchema = createInsertSchema(messages);
 export const selectMessageSchema = createSelectSchema(messages);
 export type InsertMessage = typeof messages.$inferInsert;
 export type SelectMessage = typeof messages.$inferSelect;
+
+export const insertJobSchema = createInsertSchema(jobs);
+export const selectJobSchema = createSelectSchema(jobs);
+export type InsertJob = typeof jobs.$inferInsert;
+export type SelectJob = typeof jobs.$inferSelect;

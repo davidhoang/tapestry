@@ -261,16 +261,22 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* Auth Dialog */}
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="max-w-md w-full mx-4 sm:mx-auto p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Authentication</DialogTitle>
-            <DialogDescription>Sign in or create an account to access the application</DialogDescription>
-          </DialogHeader>
-          <AuthPage />
-        </DialogContent>
-      </Dialog>
+      {/* Auth Modal */}
+      {showAuthDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="relative p-6">
+              <button
+                onClick={() => setShowAuthDialog(false)}
+                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <AuthPage />
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

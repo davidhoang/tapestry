@@ -29,14 +29,16 @@ export default function AuthPage() {
   console.log('AuthPage rendering');
   
   return (
-    <div className="w-full">
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-center">Sign in</h2>
+    <div style={{ width: '100%', minHeight: '300px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '600', textAlign: 'center', color: '#111827' }}>
+          Sign in
+        </h2>
       </div>
       <LoginForm />
-      <div className="mt-6 text-center text-sm text-muted-foreground">
+      <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: '#6b7280' }}>
         Don't have an account?{" "}
-        <Link href="/register" className="text-primary hover:underline">
+        <Link href="/register" style={{ color: '#C8944B', textDecoration: 'underline' }}>
           Sign up here
         </Link>
       </div>
@@ -77,13 +79,18 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-white">
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <div style={{ backgroundColor: 'white', width: '100%' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div>
           <label 
             htmlFor="email" 
-            className="block text-sm font-medium text-gray-900 mb-2"
-            style={{ color: '#374151' }}
+            style={{ 
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151',
+              marginBottom: '8px'
+            }}
           >
             Email Address
           </label>
@@ -92,11 +99,16 @@ function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white"
             style={{ 
-              backgroundColor: 'white',
+              width: '100%',
+              padding: '12px 16px',
               border: '2px solid #d1d5db',
-              color: '#111827'
+              borderRadius: '6px',
+              backgroundColor: 'white',
+              color: '#111827',
+              fontSize: '16px',
+              outline: 'none',
+              boxSizing: 'border-box'
             }}
             placeholder="Enter your email"
             required
@@ -105,8 +117,13 @@ function LoginForm() {
         <div>
           <label 
             htmlFor="password" 
-            className="block text-sm font-medium text-gray-900 mb-2"
-            style={{ color: '#374151' }}
+            style={{ 
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151',
+              marginBottom: '8px'
+            }}
           >
             Password
           </label>
@@ -115,11 +132,16 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 bg-white"
             style={{ 
-              backgroundColor: 'white',
+              width: '100%',
+              padding: '12px 16px',
               border: '2px solid #d1d5db',
-              color: '#111827'
+              borderRadius: '6px',
+              backgroundColor: 'white',
+              color: '#111827',
+              fontSize: '16px',
+              outline: 'none',
+              boxSizing: 'border-box'
             }}
             placeholder="Enter your password"
             required
@@ -128,10 +150,20 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 px-4 rounded-md font-medium text-white flex items-center justify-center transition-colors"
           style={{ 
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '6px',
+            fontWeight: '500',
             backgroundColor: '#C8944B',
-            color: 'white'
+            color: 'white',
+            border: 'none',
+            fontSize: '16px',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.7 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

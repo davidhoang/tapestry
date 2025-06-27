@@ -150,13 +150,17 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
       return response.json();
     },
     onSuccess: (data) => {
-      setMatches(data.recommendations);
-      setAnalysis(data.analysis);
-      toast({ title: "Found designer matches" });
+      setMatches(data.recommendations || []);
+      setAnalysis(data.analysis || "");
+      toast({ 
+        title: `Found ${data.recommendations?.length || 0} designer matches`,
+        description: data.recommendations?.length ? "Check the matches below" : "Try adjusting your job description"
+      });
     },
     onError: () => {
       toast({ 
         title: "Failed to find matches", 
+        description: "Please try again or check your connection",
         variant: "destructive" 
       });
     },
@@ -217,9 +221,9 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
   const handleFindMatches = (job: Job) => {
     setSelectedJob(job);
-    setIsAnalyzing(true);
     setMatches([]);
     setAnalysis("");
+    setSelectedDesigners(new Set());
     findMatchesMutation.mutate(job.id);
   };
 
@@ -528,8 +532,8 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
       </div>
 
       {/* Analyzing Dialog */}
-      <Dialog open={isAnalyzing || findMatchesMutation.isPending} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={findMatchesMutation.isPending} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" aria-describedby="analyzing-description">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-serif">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -546,7 +550,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                   </div>
                 </div>
               </div>
-              <p className="text-muted-foreground">
+              <p id="analyzing-description" className="text-muted-foreground">
                 Using AI to analyze your job requirements and match them with designers in your directory...
               </p>
             </div>

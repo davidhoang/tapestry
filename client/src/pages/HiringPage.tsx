@@ -526,6 +526,84 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
           )}
         </div>
       </div>
+
+      {/* Analyzing Dialog */}
+      <Dialog open={isAnalyzing || findMatchesMutation.isPending} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-serif">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              Finding Designer Matches
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center py-6">
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                  <div className="absolute -top-1 -right-1">
+                    <div className="h-3 w-3 bg-primary rounded-full animate-ping"></div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-muted-foreground">
+                Using AI to analyze your job requirements and match them with designers in your directory...
+              </p>
+            </div>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-primary rounded-full"></div>
+                Analyzing job requirements
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-primary rounded-full"></div>
+                Evaluating designer skills
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-primary rounded-full"></div>
+                Calculating match confidence
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create List Dialog */}
+      <Dialog open={showCreateListDialog} onOpenChange={setShowCreateListDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-serif">Create List from Matches</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="listName">List Name</Label>
+              <Input
+                id="listName"
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                placeholder={`Candidates for ${selectedJob?.title || 'position'}`}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {selectedDesigners.size} designer{selectedDesigners.size !== 1 ? 's' : ''} selected
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateListDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateList}
+                disabled={createListMutation.isPending || !newListName.trim()}
+              >
+                {createListMutation.isPending ? "Creating..." : "Create List"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -111,9 +111,9 @@
     font-feature-settings: "kern" 1, "liga" 1;
   }
 
-  /* Ensure UI elements stay sans-serif */
+  /* Ensure UI elements use serif for consistency */
   button, .button, nav, .nav, .menu, input, textarea, select, .form-control, .badge {
-    @apply font-sans;
+    @apply font-serif;
   }
 
   /* Override muted-foreground for better readability */

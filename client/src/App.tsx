@@ -55,6 +55,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <OnboardingProvider>
         <div className="min-h-screen flex flex-col">
+          <Navigation />
           <main className="flex-1">
             <Switch>
               {!user && <Route path="/" component={HomePage} />}

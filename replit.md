@@ -60,6 +60,13 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - Email sharing with SendGrid integration
 - Collaborative list building
 
+### Hiring Feature
+- Job posting creation with markdown editor support
+- AI-powered designer matching using OpenAI GPT-4
+- Job management interface with status tracking
+- Designer recommendations with confidence scoring and reasoning
+- Skills-based matching with concern identification
+
 ## Data Flow
 
 ### User Journey
@@ -141,6 +148,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 ## Changelog
 - June 27, 2025. Initial setup
 - June 27, 2025. Fixed login modal visibility and auto-dismiss UX
+- June 27, 2025. Implemented Hiring feature with job creation, AI matching, and database optimization
 
 ## User Preferences
 

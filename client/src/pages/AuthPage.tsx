@@ -66,6 +66,9 @@ function LoginForm() {
           description: result.message,
           variant: "destructive",
         });
+      } else {
+        // Login successful - trigger modal close
+        window.dispatchEvent(new CustomEvent('closeAuthModal'));
       }
     } catch (error) {
       toast({

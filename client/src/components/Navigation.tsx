@@ -25,7 +25,7 @@ import {
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Menu, X, Settings, User } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AuthPage from "../pages/AuthPage";
 
 export default function Navigation() {
@@ -33,6 +33,23 @@ export default function Navigation() {
   const { user, logout } = useUser();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Listen for successful login to close modal
+  useEffect(() => {
+    const handleCloseAuthModal = () => {
+      setShowAuthDialog(false);
+    };
+
+    window.addEventListener('closeAuthModal', handleCloseAuthModal);
+    return () => window.removeEventListener('closeAuthModal', handleCloseAuthModal);
+  }, []);
+
+  // Auto-close modal when user becomes authenticated
+  useEffect(() => {
+    if (user && showAuthDialog) {
+      setShowAuthDialog(false);
+    }
+  }, [user, showAuthDialog]);
 
   // Get user's workspace
   const { data: workspaces } = useQuery({

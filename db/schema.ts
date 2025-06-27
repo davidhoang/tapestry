@@ -55,10 +55,11 @@ export const designers = pgTable("designers", {
   level: text("level").notNull(),
   website: text("website"),
   linkedIn: text("linkedin"),
-  email: text("email").notNull(),
+  email: text("email"),
   photoUrl: text("photo_url"),
   skills: json("skills").$type<string[]>().notNull(),
   available: boolean("available").default(false),
+  description: text("description"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });

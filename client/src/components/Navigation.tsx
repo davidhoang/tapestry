@@ -103,6 +103,12 @@ export default function Navigation() {
               >
                 Lists
               </Link>
+              <Link
+                href={`/${workspaceSlug}/hiring`}
+                className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Hiring
+              </Link>
             </div>
           )}
         </div>
@@ -218,6 +224,17 @@ export default function Navigation() {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Lists
+                      </Link>
+                      <Link
+                        href={`/${workspaceSlug}/hiring`}
+                        className={`text-lg py-2 px-4 rounded transition-colors ${
+                          location === `/${workspaceSlug}/hiring`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Hiring
                       </Link>
                       <Link
                         href="/profile"

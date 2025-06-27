@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -1834,6 +1834,171 @@ Please analyze this role and recommend the best matching designers.`
       res.status(500).json({ error: "Failed to update onboarding settings" });
     }
   });
+
+  // Jobs API endpoints
+  app.get("/api/jobs", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const userJobs = await db.query.jobs.findMany({
+      where: eq(jobs.workspaceId, userWorkspace.id),
+      orderBy: desc(jobs.createdAt),
+    });
+
+    res.json(userJobs);
+  }));
+
+  app.post("/api/jobs", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { title, description } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ error: "Title and description are required" });
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const [newJob] = await db.insert(jobs).values({
+      userId: req.user.id,
+      workspaceId: userWorkspace.id,
+      title,
+      description,
+      status: "draft"
+    }).returning();
+
+    res.json(newJob);
+  }));
+
+  app.post("/api/jobs/matches", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({ error: "Job ID is required" });
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    // Get the job
+    const job = await db.query.jobs.findFirst({
+      where: and(eq(jobs.id, jobId), eq(jobs.workspaceId, userWorkspace.id))
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Get all designers from user's workspace
+    const allDesigners = await db.query.designers.findMany({
+      where: eq(designers.workspaceId, userWorkspace.id),
+      orderBy: desc(designers.createdAt),
+    });
+
+    if (allDesigners.length === 0) {
+      return res.json({ 
+        recommendations: [],
+        analysis: "No designers found in database to match against.",
+        jobId
+      });
+    }
+
+    // Create a summary of all designers for OpenAI
+    const designerSummaries = allDesigners.map(designer => ({
+      id: designer.id,
+      name: designer.name,
+      title: designer.title,
+      company: designer.company,
+      skills: designer.skills,
+      bio: designer.bio,
+      experience: designer.experience,
+      portfolioUrl: designer.portfolioUrl
+    }));
+
+    // Use OpenAI to analyze and recommend matches
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert design recruiter and talent matcher. Your job is to analyze a job description and recommend the best designers from a given pool based on their skills, experience, and background.
+
+          Return your response as a JSON object with this structure:
+          {
+            "analysis": "Brief analysis of the job requirements",
+            "recommendations": [
+              {
+                "designerId": number,
+                "matchScore": number (0-100),
+                "reasoning": "Explanation of why this designer is a good match",
+                "matchedSkills": ["skill1", "skill2"],
+                "concerns": "Any potential concerns or gaps (optional)"
+              }
+            ]
+          }
+
+          Rank designers by match quality and only include those with a match score of 60 or higher. Limit to top 10 matches.`
+        },
+        {
+          role: "user",
+          content: `Job Title: ${job.title}
+
+Job Description:
+${job.description}
+
+Available Designers:
+${JSON.stringify(designerSummaries, null, 2)}
+
+Please analyze this job and recommend the best matching designers.`
+        }
+      ],
+      temperature: 0.3,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      return res.status(500).json({ error: "Failed to get AI analysis" });
+    }
+
+    try {
+      const analysis = JSON.parse(aiResponse);
+      
+      // Enrich recommendations with full designer data
+      const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+        const designer = allDesigners.find(d => d.id === rec.designerId);
+        return {
+          ...rec,
+          designer
+        };
+      }).filter((rec: any) => rec.designer); // Remove any recommendations where designer wasn't found
+
+      res.json({
+        analysis: analysis.analysis,
+        recommendations: enrichedRecommendations,
+        jobId
+      });
+    } catch (error) {
+      console.error('Failed to parse AI response:', error);
+      res.status(500).json({ error: "Failed to parse AI analysis" });
+    }
+  }));
 
   const httpServer = createServer(app);
   return httpServer;

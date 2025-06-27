@@ -26,27 +26,22 @@ const authSchema = z.object({
 type AuthFormData = z.infer<typeof authSchema>;
 
 export default function AuthPage() {
-  // Get container class based on whether component is rendered in modal
-  const containerClass = window.location.pathname.startsWith('/lists/') 
-    ? "w-full" 
-    : "container py-4";
-
+  console.log('AuthPage rendering');
+  
   return (
-    <div className={containerClass} style={{ minHeight: '300px' }}>
-      <Card className="w-full shadow-none border-0 max-w-md mx-auto">
-        <CardHeader className="space-y-1 py-3">
-          <CardTitle className="text-xl text-center">Sign in</CardTitle>
-        </CardHeader>
-        <CardContent className="pb-3">
-          <LoginForm />
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Sign up here
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="w-full p-4" style={{ minHeight: '300px' }}>
+      <div className="w-full max-w-md mx-auto">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-center">Sign in</h2>
+        </div>
+        <LoginForm />
+        <div className="mt-4 text-center text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <Link href="/register" className="text-primary hover:underline">
+            Sign up here
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
@@ -55,19 +50,16 @@ function LoginForm() {
   const { login } = useUser();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const form = useForm<AuthFormData>({
-    resolver: zodResolver(authSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+  console.log('LoginForm rendering');
 
-  const onSubmit = async (data: AuthFormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
-      const result = await login(data);
+      const result = await login({ email, password });
       if (!result.ok) {
         toast({
           title: "Error",
@@ -87,40 +79,42 @@ function LoginForm() {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          required
         />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      </div>
+      <div>
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          required
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Login
-        </Button>
-      </form>
-    </Form>
+      </div>
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+      >
+        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Sign In
+      </button>
+    </form>
   );
 }
 

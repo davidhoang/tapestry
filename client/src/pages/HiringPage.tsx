@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Briefcase, Users, Sparkles, FileText } from "lucide-react";
+import { Plus, Search, Briefcase, Users, Sparkles, FileText, Loader2, Star } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import DesignerCard from "../components/DesignerCard";
 
@@ -91,6 +93,9 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   const [matches, setMatches] = useState<MatchRecommendation[]>([]);
   const [analysis, setAnalysis] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(new Set());
+  const [showCreateListDialog, setShowCreateListDialog] = useState(false);
+  const [newListName, setNewListName] = useState("");
 
   // Fetch user's jobs
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
@@ -157,6 +162,48 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
     },
   });
 
+  // Create list mutation
+  const createListMutation = useMutation({
+    mutationFn: async ({ name, designerIds }: { name: string; designerIds: number[] }) => {
+      const response = await fetch("/api/lists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ 
+          name, 
+          summary: `Job candidates for ${selectedJob?.title || 'position'}`,
+          isPublic: false 
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create list");
+      const list = await response.json();
+      
+      // Add designers to the list
+      for (const designerId of designerIds) {
+        await fetch("/api/lists/designers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ listId: list.id, designerId }),
+        });
+      }
+      
+      return list;
+    },
+    onSuccess: () => {
+      toast({ title: "List created successfully" });
+      setShowCreateListDialog(false);
+      setNewListName("");
+      setSelectedDesigners(new Set());
+    },
+    onError: () => {
+      toast({ 
+        title: "Failed to create list", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const handleCreateJob = () => {
     if (!newJobTitle.trim() || !newJobDescription.trim()) {
       toast({ 
@@ -171,8 +218,33 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   const handleFindMatches = (job: Job) => {
     setSelectedJob(job);
     setIsAnalyzing(true);
+    setMatches([]);
+    setAnalysis("");
     findMatchesMutation.mutate(job.id);
-    setIsAnalyzing(false);
+  };
+
+  const handleToggleDesigner = (designerId: number) => {
+    const newSelected = new Set(selectedDesigners);
+    if (newSelected.has(designerId)) {
+      newSelected.delete(designerId);
+    } else {
+      newSelected.add(designerId);
+    }
+    setSelectedDesigners(newSelected);
+  };
+
+  const handleCreateList = () => {
+    if (!newListName.trim()) {
+      toast({ 
+        title: "Please enter a list name", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    createListMutation.mutate({ 
+      name: newListName, 
+      designerIds: Array.from(selectedDesigners) 
+    });
   };
 
   if (!user) {
@@ -361,10 +433,23 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
               {(analysis || matches.length > 0) && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 font-serif">
-                      <Users className="h-5 w-5" />
-                      Designer Matches
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 font-serif">
+                        <Users className="h-5 w-5" />
+                        Designer Matches ({matches.length})
+                      </CardTitle>
+                      {matches.length > 0 && selectedDesigners.size > 0 && (
+                        <Button
+                          onClick={() => setShowCreateListDialog(true)}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create List ({selectedDesigners.size})
+                        </Button>
+                      )}
+                    </div>
                     {analysis && (
                       <p className="text-sm text-muted-foreground">{analysis}</p>
                     )}
@@ -380,25 +465,25 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                     ) : (
                       <div className="grid gap-4">
                         {matches.map((match) => (
-                          <div key={match.designerId} className="border rounded-lg p-4">
-                            <div className="flex items-start gap-4">
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-lg">{match.designer.name}</h3>
-                                <p className="text-muted-foreground">{match.designer.title}</p>
-                                {match.designer.company && (
-                                  <p className="text-sm text-muted-foreground">{match.designer.company}</p>
-                                )}
-                                {match.designer.description && (
-                                  <p className="text-sm mt-2">{match.designer.description}</p>
-                                )}
-                              </div>
+                          <div key={match.designerId} className="relative">
+                            <div className="absolute top-4 left-4 z-10">
+                              <Checkbox
+                                checked={selectedDesigners.has(match.designerId)}
+                                onCheckedChange={() => handleToggleDesigner(match.designerId)}
+                                className="bg-white/90 border-2"
+                              />
                             </div>
-                            <div className="mt-4 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Badge variant="secondary">
+                            <DesignerCard
+                              designer={match.designer}
+                              showCheckbox={false}
+                            />
+                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                              <div className="flex items-center justify-between mb-2">
+                                <Badge variant="secondary" className="gap-1">
+                                  <Star className="h-3 w-3" />
                                   {match.matchScore}% match
                                 </Badge>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 flex-wrap">
                                   {match.matchedSkills.map((skill) => (
                                     <Badge key={skill} variant="outline" className="text-xs">
                                       {skill}
@@ -406,7 +491,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                                   ))}
                                 </div>
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-muted-foreground mb-1">
                                 <strong>Why this match:</strong> {match.reasoning}
                               </p>
                               {match.concerns && (

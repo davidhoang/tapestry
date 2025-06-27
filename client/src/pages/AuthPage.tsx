@@ -1,17 +1,12 @@
+/*
+  AuthPage - WORKING AUTHENTICATION IMPLEMENTATION
+  DO NOT REWRITE: This component uses inline styles to ensure cross-device compatibility
+  Uses simple HTML forms instead of complex form libraries to prevent rendering issues
+  See replit.md for maintenance guidelines and implementation details
+*/
+
 import { useState } from "react";
 import { Link } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";

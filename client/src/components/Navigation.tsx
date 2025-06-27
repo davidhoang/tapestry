@@ -278,7 +278,12 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* Auth Modal */}
+      {/* 
+        Auth Modal - WORKING IMPLEMENTATION 
+        DO NOT MODIFY: This custom modal solution works reliably across all devices
+        Uses inline styles in AuthPage to prevent CSS conflicts
+        See replit.md for implementation details and maintenance guidelines
+      */}
       {showAuthDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">

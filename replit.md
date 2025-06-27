@@ -113,9 +113,36 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - Database: Drizzle schema push for migrations
 - Assets: Optimized image serving and caching
 
+## Authentication Implementation
+
+### Login Modal System
+- **Status**: ✅ WORKING - DO NOT REWRITE
+- **Implementation**: Custom modal overlay (not Radix Dialog)
+- **Location**: `client/src/components/Navigation.tsx` and `client/src/pages/AuthPage.tsx`
+- **Key Features**:
+  - Custom modal with inline styles to prevent CSS conflicts
+  - Auto-dismiss on successful authentication
+  - Event-driven close mechanism
+  - Mobile/desktop responsive design
+  - Simple HTML form elements (not react-hook-form)
+
+### Critical Implementation Details
+- Uses custom overlay instead of Radix Dialog components
+- All styling done with inline styles to avoid CSS inheritance issues
+- Event listener pattern for modal closure: `window.dispatchEvent(new CustomEvent('closeAuthModal'))`
+- Authentication flow triggers modal close via useEffect in Navigation component
+
+### Future Maintenance
+- ⚠️ **DO NOT rewrite authentication modal components**
+- ⚠️ **DO NOT replace with different modal libraries**
+- ⚠️ **DO NOT change from inline styles to CSS classes**
+- Minor UX improvements only - major rewrites prohibited
+
 ## Changelog
 - June 27, 2025. Initial setup
+- June 27, 2025. Fixed login modal visibility and auto-dismiss UX
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Cost-conscious: Avoid unnecessary rewrites of working components.

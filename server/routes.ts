@@ -916,9 +916,9 @@ export function registerRoutes(app: Express): Server {
       title: designer.title,
       company: designer.company,
       skills: designer.skills,
-      bio: designer.bio,
-      experience: designer.experience,
-      portfolioUrl: designer.portfolioUrl
+      description: designer.description,
+      level: designer.level,
+      location: designer.location
     }));
 
     // Use OpenAI to analyze and recommend matches
@@ -1168,15 +1168,10 @@ Please analyze this role and recommend the best matching designers.`
         name: designer.name,
         title: designer.title || undefined,
         company: designer.company || undefined,
-        bio: designer.bio || undefined,
-        experience: designer.experience || undefined,
+        bio: designer.description || undefined,
         skills: designer.skills || undefined,
-        portfolioUrl: designer.portfolioUrl || undefined,
         email: designer.email || undefined,
-        phone: designer.phone || undefined,
-        location: designer.location || undefined,
-        availability: designer.availability || undefined,
-        rate: designer.rate || undefined
+        location: designer.location || undefined
       };
 
       // Enrich the profile
@@ -1250,16 +1245,10 @@ Please analyze this role and recommend the best matching designers.`
           name: enrichmentData.name || designer.name,
           title: enrichmentData.title || designer.title,
           company: enrichmentData.company || designer.company,
-          bio: enrichmentData.bio || designer.bio,
-          experience: enrichmentData.experience || designer.experience,
+          description: enrichmentData.bio || designer.description,
           skills: enrichmentData.skills || designer.skills,
-          portfolioUrl: enrichmentData.portfolioUrl || designer.portfolioUrl,
           email: enrichmentData.email || designer.email,
-          phone: enrichmentData.phone || designer.phone,
-          location: enrichmentData.location || designer.location,
-          availability: enrichmentData.availability || designer.availability,
-          rate: enrichmentData.rate || designer.rate,
-          updatedAt: new Date()
+          location: enrichmentData.location || designer.location
         })
         .where(eq(designers.id, parseInt(id)))
         .returning();

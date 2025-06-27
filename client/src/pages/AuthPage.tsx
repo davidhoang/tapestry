@@ -15,11 +15,15 @@ import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-type AuthFormData = {
-  email: string;
-  password: string;
-};
+const authSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type AuthFormData = z.infer<typeof authSchema>;
 
 export default function AuthPage() {
   // Get container class based on whether component is rendered in modal
@@ -28,13 +32,19 @@ export default function AuthPage() {
     : "container py-4";
 
   return (
-    <div className={containerClass}>
+    <div className={containerClass} style={{ minHeight: '300px' }}>
       <Card className="w-full shadow-none border-0 max-w-md mx-auto">
         <CardHeader className="space-y-1 py-3">
           <CardTitle className="text-xl text-center">Sign in</CardTitle>
         </CardHeader>
         <CardContent className="pb-3">
           <LoginForm />
+          <div className="mt-4 text-center text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link href="/register" className="text-primary hover:underline">
+              Sign up here
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -47,6 +57,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<AuthFormData>({
+    resolver: zodResolver(authSchema),
     defaultValues: {
       email: "",
       password: "",

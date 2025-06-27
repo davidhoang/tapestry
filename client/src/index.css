@@ -306,3 +306,30 @@
   color: #0f172a !important;
   background-color: transparent !important;
 }
+
+/* Modal form styling fixes */
+[role="dialog"] input,
+[role="dialog"] label,
+[role="dialog"] button {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure dialog form elements are visible */
+[role="dialog"] input {
+  background-color: white !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
+}
+
+[role="dialog"] label {
+  color: #374151 !important;
+  font-weight: 500 !important;
+}
+
+[role="dialog"] .btn-primary,
+[role="dialog"] button[type="submit"] {
+  background-color: #C8944B !important;
+  color: white !important;
+  opacity: 1 !important;
+}

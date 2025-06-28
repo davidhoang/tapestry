@@ -2064,6 +2064,51 @@ Please analyze this role and recommend the best matching designers.`
     res.json({ success: true });
   }));
 
+  // Leave workspace endpoint
+  app.post("/api/workspaces/:workspaceId/leave", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const workspaceId = parseInt(req.params.workspaceId);
+    const userId = req.user!.id;
+
+    // Find the user's membership in this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: "Membership not found" });
+    }
+
+    // Prevent workspace owners from leaving their own workspace
+    if (membership.role === 'owner') {
+      return res.status(400).json({ error: "Workspace owners cannot leave their workspace. Transfer ownership first or delete the workspace." });
+    }
+
+    // Remove the user's membership
+    await db
+      .delete(workspaceMembers)
+      .where(and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId)
+      ));
+
+    await logPermissionAction({
+      userId: userId,
+      workspaceId: workspaceId,
+      action: 'leave_workspace',
+      resource: 'workspace_membership',
+      metadata: { leftRole: membership.role },
+    });
+
+    res.json({ success: true, message: "Successfully left workspace" });
+  }));
+
   app.get("/api/workspaces/:workspaceId/invitations", requirePermission('canManageInvitations'), withErrorHandler(async (req, res) => {
     const { workspaceId } = req.params;
     const context = (req as any).workspaceContext;

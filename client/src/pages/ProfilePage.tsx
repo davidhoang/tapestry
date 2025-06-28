@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, User, Camera, Mail, UserPlus } from "lucide-react";
+import { Upload, User, Camera, Mail, UserPlus, Building2, LogOut, AlertTriangle } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -150,6 +150,30 @@ export default function ProfilePage() {
     onError: (error: any) => {
       toast({
         title: "Failed to send invitation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const leaveWorkspaceMutation = useMutation({
+    mutationFn: async (workspaceId: number) => {
+      const response = await fetch(`/api/workspaces/${workspaceId}/leave`, {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
+      toast({
+        title: "Left workspace",
+        description: "You have successfully left the workspace.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to leave workspace",
         description: error.message,
         variant: "destructive",
       });
@@ -425,6 +449,100 @@ export default function ProfilePage() {
                   Need to change your workspace name? Please contact support.
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Workspace Membership Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace Memberships</CardTitle>
+              <CardDescription>
+                Workspaces you have access to
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {workspaces && workspaces.length > 0 ? (
+                <div className="space-y-3">
+                  {workspaces.map((workspace: any) => {
+                    const isOwner = workspace.owner?.email === user?.email;
+                    const workspaceName = isOwner ? 'My Workspace' : workspace.name;
+                    
+                    return (
+                      <div
+                        key={workspace.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{workspaceName}</p>
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              <span className="capitalize">{workspace.role}</span>
+                              <span>•</span>
+                              <span>/{workspace.slug}</span>
+                              {isOwner && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-primary font-medium">Owner</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {!isOwner && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                                <LogOut className="h-4 w-4 mr-2" />
+                                Leave
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center">
+                                  <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
+                                  Leave Workspace
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to leave "{workspace.name}"? You will lose access to all content in this workspace and will need to be re-invited to rejoin.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="flex justify-end space-x-2">
+                                <DialogTrigger asChild>
+                                  <Button variant="outline">Cancel</Button>
+                                </DialogTrigger>
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => leaveWorkspaceMutation.mutate(workspace.id)}
+                                  disabled={leaveWorkspaceMutation.isPending}
+                                >
+                                  {leaveWorkspaceMutation.isPending ? (
+                                    <>
+                                      <LogOut className="mr-2 h-4 w-4 animate-spin" />
+                                      Leaving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <LogOut className="mr-2 h-4 w-4" />
+                                      Leave Workspace
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No workspaces found</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

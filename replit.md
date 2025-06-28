@@ -216,6 +216,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Enhanced RLHF system with system prompt tracking: added system_prompt_id to recommendation_feedback table, implemented prompt performance analytics with filtering capabilities, created comparative analytics between different custom AI prompts, enabling measurement of prompt effectiveness through success rates and user feedback metrics
 - June 28, 2025. Streamlined role system: removed "Viewer" role from workspace permissions, updated role dropdown interfaces to show only Owner/Editor/Member roles (Admin role hidden from user interfaces and restricted to david@davidhoang.com), simplified permission system to 4 core roles while maintaining comprehensive access control
 - June 28, 2025. Enhanced workspace discoverability: implemented dedicated WorkspaceSwitcher component in navigation bar with professional dropdown interface, workspace names, role indicators (Owner/Admin/Editor/Member with icons), smooth switching with cache clearing and toast notifications, removed redundant workspace switcher from profile dropdown for cleaner UX
+- June 28, 2025. Optimized workspace switcher design: removed building icons and "Switch workspace" title from dropdown for minimal aesthetic, moved workspace switcher to center of navigation bar for improved discoverability and visual balance
 
 ## User Preferences
 

@@ -135,10 +135,6 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="start" className="w-[280px]">
-        <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Switch workspace
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
         
         {workspaces.map((workspace: Workspace) => {
           const isCurrentWorkspace = workspace.slug === currentWorkspaceSlug;
@@ -168,12 +164,9 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
                   {isCurrentWorkspace && (
                     <div className="w-2 h-2 bg-green-500 rounded-full" />
                   )}
-                  <div className="flex items-center space-x-1">
-                    {getRoleIcon(workspace.role)}
-                    <span className="text-xs text-gray-500">
-                      {getRoleLabel(workspace.role)}
-                    </span>
-                  </div>
+                  <span className="text-xs text-gray-500">
+                    {getRoleLabel(workspace.role)}
+                  </span>
                 </div>
               </div>
             </DropdownMenuItem>

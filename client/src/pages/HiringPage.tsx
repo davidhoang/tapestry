@@ -320,26 +320,27 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
   return (
     <div className="container mx-auto px-4 pt-24 pb-8 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 font-serif">Hiring</h1>
-        <p className="text-muted-foreground font-serif">
-          Create job descriptions and find matching designers from your directory
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2 font-serif">Hiring</h1>
+          <p className="text-muted-foreground font-serif">
+            Create job descriptions and find matching designers from your directory
+          </p>
+        </div>
+        <Button 
+          onClick={() => setShowNewJobForm(true)}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Create job
+        </Button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Jobs List */}
         <div className="lg:col-span-1">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-xl font-semibold font-serif">Job Postings</h2>
-            <Button 
-              onClick={() => setShowNewJobForm(true)}
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Job
-            </Button>
           </div>
 
           {/* New Job Form */}
@@ -399,10 +400,8 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
               <Card>
                 <CardContent className="py-8 text-center">
                   <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">No jobs created yet</p>
-                  <Button onClick={() => setShowNewJobForm(true)} size="sm">
-                    Create your first job
-                  </Button>
+                  <p className="text-muted-foreground">No jobs created yet</p>
+                  <p className="text-sm text-muted-foreground/80 mt-2">Click "Create job" above to get started</p>
                 </CardContent>
               </Card>
             ) : (
@@ -565,14 +564,9 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
               <CardContent className="py-16 text-center">
                 <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2 font-serif">Select a Job</h3>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-muted-foreground">
                   Choose a job from the list to view details and find matching designers
                 </p>
-                {jobs.length === 0 && (
-                  <Button onClick={() => setShowNewJobForm(true)}>
-                    Create Your First Job
-                  </Button>
-                )}
               </CardContent>
             </Card>
           )}

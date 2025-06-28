@@ -50,12 +50,11 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 
 ### Workspace System
 - Multi-tenant architecture with workspace isolation
-- Comprehensive role-based permissions system with 5 roles:
-  - **Admin**: The main admin account (david@davidhoang.com) with full application access
+- Comprehensive role-based permissions system with 4 roles:
+  - **Admin**: The main admin account (david@davidhoang.com) with full application access (hidden from user interfaces)
   - **Owner**: Users who create accounts and maintain their personal workspace with full workspace control
   - **Editor**: Users added to a workspace with edit access granted by the Owner (enhanced member permissions)
   - **Member**: Users added to a workspace with limited access (view designers, use AI matchmaker, restricted from lists/hiring)
-  - **Viewer**: Read-only access to workspace content
 - Advanced permission enforcement with 25+ granular permissions across:
   - Designer Management (create, edit, delete, view, export, import, bulk operations)
   - List Management (create, edit, delete, view, share, publish)
@@ -214,6 +213,8 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Extended RLHF feedback system to Intelligent Matching page: added thumbs up/down icons with smart pre-selection, integrated RecommendationFeedbackModal with job context, implemented consistent feedback UI across both hiring and matchmaker workflows, enabling comprehensive learning from user interactions across all AI recommendation touchpoints
 - June 28, 2025. Moved RLHF Analytics dashboard from hiring page to admin section: relocated FeedbackAnalyticsDashboard component to admin panel as dedicated tab, providing centralized access to feedback analytics and system insights for administrative users
 - June 28, 2025. Implemented AI System Prompt Configuration: created ai_system_prompts database table, built comprehensive admin interface for creating/editing/managing custom AI prompts, integrated custom prompts into AI matching system with {feedbackInsights} placeholder injection, added workspace-specific prompt management with activation controls, enabling administrators to customize AI behavior and improve matching quality through tailored system instructions
+- June 28, 2025. Enhanced RLHF system with system prompt tracking: added system_prompt_id to recommendation_feedback table, implemented prompt performance analytics with filtering capabilities, created comparative analytics between different custom AI prompts, enabling measurement of prompt effectiveness through success rates and user feedback metrics
+- June 28, 2025. Streamlined role system: removed "Viewer" role from workspace permissions, updated role dropdown interfaces to show only Owner/Editor/Member roles (Admin role hidden from user interfaces and restricted to david@davidhoang.com), simplified permission system to 4 core roles while maintaining comprehensive access control
 
 ## User Preferences
 

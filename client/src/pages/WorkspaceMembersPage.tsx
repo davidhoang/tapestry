@@ -50,15 +50,15 @@ const roleIcons = {
 const roleColors = {
   owner: "bg-yellow-100 text-yellow-800 border-yellow-200",
   admin: "bg-blue-100 text-blue-800 border-blue-200",
+  editor: "bg-purple-100 text-purple-800 border-purple-200",
   member: "bg-green-100 text-green-800 border-green-200",
-  viewer: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
 const roleDescriptions = {
   owner: "Full access to everything including workspace settings and billing",
   admin: "Can manage content and invite members, but can't change workspace settings",
+  editor: "Can manage content including lists and hiring, but can't change workspace settings or invite members",
   member: "Can view designers directory, add designers, and use AI matchmaker. No access to lists or hiring by default",
-  viewer: "Read-only access to workspace content",
 };
 
 export default function WorkspaceMembersPage() {
@@ -277,9 +277,8 @@ export default function WorkspaceMembersPage() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="editor">Editor</SelectItem>
                                   <SelectItem value="member">Member</SelectItem>
-                                  <SelectItem value="viewer">Viewer</SelectItem>
                                   {permissions.isOwner && (
                                     <SelectItem value="owner">Owner</SelectItem>
                                   )}

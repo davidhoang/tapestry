@@ -1,7 +1,7 @@
 import { useUser } from './use-user';
 import { useQuery } from '@tanstack/react-query';
 
-export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'member';
 
 interface WorkspacePermissions {
   // Designer Management
@@ -69,7 +69,7 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
   const isOwner = role === 'owner';
   const isAdmin = role === 'admin';
   const isMember = role === 'member';
-  const isViewer = role === 'viewer';
+  const isEditor = role === 'editor';
   
   // Owner has all permissions
   if (isOwner) {
@@ -130,8 +130,8 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       role,
       isOwner: true,
       isAdmin: false,
+      isEditor: false,
       isMember: false,
-      isViewer: false,
     };
   }
   
@@ -194,8 +194,8 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       role,
       isOwner: false,
       isAdmin: true,
+      isEditor: false,
       isMember: false,
-      isViewer: false,
     };
   }
   

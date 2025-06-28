@@ -36,6 +36,11 @@ export default function DesignerCard({
   const [isSkillsExpanded, setIsSkillsExpanded] = useState(false);
   const permissions = useWorkspacePermissions(workspaceSlug);
   
+  // Add cache-busting for images based on workspace to prevent cross-workspace image caching
+  const cacheBuster = workspaceSlug ? `?workspace=${workspaceSlug}` : '';
+  const profileImageUrl = designer.photoUrl ? `${designer.photoUrl}${cacheBuster}` : undefined;
+  const coverImageUrl = `${getDesignerCoverImage(designer.id)}${cacheBuster}`;
+  
   // Parse skills string into array and check if skills overflow one line
   const skillsArray = (designer.skills && typeof designer.skills === 'string') 
     ? designer.skills.split(',').map(s => s.trim()).filter(s => s) 
@@ -52,7 +57,7 @@ export default function DesignerCard({
         {/* Cover Image */}
         <div className="relative h-16 overflow-hidden">
           <img 
-            src={getDesignerCoverImage(designer.id)} 
+            src={coverImageUrl} 
             alt="Cover"
             className="w-full h-full object-cover transition-transform duration-[3000ms] ease-out group-hover:scale-110"
             style={{ transitionDuration: '3s' }}
@@ -105,7 +110,7 @@ export default function DesignerCard({
           <div className="flex items-start gap-4 pt-4">
             <Avatar className="h-16 w-16 overflow-hidden">
               <AvatarImage 
-                src={designer.photoUrl || undefined} 
+                src={profileImageUrl} 
                 alt={designer.name}
                 className="transition-transform duration-[3000ms] ease-out group-hover:scale-110"
                 style={{ transitionDuration: '3s' }}

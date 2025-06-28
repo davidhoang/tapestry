@@ -353,21 +353,33 @@ export function requirePermission(permission: keyof WorkspacePermissions) {
 // Middleware to require workspace membership (any role)
 export function requireWorkspaceMembership() {
   return async (req: Request, res: Response, next: NextFunction) => {
+    console.log('requireWorkspaceMembership middleware called for:', req.method, req.path);
+    console.log('Query params:', req.query);
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Authentication required" });
     }
 
     const user = req.user as any;
+    console.log('User authenticated:', user.id);
     
     // Try to get workspace ID from various sources
     let workspaceId = 0;
     
-    if (req.params.workspaceId) {
+    // Check URL parameters first
+    if (req.params.workspaceId && !isNaN(parseInt(req.params.workspaceId))) {
       workspaceId = parseInt(req.params.workspaceId);
-    } else if (req.body.workspaceId) {
+    }
+    
+    // Check request body
+    if (!workspaceId && req.body.workspaceId && !isNaN(parseInt(req.body.workspaceId))) {
       workspaceId = parseInt(req.body.workspaceId);
-    } else if (req.query.workspaceId) {
+    }
+    
+    // Check query parameters
+    if (!workspaceId && req.query.workspaceId && !isNaN(parseInt(req.query.workspaceId as string))) {
       workspaceId = parseInt(req.query.workspaceId as string);
+      console.log('Found workspace ID from query:', workspaceId);
     }
     
     // If no workspace ID, try to get workspace slug and convert it
@@ -376,22 +388,29 @@ export function requireWorkspaceMembership() {
                            req.query.workspaceSlug as string;
       
       if (workspaceSlug) {
-        // Get workspace by slug
-        const workspace = await db.query.workspaces.findFirst({
-          where: eq(workspaces.slug, workspaceSlug),
-        });
-        
-        if (workspace) {
-          workspaceId = workspace.id;
+        try {
+          const workspace = await db.query.workspaces.findFirst({
+            where: eq(workspaces.slug, workspaceSlug),
+          });
+          
+          if (workspace) {
+            workspaceId = workspace.id;
+          }
+        } catch (error) {
+          console.error('Error finding workspace by slug:', error);
         }
       }
     }
     
     // If still no workspace ID, try to get user's default workspace
     if (!workspaceId) {
-      const userWorkspace = await getUserWorkspace(user.id);
-      if (userWorkspace) {
-        workspaceId = userWorkspace.id;
+      try {
+        const userWorkspace = await getUserWorkspace(user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      } catch (error) {
+        console.error('Error getting user workspace:', error);
       }
     }
     

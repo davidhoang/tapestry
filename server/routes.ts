@@ -501,10 +501,7 @@ export function registerRoutes(app: Express): Server {
   }));
 
   // List routes with workspace support
-  app.post("/api/lists", withErrorHandler(async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
+  app.post("/api/lists", requirePermission('canCreateLists'), withErrorHandler(async (req, res) => {
 
     const userWorkspace = await getUserWorkspace(req.user.id);
     if (!userWorkspace) {
@@ -539,10 +536,7 @@ export function registerRoutes(app: Express): Server {
     res.json(result);
   }));
 
-  app.get("/api/lists", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
+  app.get("/api/lists", requirePermission('canViewLists'), async (req, res) => {
 
     try {
       const userWorkspace = await getUserWorkspace(req.user.id);
@@ -2362,10 +2356,7 @@ The Tapestry Team`;
   }));
 
   // Jobs API endpoints
-  app.get("/api/jobs", withErrorHandler(async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
+  app.get("/api/jobs", requirePermission('canViewJobs'), withErrorHandler(async (req, res) => {
 
     const userWorkspace = await getUserWorkspace(req.user.id);
     if (!userWorkspace) {
@@ -2380,10 +2371,7 @@ The Tapestry Team`;
     res.json(userJobs);
   }));
 
-  app.post("/api/jobs", withErrorHandler(async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
+  app.post("/api/jobs", requirePermission('canCreateJobs'), withErrorHandler(async (req, res) => {
 
     const { title, description } = req.body;
 

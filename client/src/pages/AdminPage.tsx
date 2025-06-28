@@ -169,6 +169,7 @@ export default function AdminPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const [location] = useLocation();
+  const queryClient = useQueryClient();
 
   // Fetch user workspaces
   const { data: workspaces } = useQuery({
@@ -188,6 +189,11 @@ export default function AdminPage() {
   // Handle workspace switching with visual feedback
   const handleWorkspaceSwitch = (workspace: any) => {
     const workspaceName = workspace.owner?.email === user?.email ? 'My Workspace' : workspace.name;
+    
+    // Invalidate all designer queries to ensure fresh data for new workspace
+    queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
+    queryClient.removeQueries({ queryKey: ['/api/designers'] });
+    
     toast({
       title: "Workspace switched",
       description: `Now viewing ${workspaceName}`,

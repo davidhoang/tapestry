@@ -209,6 +209,25 @@ export function registerRoutes(app: Express): Server {
     return member?.workspace || null;
   };
 
+  // Get user's role in a workspace
+  const getUserWorkspaceRole = async (userId: number, workspaceId?: number) => {
+    const targetWorkspaceId = workspaceId || (await getUserWorkspace(userId))?.id;
+    if (!targetWorkspaceId) return null;
+
+    const member = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, userId),
+        eq(workspaceMembers.workspaceId, targetWorkspaceId)
+      ),
+    });
+    return member?.role || null;
+  };
+
+  // Check if user has permission for specific actions
+  const hasPermission = (userRole: string | null, requiredRoles: string[]) => {
+    return userRole && requiredRoles.includes(userRole);
+  };
+
   // Designer routes with workspace support
   app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {

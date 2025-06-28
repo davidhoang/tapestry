@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, Shuffle } from "lucide-react";
+import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, Shuffle, ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import Navigation from "../components/Navigation";
+import RecommendationFeedbackModal from "../components/RecommendationFeedbackModal";
 
 export default function MatchmakerPage() {
   const [roleDescription, setRoleDescription] = useState("We're looking for a senior product designer with 5+ years of experience in B2B SaaS. They should be skilled in user research, prototyping, and design systems. Experience with Figma and familiarity with React components is a plus...");
@@ -21,6 +22,9 @@ export default function MatchmakerPage() {
   const [showCreateList, setShowCreateList] = useState(false);
   const [listName, setListName] = useState("");
   const [listDescription, setListDescription] = useState("");
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [selectedDesignerForFeedback, setSelectedDesignerForFeedback] = useState<any>(null);
+  const [initialFeedbackType, setInitialFeedbackType] = useState<string | null>(null);
   
   // Use consistent background image
   const backgroundImage = '/images/bg.jpeg';
@@ -360,17 +364,62 @@ export default function MatchmakerPage() {
 
                         <p className="text-xs text-gray-600 line-clamp-2 mb-3">{rec.reasoning}</p>
 
-                        <div className="flex gap-2">
-                          {rec.designer.email && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-2">
+                            {rec.designer.email && (
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                                <Mail className="h-3 w-3 mr-1" />
+                                Contact
+                              </Button>
+                            )}
                             <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
-                              <Mail className="h-3 w-3 mr-1" />
-                              Contact
+                              <User className="h-3 w-3 mr-1" />
+                              View Profile
                             </Button>
-                          )}
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
-                            <User className="h-3 w-3 mr-1" />
-                            View Profile
-                          </Button>
+                          </div>
+                          
+                          {/* Feedback Controls */}
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedDesignerForFeedback(rec);
+                                setInitialFeedbackType("good_match");
+                                setFeedbackModalOpen(true);
+                              }}
+                              className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600"
+                              title="Good match"
+                            >
+                              <ThumbsUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedDesignerForFeedback(rec);
+                                setInitialFeedbackType("irrelevant_experience");
+                                setFeedbackModalOpen(true);
+                              }}
+                              className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                              title="Poor match"
+                            >
+                              <ThumbsDown className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedDesignerForFeedback(rec);
+                                setInitialFeedbackType(null);
+                                setFeedbackModalOpen(true);
+                              }}
+                              className="h-7 w-7 p-0"
+                              title="Detailed feedback"
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

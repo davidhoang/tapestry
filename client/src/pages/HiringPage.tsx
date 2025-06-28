@@ -73,7 +73,7 @@ export default function HiringPage() {
   const workspaceSlug = pathParts[1];
   
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [showNewJobForm, setShowNewJobForm] = useState(false);
+  const [showCreateJobDialog, setShowCreateJobDialog] = useState(false);
   const [newJobTitle, setNewJobTitle] = useState("");
   const [newJobDescription, setNewJobDescription] = useState(
     `# Senior Product Designer
@@ -149,7 +149,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", workspaceSlug] });
-      setShowNewJobForm(false);
+      setShowCreateJobDialog(false);
       setNewJobTitle("");
       setNewJobDescription("");
       toast({ title: "Job created successfully" });
@@ -328,7 +328,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
           </p>
         </div>
         <Button 
-          onClick={() => setShowNewJobForm(true)}
+          onClick={() => setShowCreateJobDialog(true)}
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -343,52 +343,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
             <h2 className="text-xl font-semibold font-serif">Job Postings</h2>
           </div>
 
-          {/* New Job Form */}
-          {showNewJobForm && (
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle className="text-lg font-serif">Create New Job</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="jobTitle">Job Title</Label>
-                  <Input
-                    id="jobTitle"
-                    value={newJobTitle}
-                    onChange={(e) => setNewJobTitle(e.target.value)}
-                    placeholder="e.g. Senior Product Designer"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="jobDescription">Job Description</Label>
-                  <div className="mt-2">
-                    <MDEditor
-                      value={newJobDescription}
-                      onChange={(value) => setNewJobDescription(value || "")}
-                      height={300}
-                      data-color-mode="light"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleCreateJob}
-                    disabled={createJobMutation.isPending}
-                    className="flex-1"
-                  >
-                    {createJobMutation.isPending ? "Creating..." : "Create Job"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowNewJobForm(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
 
           {/* Jobs List */}
           <div className="space-y-3">
@@ -645,6 +600,51 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                 disabled={createListMutation.isPending || !newListName.trim()}
               >
                 {createListMutation.isPending ? "Creating..." : "Create List"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Job Modal */}
+      <Dialog open={showCreateJobDialog} onOpenChange={setShowCreateJobDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Create New Job</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="jobTitle">Job Title</Label>
+              <Input
+                id="jobTitle"
+                value={newJobTitle}
+                onChange={(e) => setNewJobTitle(e.target.value)}
+                placeholder="e.g. Senior Product Designer"
+              />
+            </div>
+            <div>
+              <Label htmlFor="jobDescription">Job Description</Label>
+              <div className="mt-2">
+                <MDEditor
+                  value={newJobDescription}
+                  onChange={(value) => setNewJobDescription(value || "")}
+                  height={400}
+                  data-color-mode="light"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateJobDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateJob}
+                disabled={createJobMutation.isPending}
+              >
+                {createJobMutation.isPending ? "Creating..." : "Create job"}
               </Button>
             </div>
           </div>

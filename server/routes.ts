@@ -2542,23 +2542,70 @@ The Tapestry Team`;
     }
   }));
 
-  app.post("/api/jobs", requireWorkspaceMembership(), requirePermission('canCreateJobs'), withErrorHandler(async (req, res) => {
-    const context = (req as any).workspaceContext;
-    const { title, description } = req.body;
-
-    if (!title || !description) {
-      return res.status(400).json({ error: "Title and description are required" });
+  app.post("/api/jobs", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
     }
 
-    const [newJob] = await db.insert(jobs).values({
-      userId: context.userId,
-      workspaceId: context.workspaceId,
-      title,
-      description,
-      status: "draft"
-    }).returning();
+    try {
+      const { title, description } = req.body;
 
-    res.json(newJob);
+      if (!title || !description) {
+        return res.status(400).json({ error: "Title and description are required" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const [newJob] = await db.insert(jobs).values({
+        userId: req.user.id,
+        workspaceId: workspaceId,
+        title,
+        description,
+        status: "draft"
+      }).returning();
+
+      res.json(newJob);
+    } catch (error: any) {
+      console.error('Error creating job:', error);
+      res.status(500).json({ error: "Failed to create job" });
+    }
   }));
 
   app.post("/api/jobs/matches", withErrorHandler(async (req, res) => {

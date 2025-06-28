@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -3243,6 +3243,133 @@ Analyze this role and recommend matching designers, considering feedback pattern
       console.error('Enhanced recommendation error:', error);
       res.status(500).json({ error: "Failed to generate enhanced recommendations" });
     }
+  }));
+
+  // AI System Prompts Management
+  app.get("/api/system-prompts", requireRole("admin"), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    
+    const prompts = await db.query.aiSystemPrompts.findMany({
+      where: eq(aiSystemPrompts.workspaceId, context.workspaceId),
+      orderBy: desc(aiSystemPrompts.updatedAt),
+      with: {
+        createdBy: {
+          columns: { id: true, email: true }
+        }
+      }
+    });
+
+    res.json(prompts);
+  }));
+
+  app.post("/api/system-prompts", requireRole("admin"), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { name, description, systemPrompt } = req.body;
+
+    if (!name || !systemPrompt) {
+      return res.status(400).json({ error: "Name and system prompt are required" });
+    }
+
+    // Deactivate other prompts if this is being set as active
+    if (req.body.isActive) {
+      await db.update(aiSystemPrompts)
+        .set({ isActive: false })
+        .where(eq(aiSystemPrompts.workspaceId, context.workspaceId));
+    }
+
+    const [newPrompt] = await db.insert(aiSystemPrompts).values({
+      workspaceId: context.workspaceId,
+      name,
+      description,
+      systemPrompt,
+      isActive: req.body.isActive || false,
+      createdBy: context.userId,
+    }).returning();
+
+    res.json(newPrompt);
+  }));
+
+  app.put("/api/system-prompts/:id", requireRole("admin"), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const promptId = parseInt(req.params.id);
+    const { name, description, systemPrompt, isActive } = req.body;
+
+    if (!name || !systemPrompt) {
+      return res.status(400).json({ error: "Name and system prompt are required" });
+    }
+
+    // Deactivate other prompts if this is being set as active
+    if (isActive) {
+      await db.update(aiSystemPrompts)
+        .set({ isActive: false })
+        .where(and(
+          eq(aiSystemPrompts.workspaceId, context.workspaceId),
+          ne(aiSystemPrompts.id, promptId)
+        ));
+    }
+
+    const [updatedPrompt] = await db.update(aiSystemPrompts)
+      .set({
+        name,
+        description,
+        systemPrompt,
+        isActive,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(aiSystemPrompts.id, promptId),
+        eq(aiSystemPrompts.workspaceId, context.workspaceId)
+      ))
+      .returning();
+
+    if (!updatedPrompt) {
+      return res.status(404).json({ error: "System prompt not found" });
+    }
+
+    res.json(updatedPrompt);
+  }));
+
+  app.delete("/api/system-prompts/:id", requireRole("admin"), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const promptId = parseInt(req.params.id);
+
+    const [deletedPrompt] = await db.delete(aiSystemPrompts)
+      .where(and(
+        eq(aiSystemPrompts.id, promptId),
+        eq(aiSystemPrompts.workspaceId, context.workspaceId)
+      ))
+      .returning();
+
+    if (!deletedPrompt) {
+      return res.status(404).json({ error: "System prompt not found" });
+    }
+
+    res.json({ success: true });
+  }));
+
+  app.post("/api/system-prompts/:id/activate", requireRole("admin"), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const promptId = parseInt(req.params.id);
+
+    // Deactivate all other prompts
+    await db.update(aiSystemPrompts)
+      .set({ isActive: false })
+      .where(eq(aiSystemPrompts.workspaceId, context.workspaceId));
+
+    // Activate the selected prompt
+    const [activatedPrompt] = await db.update(aiSystemPrompts)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(and(
+        eq(aiSystemPrompts.id, promptId),
+        eq(aiSystemPrompts.workspaceId, context.workspaceId)
+      ))
+      .returning();
+
+    if (!activatedPrompt) {
+      return res.status(404).json({ error: "System prompt not found" });
+    }
+
+    res.json(activatedPrompt);
   }));
 
   const httpServer = createServer(app);

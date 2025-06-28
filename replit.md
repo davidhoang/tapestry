@@ -193,6 +193,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Enhanced invitation system: allows multiple invitations to same email, graceful duplicate account handling, and auto-acceptance of pending invitations
 - June 28, 2025. Implemented comprehensive role-based permission system with 25+ granular permissions, server-side middleware enforcement, audit logging, and workspace member management interface
 - June 28, 2025. Updated Member role permissions: restricted access to lists and hiring by default, retained directory, matchmaker, and designer creation access
+- June 28, 2025. Completed comprehensive permission enforcement: Members properly blocked from Lists API ("Permission denied: Cannot view lists"), while maintaining full access to Designer Directory, AI Matchmaker, and designer creation capabilities
 
 ## User Preferences
 

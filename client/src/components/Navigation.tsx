@@ -28,6 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Menu, X, Settings, User, Users, Building2, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import AuthPage from "../pages/AuthPage";
 
 export default function Navigation() {
@@ -36,10 +37,16 @@ export default function Navigation() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Handle workspace switching with visual feedback
   const handleWorkspaceSwitch = (workspace: any) => {
     const workspaceName = workspace.owner?.email === user?.email ? 'My Workspace' : workspace.name;
+    
+    // Invalidate all designer queries to ensure fresh data for new workspace
+    queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
+    queryClient.removeQueries({ queryKey: ['/api/designers'] });
+    
     toast({
       title: "Workspace switched",
       description: `Now viewing ${workspaceName}`,

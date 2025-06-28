@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '@db';
 import { workspaceMembers, workspaces } from '@db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
 
@@ -272,6 +272,18 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
     canManageBilling: false,
     canViewUsage: false,
   };
+}
+
+// Get user's first workspace (for fallback)
+async function getUserWorkspace(userId: number) {
+  const member = await db.query.workspaceMembers.findFirst({
+    where: eq(workspaceMembers.userId, userId),
+    with: {
+      workspace: true,
+    },
+    orderBy: [desc(workspaceMembers.joinedAt)], // Get most recent workspace
+  });
+  return member?.workspace || null;
 }
 
 // Get user's workspace membership and permissions

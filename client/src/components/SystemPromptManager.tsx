@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, CheckCircle, AlertCircle, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface SystemPrompt {
   id: number;
@@ -38,6 +39,7 @@ interface SystemPromptFormData {
 export default function SystemPromptManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<SystemPrompt | null>(null);
   const [formData, setFormData] = useState<SystemPromptFormData>({
@@ -47,10 +49,17 @@ export default function SystemPromptManager() {
     isActive: false,
   });
 
+  // Extract workspace slug from URL
+  const workspaceSlug = location.split('/')[1];
+
   const { data: systemPrompts = [], isLoading } = useQuery({
-    queryKey: ["/api/system-prompts"],
+    queryKey: ["/api/system-prompts", workspaceSlug],
     queryFn: async () => {
-      const response = await fetch("/api/system-prompts");
+      const response = await fetch("/api/system-prompts", {
+        headers: {
+          "x-workspace-slug": workspaceSlug,
+        },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch system prompts");
       }
@@ -62,7 +71,10 @@ export default function SystemPromptManager() {
     mutationFn: async (data: SystemPromptFormData) => {
       const response = await fetch("/api/system-prompts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-workspace-slug": workspaceSlug,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {

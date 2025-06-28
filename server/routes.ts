@@ -3269,7 +3269,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
   }));
 
   // AI System Prompts Management
-  app.get("/api/system-prompts", requireRole("admin"), withErrorHandler(async (req, res) => {
+  app.get("/api/system-prompts", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const context = (req as any).workspaceContext;
     
     const prompts = await db.query.aiSystemPrompts.findMany({
@@ -3285,7 +3285,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
     res.json(prompts);
   }));
 
-  app.post("/api/system-prompts", requireRole("admin"), withErrorHandler(async (req, res) => {
+  app.post("/api/system-prompts", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const context = (req as any).workspaceContext;
     const { name, description, systemPrompt } = req.body;
 
@@ -3312,7 +3312,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
     res.json(newPrompt);
   }));
 
-  app.put("/api/system-prompts/:id", requireRole("admin"), withErrorHandler(async (req, res) => {
+  app.put("/api/system-prompts/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const context = (req as any).workspaceContext;
     const promptId = parseInt(req.params.id);
     const { name, description, systemPrompt, isActive } = req.body;
@@ -3352,7 +3352,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
     res.json(updatedPrompt);
   }));
 
-  app.delete("/api/system-prompts/:id", requireRole("admin"), withErrorHandler(async (req, res) => {
+  app.delete("/api/system-prompts/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const context = (req as any).workspaceContext;
     const promptId = parseInt(req.params.id);
 
@@ -3370,7 +3370,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
     res.json({ success: true });
   }));
 
-  app.post("/api/system-prompts/:id/activate", requireRole("admin"), withErrorHandler(async (req, res) => {
+  app.post("/api/system-prompts/:id/activate", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const context = (req as any).workspaceContext;
     const promptId = parseInt(req.params.id);
 

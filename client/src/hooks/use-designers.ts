@@ -12,7 +12,7 @@ export function useDesigners() {
   console.log('useDesigners - location:', location, 'workspaceSlug:', workspaceSlug);
   
   return useQuery<SelectDesigner[]>({
-    queryKey: ["/api/designers", workspaceSlug],
+    queryKey: ["/api/designers", workspaceSlug, Date.now()], // Add timestamp to force cache busting
     queryFn: async () => {
       const headers: Record<string, string> = {};
       
@@ -26,6 +26,7 @@ export function useDesigners() {
       
       const response = await fetch("/api/designers", {
         headers,
+        cache: 'no-cache', // Force no cache
       });
       if (!response.ok) {
         throw new Error(`Failed to fetch designers: ${response.statusText}`);
@@ -33,6 +34,8 @@ export function useDesigners() {
       return response.json();
     },
     enabled: !!workspaceSlug, // Only enable query if we have a workspace slug
+    staleTime: 0, // Make data immediately stale
+    gcTime: 0, // Don't cache
   });
 }
 

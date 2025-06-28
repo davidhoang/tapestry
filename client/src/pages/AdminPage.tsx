@@ -190,9 +190,8 @@ export default function AdminPage() {
   const handleWorkspaceSwitch = (workspace: any) => {
     const workspaceName = workspace.owner?.email === user?.email ? 'My Workspace' : workspace.name;
     
-    // Invalidate all designer queries to ensure fresh data for new workspace
-    queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
-    queryClient.removeQueries({ queryKey: ['/api/designers'] });
+    // Clear all queries to force fresh data for new workspace
+    queryClient.clear();
     
     toast({
       title: "Workspace switched",

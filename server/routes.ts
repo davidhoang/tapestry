@@ -399,6 +399,9 @@ export function registerRoutes(app: Express): Server {
         designer.name && designer.name.trim()
       );
       
+      console.log('GET /api/designers - returning', completeDesigners.length, 'designers from workspace', workspaceId);
+      console.log('GET /api/designers - sample designer workspaceIds:', completeDesigners.slice(0, 3).map(d => d.workspaceId));
+      
       res.json(completeDesigners);
     } catch (err) {
       console.error('Error fetching designers:', err);

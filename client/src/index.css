@@ -15,6 +15,11 @@
     background-color: #fafaf9 !important;
     min-height: 100vh !important;
   }
+
+  /* Ensure all buttons use sentence case instead of uppercase */
+  button {
+    text-transform: none !important;
+  }
   
   body::before {
     content: '';

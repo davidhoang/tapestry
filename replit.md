@@ -204,3 +204,4 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 
 Preferred communication style: Simple, everyday language.
 Cost-conscious: Avoid unnecessary rewrites of working components.
+Button styling: All buttons should use sentence case instead of all capitals.

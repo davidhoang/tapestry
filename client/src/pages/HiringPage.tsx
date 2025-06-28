@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Briefcase, Users, Sparkles, FileText, Loader2, Star, ChevronDown, ChevronUp } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import DesignerCard from "../components/DesignerCard";
+import SlimDesignerCard from "../components/SlimDesignerCard";
 
 interface Designer {
   id: number;
@@ -504,44 +505,15 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                         </p>
                       </div>
                     ) : (
-                      <div className="grid gap-4">
+                      <div className="space-y-2">
                         {matches.map((match) => (
-                          <div key={match.designerId} className="relative">
-                            <div className="absolute top-4 left-4 z-10">
-                              <Checkbox
-                                checked={selectedDesigners.has(match.designerId)}
-                                onCheckedChange={() => handleToggleDesigner(match.designerId)}
-                                className="bg-white/90 border-2"
-                              />
-                            </div>
-                            <DesignerCard
-                              designer={match.designer}
-                              showCheckbox={false}
-                            />
-                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
-                              <div className="flex items-center justify-between mb-2">
-                                <Badge variant="secondary" className="gap-1">
-                                  <Star className="h-3 w-3" />
-                                  {match.matchScore}% match
-                                </Badge>
-                                <div className="flex gap-1 flex-wrap">
-                                  {match.matchedSkills.map((skill) => (
-                                    <Badge key={skill} variant="outline" className="text-xs">
-                                      {skill}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                              <p className="text-sm text-muted-foreground mb-1">
-                                <strong>Why this match:</strong> {match.reasoning}
-                              </p>
-                              {match.concerns && (
-                                <p className="text-sm text-orange-600">
-                                  <strong>Considerations:</strong> {match.concerns}
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                          <SlimDesignerCard
+                            key={match.designerId}
+                            match={match}
+                            isSelected={selectedDesigners.has(match.designerId)}
+                            onSelectionChange={() => handleToggleDesigner(match.designerId)}
+                            showSelection={true}
+                          />
                         ))}
                       </div>
                     )}

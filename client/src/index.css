@@ -333,3 +333,76 @@
   color: white !important;
   opacity: 1 !important;
 }
+
+/* Force proper modal positioning for all dialog components */
+[data-radix-portal] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+}
+
+/* Ensure overlay covers full screen */
+[data-radix-dialog-overlay] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Force proper modal content positioning */
+[data-radix-dialog-content] {
+  position: fixed !important;
+  z-index: 50 !important;
+}
+
+/* Mobile: Full screen modal */
+@media (max-width: 639px) {
+  [data-radix-dialog-content] {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Desktop and tablet: Centered modal */
+@media (min-width: 640px) {
+  [data-radix-dialog-content] {
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: min(90vw, 512px) !important;
+    max-height: 85vh !important;
+    inset: auto !important;
+    border-radius: 0.5rem !important;
+  }
+}
+
+/* Large modals for desktop */
+@media (min-width: 1024px) {
+  [data-radix-dialog-content].large-modal,
+  [data-radix-dialog-content][class*="max-w-2xl"],
+  [data-radix-dialog-content][class*="max-w-3xl"],
+  [data-radix-dialog-content][class*="max-w-4xl"] {
+    max-width: min(90vw, 768px) !important;
+  }
+}
+
+/* Override any conflicting positioning */
+.fixed.z-50[role="dialog"] {
+  position: fixed !important;
+}
+
+/* Ensure proper stacking context */
+.radix-dialog-overlay {
+  z-index: 50 !important;
+}
+
+.radix-dialog-content {
+  z-index: 51 !important;
+}

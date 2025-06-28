@@ -871,7 +871,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
               )}
             />
 
-            {permissions.canAccessNotes && (
+            {permissions?.canAccessNotes && (
               <FormField
                 control={form.control}
                 name="notes"
@@ -913,7 +913,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
               />
             )}
 
-            {permissions.canAccessOpenToRoles && (
+            {permissions?.canAccessOpenToRoles && (
               <FormField
                 control={form.control}
                 name="available"

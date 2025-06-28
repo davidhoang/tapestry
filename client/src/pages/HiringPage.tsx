@@ -482,37 +482,17 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                         <Users className="h-5 w-5" />
                         Designer Matches ({matches.length})
                       </CardTitle>
-                      <div className="flex items-center gap-2">
+                      {matches.length > 0 && selectedDesigners.size > 0 && (
                         <Button
-                          onClick={() => handleFindMatches(selectedJob)}
-                          disabled={isAnalyzing || findMatchesMutation.isPending}
+                          onClick={() => setShowCreateListDialog(true)}
+                          variant="outline"
                           size="sm"
                           className="gap-2"
                         >
-                          {isAnalyzing || findMatchesMutation.isPending ? (
-                            <>
-                              <Sparkles className="h-4 w-4 animate-spin" />
-                              Analyzing...
-                            </>
-                          ) : (
-                            <>
-                              <Search className="h-4 w-4" />
-                              Find Matches
-                            </>
-                          )}
+                          <Plus className="h-4 w-4" />
+                          Create List ({selectedDesigners.size})
                         </Button>
-                        {matches.length > 0 && selectedDesigners.size > 0 && (
-                          <Button
-                            onClick={() => setShowCreateListDialog(true)}
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Create List ({selectedDesigners.size})
-                          </Button>
-                        )}
-                      </div>
+                      )}
                     </div>
                     {analysis && (
                       <p className="text-sm text-muted-foreground">

@@ -202,7 +202,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Implemented sentence case styling for all buttons across the application, replacing uppercase text transformations with proper capitalization
 - June 28, 2025. Fixed AI matchmaker functionality: resolved workspace context extraction issues in /api/jobs/matches endpoint, added comprehensive error handling and OpenAI API key validation, corrected syntax errors in nested try-catch blocks. Users can now successfully use "Find Matches" feature with proper workspace isolation
 - June 28, 2025. Cleaned up job card UI design: removed draft badges, creation dates, and "Find Matches" buttons from job cards for cleaner, simpler interface focused on job titles and descriptions
-- June 28, 2025. Repositioned "Find Matches" button to top right of Designer Matches section header for better accessibility and workflow integration
+- June 28, 2025. Repositioned "Find Matches" button to job details section header for better workflow integration - users can now trigger AI matching directly from the job description area
 
 ## User Preferences
 

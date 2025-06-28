@@ -150,6 +150,14 @@ export default function Navigation() {
                       Profile Settings
                     </Link>
                   </DropdownMenuItem>
+                  {permissions?.canViewMembersList && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/workspaces/members" className="flex items-center w-full">
+                        <Users className="mr-2 h-4 w-4" />
+                        Workspace Members
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/components" className="flex items-center w-full">

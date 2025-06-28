@@ -16,6 +16,7 @@ import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 import WorkspacePage from "./pages/WorkspacePage";
+import WorkspaceMembersPage from "./pages/WorkspaceMembersPage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
@@ -68,6 +69,7 @@ function App() {
                   <Route path="/" component={MatchmakerPage} />
                   <Route path="/profile" component={ProfilePage} />
                   <Route path="/workspaces" component={WorkspacePage} />
+                  <Route path="/workspaces/members" component={WorkspaceMembersPage} />
                   <Route path="/components" component={ComponentsPage} />
                   {user.isAdmin && <Route path="/admin" component={AdminPage} />}
                   

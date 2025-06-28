@@ -50,8 +50,22 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 
 ### Workspace System
 - Multi-tenant architecture with workspace isolation
-- Role-based permissions (owner, admin, member)
-- Invitation system with email notifications
+- Comprehensive role-based permissions system with 4 roles:
+  - **Owner**: Full access including workspace settings, billing, and member management
+  - **Admin**: Can manage content and invite members, but not workspace settings
+  - **Member**: Can create and edit content, but limited deletion and management permissions
+  - **Viewer**: Read-only access to workspace content
+- Advanced permission enforcement with 25+ granular permissions across:
+  - Designer Management (create, edit, delete, view, export, import, bulk operations)
+  - List Management (create, edit, delete, view, share, publish)
+  - Hiring & Jobs (create, edit, delete, view, manage candidates, AI matching)
+  - Workspace Management (invite, remove members, change roles, settings)
+  - Data & Analytics (access analytics, export data, audit logs)
+  - AI Features (use enrichment, configure AI settings)
+  - Billing & Admin (manage billing, view usage)
+- Server-side permission middleware for API endpoint protection
+- Audit logging for permission-based actions
+- Invitation system with email notifications and role assignment
 - Slug-based workspace routing
 
 ### List Management
@@ -177,6 +191,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Fixed workspace loading issue in settings page by adding missing /api/workspaces endpoint
 - June 28, 2025. Fixed modal positioning issues - all dialogs now properly center on desktop, tablet, and mobile
 - June 28, 2025. Enhanced invitation system: allows multiple invitations to same email, graceful duplicate account handling, and auto-acceptance of pending invitations
+- June 28, 2025. Implemented comprehensive role-based permission system with 25+ granular permissions, server-side middleware enforcement, audit logging, and workspace member management interface
 
 ## User Preferences
 

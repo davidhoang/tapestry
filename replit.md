@@ -149,6 +149,9 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 27, 2025. Initial setup
 - June 27, 2025. Fixed login modal visibility and auto-dismiss UX
 - June 27, 2025. Implemented Hiring feature with job creation, AI matching, and database optimization
+- June 28, 2025. Fixed workspace access issues for all alpha users by creating personal workspaces
+- June 28, 2025. Implemented comprehensive workspace invitation system with token-based flow
+- June 28, 2025. Fixed workspace loading issue in settings page by adding missing /api/workspaces endpoint
 
 ## User Preferences
 

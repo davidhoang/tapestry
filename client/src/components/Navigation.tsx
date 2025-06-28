@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useUser } from "../hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
+import { useWorkspacePermissions } from "../hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +34,7 @@ export default function Navigation() {
   const { user, logout } = useUser();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const permissions = useWorkspacePermissions();
 
   // Listen for successful login to close modal
   useEffect(() => {
@@ -103,12 +105,14 @@ export default function Navigation() {
               >
                 Lists
               </Link>
-              <Link
-                href={`/${workspaceSlug}/hiring`}
-                className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-              >
-                Hiring
-              </Link>
+              {permissions.canAccessHiring && (
+                <Link
+                  href={`/${workspaceSlug}/hiring`}
+                  className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                >
+                  Hiring
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -225,17 +229,19 @@ export default function Navigation() {
                       >
                         Lists
                       </Link>
-                      <Link
-                        href={`/${workspaceSlug}/hiring`}
-                        className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === `/${workspaceSlug}/hiring`
-                            ? "text-gray-900 bg-gray-100 font-bold" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Hiring
-                      </Link>
+                      {permissions.canAccessHiring && (
+                        <Link
+                          href={`/${workspaceSlug}/hiring`}
+                          className={`text-lg py-2 px-4 rounded transition-colors ${
+                            location === `/${workspaceSlug}/hiring`
+                              ? "text-gray-900 bg-gray-100 font-bold" 
+                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                          }`}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Hiring
+                        </Link>
+                      )}
                       <Link
                         href="/profile"
                         className={`text-lg py-2 px-4 rounded transition-colors ${

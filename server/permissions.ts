@@ -353,42 +353,35 @@ export function requirePermission(permission: keyof WorkspacePermissions) {
 // Middleware to require workspace membership (any role)
 export function requireWorkspaceMembership() {
   return async (req: Request, res: Response, next: NextFunction) => {
-    console.log('requireWorkspaceMembership middleware called for:', req.method, req.path);
-    console.log('Query params:', req.query);
-    
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
 
-    const user = req.user as any;
-    console.log('User authenticated:', user.id);
-    
-    // Try to get workspace ID from various sources
-    let workspaceId = 0;
-    
-    // Check URL parameters first
-    if (req.params.workspaceId && !isNaN(parseInt(req.params.workspaceId))) {
-      workspaceId = parseInt(req.params.workspaceId);
-    }
-    
-    // Check request body
-    if (!workspaceId && req.body.workspaceId && !isNaN(parseInt(req.body.workspaceId))) {
-      workspaceId = parseInt(req.body.workspaceId);
-    }
-    
-    // Check query parameters
-    if (!workspaceId && req.query.workspaceId && !isNaN(parseInt(req.query.workspaceId as string))) {
-      workspaceId = parseInt(req.query.workspaceId as string);
-      console.log('Found workspace ID from query:', workspaceId);
-    }
-    
-    // If no workspace ID, try to get workspace slug and convert it
-    if (!workspaceId) {
-      const workspaceSlug = req.headers['x-workspace-slug'] as string || 
-                           req.query.workspaceSlug as string;
+      const user = req.user as any;
+      let workspaceId = 0;
       
-      if (workspaceSlug) {
-        try {
+      // Check URL parameters first
+      if (req.params.workspaceId && !isNaN(parseInt(req.params.workspaceId))) {
+        workspaceId = parseInt(req.params.workspaceId);
+      }
+      
+      // Check request body
+      if (!workspaceId && req.body.workspaceId && !isNaN(parseInt(req.body.workspaceId))) {
+        workspaceId = parseInt(req.body.workspaceId);
+      }
+      
+      // Check query parameters
+      if (!workspaceId && req.query.workspaceId && !isNaN(parseInt(req.query.workspaceId as string))) {
+        workspaceId = parseInt(req.query.workspaceId as string);
+      }
+      
+      // If no workspace ID, try to get workspace slug and convert it
+      if (!workspaceId) {
+        const workspaceSlug = req.headers['x-workspace-slug'] as string || 
+                             req.query.workspaceSlug as string;
+        
+        if (workspaceSlug) {
           const workspace = await db.query.workspaces.findFirst({
             where: eq(workspaces.slug, workspaceSlug),
           });
@@ -396,41 +389,38 @@ export function requireWorkspaceMembership() {
           if (workspace) {
             workspaceId = workspace.id;
           }
-        } catch (error) {
-          console.error('Error finding workspace by slug:', error);
         }
       }
-    }
-    
-    // If still no workspace ID, try to get user's default workspace
-    if (!workspaceId) {
-      try {
+      
+      // If still no workspace ID, try to get user's default workspace
+      if (!workspaceId) {
         const userWorkspace = await getUserWorkspace(user.id);
         if (userWorkspace) {
           workspaceId = userWorkspace.id;
         }
-      } catch (error) {
-        console.error('Error getting user workspace:', error);
       }
-    }
-    
-    if (!workspaceId) {
-      return res.status(400).json({ error: "Workspace ID required" });
-    }
+      
+      if (!workspaceId) {
+        return res.status(400).json({ error: "Workspace ID required" });
+      }
 
-    const context = await getUserWorkspaceContext(user.id, workspaceId);
-    
-    if (!context) {
-      return res.status(403).json({ error: "Not a member of this workspace" });
-    }
+      const context = await getUserWorkspaceContext(user.id, workspaceId);
+      
+      if (!context) {
+        return res.status(403).json({ error: "Not a member of this workspace" });
+      }
 
-    const permissions = calculatePermissions(context.role);
-    
-    // Add context to request for use in handlers
-    (req as any).workspaceContext = context;
-    (req as any).permissions = permissions;
-    
-    next();
+      const permissions = calculatePermissions(context.role);
+      
+      // Add context to request for use in handlers
+      (req as any).workspaceContext = context;
+      (req as any).permissions = permissions;
+      
+      next();
+    } catch (error) {
+      console.error('Error in requireWorkspaceMembership middleware:', error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
   };
 }
 

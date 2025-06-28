@@ -350,6 +350,7 @@ export function registerRoutes(app: Express): Server {
       
       // Try to get workspace from URL headers (set by frontend)
       const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      console.log('GET /api/designers - received x-workspace-slug header:', workspaceSlug);
       
       if (workspaceSlug) {
         const workspace = await db.query.workspaces.findFirst({
@@ -358,6 +359,9 @@ export function registerRoutes(app: Express): Server {
         
         if (workspace) {
           workspaceId = workspace.id;
+          console.log('GET /api/designers - found workspace:', workspace.id, workspace.name);
+        } else {
+          console.log('GET /api/designers - workspace not found for slug:', workspaceSlug);
         }
       }
       

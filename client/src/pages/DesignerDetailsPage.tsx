@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X } from "lucide-react";
 import { MarkdownPreview } from "@/components/ui/markdown-preview";
-import { useDesignerBySlug } from "@/hooks/use-designers";
+import { useDesignerBySlug } from "@/hooks/use-designer";
 import { useState, useRef } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
 import { useForm } from "react-hook-form";

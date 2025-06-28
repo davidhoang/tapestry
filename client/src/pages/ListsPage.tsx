@@ -7,7 +7,7 @@ import {
   useAddDesignersToList,
 } from "@/hooks/use-lists";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDesigners } from "@/hooks/use-designers";
+import { useDesigners } from "@/hooks/use-designer";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

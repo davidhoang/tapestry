@@ -10,14 +10,7 @@ export function useDesigners() {
   const pathParts = location.split('/');
   const workspaceSlug = pathParts[1]; // This will be undefined if not in workspace URL
   
-  console.log('useDesigners - current location:', location);
-  console.log('useDesigners - pathParts:', pathParts);
-  console.log('useDesigners - extracted workspaceSlug:', workspaceSlug);
-  
-  // Add effect to debug location changes
-  useEffect(() => {
-    console.log('useDesigners - useEffect triggered - location:', location, 'workspaceSlug:', workspaceSlug);
-  }, [location, workspaceSlug]);
+
   
   return useQuery<SelectDesigner[]>({
     queryKey: ["/api/designers", workspaceSlug],
@@ -27,12 +20,7 @@ export function useDesigners() {
       // Always try to add workspace header if we have a workspace slug from URL
       if (workspaceSlug && workspaceSlug.length > 0) {
         headers['x-workspace-slug'] = workspaceSlug;
-        console.log('useDesigners - sending header x-workspace-slug:', workspaceSlug);
-      } else {
-        console.log('useDesigners - no valid workspace slug found, no header sent');
       }
-      
-      console.log('useDesigners - making request with headers:', headers);
       
       const response = await fetch("/api/designers", {
         headers,
@@ -43,6 +31,34 @@ export function useDesigners() {
       return response.json();
     },
     enabled: !!workspaceSlug && workspaceSlug.length > 0, // Only enable query if we have a valid workspace slug
+  });
+}
+
+export function useDesignerBySlug(slug: string) {
+  const [location] = useLocation();
+  
+  // Extract workspace slug from URL path
+  const pathParts = location.split('/');
+  const workspaceSlug = pathParts[1];
+  
+  return useQuery<SelectDesigner>({
+    queryKey: ["/api/designers/slug", slug, workspaceSlug],
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
+      const response = await fetch(`/api/designers/slug/${slug}`, {
+        headers,
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch designer: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !!slug && !!workspaceSlug && workspaceSlug.length > 0,
   });
 }
 

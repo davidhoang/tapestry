@@ -254,7 +254,7 @@ export default function DirectoryPage() {
                       <DialogTitle>Add new designer</DialogTitle>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto pr-2">
-                      <AddDesignerDialog designer={null} onClose={() => {}} />
+                      <AddDesignerDialog designer={null} onClose={() => {}} permissions={permissions} />
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -343,7 +343,8 @@ export default function DirectoryPage() {
             <div className="flex-1 overflow-y-auto pr-2">
               <AddDesignerDialog 
                 designer={designerToEdit} 
-                onClose={() => setDesignerToEdit(null)} 
+                onClose={() => setDesignerToEdit(null)}
+                permissions={permissions}
               />
             </div>
           </DialogContent>
@@ -388,9 +389,10 @@ export default function DirectoryPage() {
 interface AddDesignerDialogProps {
   designer?: SelectDesigner | null;
   onClose: () => void;
+  permissions: ReturnType<typeof useWorkspacePermissions>;
 }
 
-function AddDesignerDialog({ designer, onClose }: AddDesignerDialogProps) {
+function AddDesignerDialog({ designer, onClose, permissions }: AddDesignerDialogProps) {
   const { toast } = useToast();
   const createDesigner = useCreateDesigner();
   const updateDesigner = useUpdateDesigner();

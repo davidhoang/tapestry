@@ -51,7 +51,7 @@ interface WorkspacePermissions {
   canManageBilling: boolean;
   canViewUsage: boolean;
   
-  // Legacy permissions (for backward compatibility)
+  // Legacy permissions for backward compatibility
   canAccessNotes: boolean;
   canAccessOpenToRoles: boolean;
   canAccessHiring: boolean;
@@ -62,20 +62,18 @@ interface WorkspacePermissions {
   isAdmin: boolean;
   isEditor: boolean;
   isMember: boolean;
-  isViewer: boolean;
 }
 
 // Permission utility function
 function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions {
   const isOwner = role === 'owner';
   const isAdmin = role === 'admin';
-  const isMember = role === 'member';
   const isEditor = role === 'editor';
+  const isMember = role === 'member';
   
   // Owner has all permissions
   if (isOwner) {
     return {
-      // Designer Management
       canCreateDesigners: true,
       canEditDesigners: true,
       canDeleteDesigners: true,
@@ -83,24 +81,18 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canExportDesigners: true,
       canImportDesigners: true,
       canBulkEditDesigners: true,
-      
-      // List Management
       canCreateLists: true,
       canEditLists: true,
       canDeleteLists: true,
       canViewLists: true,
       canShareLists: true,
       canPublishLists: true,
-      
-      // Hiring & Jobs
       canCreateJobs: true,
       canEditJobs: true,
       canDeleteJobs: true,
       canViewJobs: true,
       canManageJobCandidates: true,
       canAccessAIMatching: true,
-      
-      // Workspace Management
       canInviteMembers: true,
       canRemoveMembers: true,
       canChangeRoles: true,
@@ -108,26 +100,17 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canDeleteWorkspace: true,
       canViewMembersList: true,
       canManageInvitations: true,
-      
-      // Data & Analytics
       canAccessAnalytics: true,
       canExportData: true,
       canViewAuditLogs: true,
-      
-      // AI Features
       canUseAIEnrichment: true,
       canConfigureAI: true,
-      
-      // Billing & Admin
       canManageBilling: true,
       canViewUsage: true,
-      
-      // Legacy permissions
       canAccessNotes: true,
       canAccessOpenToRoles: true,
       canAccessHiring: true,
       canManageWorkspace: true,
-      
       role,
       isOwner: true,
       isAdmin: false,
@@ -139,7 +122,6 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
   // Admin has most permissions except critical workspace management
   if (isAdmin) {
     return {
-      // Designer Management
       canCreateDesigners: true,
       canEditDesigners: true,
       canDeleteDesigners: true,
@@ -147,51 +129,36 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canExportDesigners: true,
       canImportDesigners: true,
       canBulkEditDesigners: true,
-      
-      // List Management
       canCreateLists: true,
       canEditLists: true,
       canDeleteLists: true,
       canViewLists: true,
       canShareLists: true,
       canPublishLists: true,
-      
-      // Hiring & Jobs
       canCreateJobs: true,
       canEditJobs: true,
       canDeleteJobs: true,
       canViewJobs: true,
       canManageJobCandidates: true,
       canAccessAIMatching: true,
-      
-      // Workspace Management (limited)
       canInviteMembers: true,
-      canRemoveMembers: false, // Only owner can remove members
-      canChangeRoles: false, // Only owner can change roles
-      canManageWorkspaceSettings: false, // Only owner can manage settings
-      canDeleteWorkspace: false, // Only owner can delete workspace
+      canRemoveMembers: true,
+      canChangeRoles: true,
+      canManageWorkspaceSettings: false,
+      canDeleteWorkspace: false,
       canViewMembersList: true,
       canManageInvitations: true,
-      
-      // Data & Analytics
       canAccessAnalytics: true,
       canExportData: true,
-      canViewAuditLogs: false, // Only owner can view audit logs
-      
-      // AI Features
+      canViewAuditLogs: true,
       canUseAIEnrichment: true,
-      canConfigureAI: false, // Only owner can configure AI
-      
-      // Billing & Admin
-      canManageBilling: false, // Only owner can manage billing
+      canConfigureAI: true,
+      canManageBilling: false,
       canViewUsage: true,
-      
-      // Legacy permissions
       canAccessNotes: true,
       canAccessOpenToRoles: true,
       canAccessHiring: true,
       canManageWorkspace: false,
-      
       role,
       isOwner: false,
       isAdmin: true,
@@ -200,74 +167,9 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
     };
   }
   
-  // Member has standard permissions
-  if (isMember) {
-    return {
-      // Designer Management
-      canCreateDesigners: true,
-      canEditDesigners: true,
-      canDeleteDesigners: false, // Members can't delete designers
-      canViewDesigners: true,
-      canExportDesigners: true,
-      canImportDesigners: true,
-      canBulkEditDesigners: false, // Members can't bulk edit
-      
-      // List Management - Members restricted from lists
-      canCreateLists: false,
-      canEditLists: false,
-      canDeleteLists: false,
-      canViewLists: false,
-      canShareLists: false,
-      canPublishLists: false,
-      
-      // Hiring & Jobs - Members restricted from hiring
-      canCreateJobs: false,
-      canEditJobs: false,
-      canDeleteJobs: false,
-      canViewJobs: false,
-      canManageJobCandidates: false,
-      canAccessAIMatching: true, // Can still use Matchmaker
-      
-      // Workspace Management (very limited)
-      canInviteMembers: false, // Members can't invite
-      canRemoveMembers: false,
-      canChangeRoles: false,
-      canManageWorkspaceSettings: false,
-      canDeleteWorkspace: false,
-      canViewMembersList: true,
-      canManageInvitations: false,
-      
-      // Data & Analytics
-      canAccessAnalytics: false, // Members can't access analytics
-      canExportData: true,
-      canViewAuditLogs: false,
-      
-      // AI Features
-      canUseAIEnrichment: true,
-      canConfigureAI: false,
-      
-      // Billing & Admin
-      canManageBilling: false,
-      canViewUsage: false,
-      
-      // Legacy permissions
-      canAccessNotes: false,
-      canAccessOpenToRoles: false,
-      canAccessHiring: false, // Members cannot access hiring
-      canManageWorkspace: false,
-      
-      role,
-      isOwner: false,
-      isAdmin: false,
-      isMember: true,
-      isEditor: false,
-    };
-  }
-  
   // Editor has content management permissions but limited workspace management
   if (isEditor) {
     return {
-      // Designer Management
       canCreateDesigners: true,
       canEditDesigners: true,
       canDeleteDesigners: true,
@@ -275,24 +177,18 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canExportDesigners: true,
       canImportDesigners: true,
       canBulkEditDesigners: true,
-      
-      // List Management
       canCreateLists: true,
       canEditLists: true,
       canDeleteLists: true,
       canViewLists: true,
       canShareLists: true,
       canPublishLists: true,
-      
-      // Hiring & Jobs
       canCreateJobs: true,
       canEditJobs: true,
       canDeleteJobs: true,
       canViewJobs: true,
       canManageJobCandidates: true,
       canAccessAIMatching: true,
-      
-      // Workspace Management (limited)
       canInviteMembers: false,
       canRemoveMembers: false,
       canChangeRoles: false,
@@ -300,31 +196,70 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canDeleteWorkspace: false,
       canViewMembersList: true,
       canManageInvitations: false,
-      
-      // Data & Analytics
       canAccessAnalytics: true,
       canExportData: true,
       canViewAuditLogs: false,
-      
-      // AI Features
       canUseAIEnrichment: true,
       canConfigureAI: false,
-      
-      // Billing & Admin
       canManageBilling: false,
       canViewUsage: false,
-      
-      // Legacy permissions
       canAccessNotes: true,
       canAccessOpenToRoles: true,
       canAccessHiring: true,
       canManageWorkspace: false,
-      
       role,
       isOwner: false,
       isAdmin: false,
       isEditor: true,
       isMember: false,
+    };
+  }
+  
+  // Member has limited permissions - can view designers, create designers, and use AI matchmaker
+  if (isMember) {
+    return {
+      canCreateDesigners: true,
+      canEditDesigners: true,
+      canDeleteDesigners: false,
+      canViewDesigners: true,
+      canExportDesigners: true,
+      canImportDesigners: true,
+      canBulkEditDesigners: false,
+      canCreateLists: false,
+      canEditLists: false,
+      canDeleteLists: false,
+      canViewLists: false,
+      canShareLists: false,
+      canPublishLists: false,
+      canCreateJobs: false,
+      canEditJobs: false,
+      canDeleteJobs: false,
+      canViewJobs: false,
+      canManageJobCandidates: false,
+      canAccessAIMatching: true,
+      canInviteMembers: false,
+      canRemoveMembers: false,
+      canChangeRoles: false,
+      canManageWorkspaceSettings: false,
+      canDeleteWorkspace: false,
+      canViewMembersList: true,
+      canManageInvitations: false,
+      canAccessAnalytics: false,
+      canExportData: false,
+      canViewAuditLogs: false,
+      canUseAIEnrichment: true,
+      canConfigureAI: false,
+      canManageBilling: false,
+      canViewUsage: false,
+      canAccessNotes: true,
+      canAccessOpenToRoles: false,
+      canAccessHiring: false,
+      canManageWorkspace: false,
+      role,
+      isOwner: false,
+      isAdmin: false,
+      isEditor: false,
+      isMember: true,
     };
   }
   
@@ -370,46 +305,49 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
     role: null,
     isOwner: false,
     isAdmin: false,
-    isMember: false,
     isEditor: false,
+    isMember: false,
   };
 }
 
 export function useWorkspacePermissions(workspaceSlug?: string): WorkspacePermissions {
   const { user } = useUser();
   
-  const { data: workspaces } = useQuery({
-    queryKey: ["/api/workspaces"],
+  const { data: permissions } = useQuery({
+    queryKey: ['/api/workspaces/permissions', workspaceSlug],
     queryFn: async () => {
-      const response = await fetch("/api/workspaces");
-      if (!response.ok) return [];
+      const headers: Record<string, string> = {};
+      if (workspaceSlug) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
+      const response = await fetch('/api/workspaces/permissions', { headers });
+      if (!response.ok) throw new Error('Failed to fetch permissions');
       return response.json();
     },
     enabled: !!user,
   });
 
-  // Find current workspace by slug or use first workspace
-  const currentWorkspace = workspaceSlug 
-    ? workspaces?.find((w: any) => w.slug === workspaceSlug)
-    : workspaces?.[0];
+  if (!permissions) {
+    return calculatePermissions(null);
+  }
 
-  const userRole = currentWorkspace?.role as WorkspaceRole || null;
-
-  return calculatePermissions(userRole);
+  return calculatePermissions(permissions.role);
 }
 
 export function useCurrentWorkspace() {
   const { user } = useUser();
   
   const { data: workspaces } = useQuery({
-    queryKey: ["/api/workspaces"],
+    queryKey: ['/api/workspaces'],
     queryFn: async () => {
-      const response = await fetch("/api/workspaces");
-      if (!response.ok) return [];
+      const response = await fetch('/api/workspaces');
+      if (!response.ok) throw new Error('Failed to fetch workspaces');
       return response.json();
     },
     enabled: !!user,
   });
 
+  // Return the first workspace (primary workspace) or null
   return workspaces?.[0] || null;
 }

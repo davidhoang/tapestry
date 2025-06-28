@@ -290,7 +290,7 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
 
 // Get user's first workspace (for fallback)
 async function getUserWorkspace(userId: number) {
-  // Get all memberships ordered by role priority (owner > admin > member > viewer)
+  // Get all memberships ordered by role priority (owner > admin > editor > member)
   const memberships = await db.query.workspaceMembers.findMany({
     where: eq(workspaceMembers.userId, userId),
     with: {
@@ -303,8 +303,8 @@ async function getUserWorkspace(userId: number) {
     return null;
   }
   
-  // Prioritize by role: owner first, then admin (for personal workspaces), then editor, member, viewer
-  const roleOrder = { 'owner': 5, 'admin': 4, 'editor': 3, 'member': 2, 'viewer': 1 };
+  // Prioritize by role: owner first, then admin (for personal workspaces), then editor, member
+  const roleOrder = { 'owner': 5, 'admin': 4, 'editor': 3, 'member': 2 };
   
   memberships.sort((a, b) => {
     const roleA = roleOrder[a.role as keyof typeof roleOrder] || 0;

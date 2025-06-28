@@ -212,6 +212,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Implemented Editor role in permission system: added new role type between Admin and Member with full content access but limited workspace management permissions. Updated role hierarchy to owner > admin > editor > member > viewer for proper workspace selection priority
 - June 28, 2025. Implemented comprehensive RLHF (Reinforcement Learning from Human Feedback) system: created recommendation_feedback database table, feedback collection modal with 5 feedback types (good_match, irrelevant_experience, under_qualified, over_qualified, location_mismatch), analytics dashboard with success rate tracking, enhanced AI recommendation endpoint that learns from historical feedback patterns, integrated feedback buttons into hiring page recommendation cards, and feedback analytics page with trend analysis and insights
 - June 28, 2025. Extended RLHF feedback system to Intelligent Matching page: added thumbs up/down icons with smart pre-selection, integrated RecommendationFeedbackModal with job context, implemented consistent feedback UI across both hiring and matchmaker workflows, enabling comprehensive learning from user interactions across all AI recommendation touchpoints
+- June 28, 2025. Moved RLHF Analytics dashboard from hiring page to admin section: relocated FeedbackAnalyticsDashboard component to admin panel as dedicated tab, providing centralized access to feedback analytics and system insights for administrative users
 
 ## User Preferences
 

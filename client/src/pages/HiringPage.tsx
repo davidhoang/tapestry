@@ -363,20 +363,10 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
             directory
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => window.location.href = `/${workspaceSlug}/feedback-analytics`}
-            className="gap-2"
-          >
-            <Star className="h-4 w-4" />
-            RLHF Analytics
-          </Button>
-          <Button onClick={() => setShowCreateJobDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create job
-          </Button>
-        </div>
+        <Button onClick={() => setShowCreateJobDialog(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Create job
+        </Button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

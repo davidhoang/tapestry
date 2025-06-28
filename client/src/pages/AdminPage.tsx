@@ -19,6 +19,7 @@ import PdfImport from "@/components/PdfImport";
 import AdminRoute from "@/components/AdminRoute";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { Switch } from "@/components/ui/switch";
+import FeedbackAnalyticsDashboard from "@/components/FeedbackAnalyticsDashboard";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -404,6 +405,7 @@ export default function AdminPage() {
             <TabsTrigger value="pdf-import">PDF import</TabsTrigger>
             <TabsTrigger value="invites">Alpha Invites</TabsTrigger>
             <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+            <TabsTrigger value="rlhf-analytics">RLHF Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="database" className="grid gap-6">
@@ -560,6 +562,10 @@ export default function AdminPage() {
                 </Alert>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="rlhf-analytics">
+            <FeedbackAnalyticsDashboard />
           </TabsContent>
         </Tabs>
       </div>

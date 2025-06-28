@@ -8,10 +8,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Briefcase, Users, Sparkles, FileText, Loader2, Star, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Briefcase,
+  Users,
+  Sparkles,
+  FileText,
+  Loader2,
+  Star,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import DesignerCard from "../components/DesignerCard";
 import SlimDesignerCard from "../components/SlimDesignerCard";
@@ -67,11 +83,11 @@ export default function HiringPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Extract workspace slug from URL path
-  const pathParts = location.split('/');
+  const pathParts = location.split("/");
   const workspaceSlug = pathParts[1];
-  
+
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showCreateJobDialog, setShowCreateJobDialog] = useState(false);
   const [newJobTitle, setNewJobTitle] = useState("");
@@ -95,12 +111,14 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 ## Nice to have
 - Familiarity with React components
 - Experience with design tokens
-- Background in enterprise software`
+- Background in enterprise software`,
   );
   const [matches, setMatches] = useState<MatchRecommendation[]>([]);
   const [analysis, setAnalysis] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(new Set());
+  const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(
+    new Set(),
+  );
   const [showCreateListDialog, setShowCreateListDialog] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
@@ -110,16 +128,16 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
     queryKey: ["/api/jobs", workspaceSlug],
     queryFn: async () => {
       const headers: Record<string, string> = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       };
-      
+
       if (workspaceSlug && workspaceSlug.length > 0) {
-        headers['x-workspace-slug'] = workspaceSlug;
+        headers["x-workspace-slug"] = workspaceSlug;
       }
-      
+
       const response = await fetch("/api/jobs", {
         headers,
-        credentials: "include"
+        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch jobs");
       return response.json();
@@ -129,15 +147,21 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
   // Create job mutation
   const createJobMutation = useMutation({
-    mutationFn: async ({ title, description }: { title: string; description: string }) => {
+    mutationFn: async ({
+      title,
+      description,
+    }: {
+      title: string;
+      description: string;
+    }) => {
       const headers: Record<string, string> = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       };
-      
+
       if (workspaceSlug && workspaceSlug.length > 0) {
-        headers['x-workspace-slug'] = workspaceSlug;
+        headers["x-workspace-slug"] = workspaceSlug;
       }
-      
+
       const response = await fetch("/api/jobs", {
         method: "POST",
         headers,
@@ -155,9 +179,9 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
       toast({ title: "Job created successfully" });
     },
     onError: () => {
-      toast({ 
-        title: "Failed to create job", 
-        variant: "destructive" 
+      toast({
+        title: "Failed to create job",
+        variant: "destructive",
       });
     },
   });
@@ -166,13 +190,13 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   const findMatchesMutation = useMutation({
     mutationFn: async (jobId: number): Promise<JobMatchResponse> => {
       const headers: Record<string, string> = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       };
-      
+
       if (workspaceSlug && workspaceSlug.length > 0) {
-        headers['x-workspace-slug'] = workspaceSlug;
+        headers["x-workspace-slug"] = workspaceSlug;
       }
-      
+
       const response = await fetch("/api/jobs/matches", {
         method: "POST",
         headers,
@@ -185,44 +209,52 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
     onSuccess: (data) => {
       setMatches(data.recommendations || []);
       setAnalysis(data.analysis || "");
-      toast({ 
+      toast({
         title: `Found ${data.recommendations?.length || 0} designer matches`,
-        description: data.recommendations?.length ? "Check the matches below" : "Try adjusting your job description"
+        description: data.recommendations?.length
+          ? "Check the matches below"
+          : "Try adjusting your job description",
       });
     },
     onError: () => {
-      toast({ 
-        title: "Failed to find matches", 
+      toast({
+        title: "Failed to find matches",
         description: "Please try again or check your connection",
-        variant: "destructive" 
+        variant: "destructive",
       });
     },
   });
 
   // Create list mutation
   const createListMutation = useMutation({
-    mutationFn: async ({ name, designerIds }: { name: string; designerIds: number[] }) => {
+    mutationFn: async ({
+      name,
+      designerIds,
+    }: {
+      name: string;
+      designerIds: number[];
+    }) => {
       const headers: Record<string, string> = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       };
-      
+
       if (workspaceSlug && workspaceSlug.length > 0) {
-        headers['x-workspace-slug'] = workspaceSlug;
+        headers["x-workspace-slug"] = workspaceSlug;
       }
-      
+
       const response = await fetch("/api/lists", {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ 
-          name, 
-          summary: `Job candidates for ${selectedJob?.title || 'position'}`,
-          isPublic: false 
+        body: JSON.stringify({
+          name,
+          summary: `Job candidates for ${selectedJob?.title || "position"}`,
+          isPublic: false,
         }),
       });
       if (!response.ok) throw new Error("Failed to create list");
       const list = await response.json();
-      
+
       // Add designers to the list
       for (const designerId of designerIds) {
         await fetch("/api/lists/designers", {
@@ -232,7 +264,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
           body: JSON.stringify({ listId: list.id, designerId }),
         });
       }
-      
+
       return list;
     },
     onSuccess: () => {
@@ -242,22 +274,25 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
       setSelectedDesigners(new Set());
     },
     onError: () => {
-      toast({ 
-        title: "Failed to create list", 
-        variant: "destructive" 
+      toast({
+        title: "Failed to create list",
+        variant: "destructive",
       });
     },
   });
 
   const handleCreateJob = () => {
     if (!newJobTitle.trim() || !newJobDescription.trim()) {
-      toast({ 
-        title: "Please fill in all fields", 
-        variant: "destructive" 
+      toast({
+        title: "Please fill in all fields",
+        variant: "destructive",
       });
       return;
     }
-    createJobMutation.mutate({ title: newJobTitle, description: newJobDescription });
+    createJobMutation.mutate({
+      title: newJobTitle,
+      description: newJobDescription,
+    });
   };
 
   const handleFindMatches = (job: Job) => {
@@ -266,7 +301,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
     setAnalysis("");
     setSelectedDesigners(new Set());
     // Collapse the job description during analysis
-    setExpandedJobs(prev => {
+    setExpandedJobs((prev) => {
       const newSet = new Set(prev);
       newSet.delete(job.id);
       return newSet;
@@ -275,7 +310,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   };
 
   const toggleJobExpansion = (jobId: number) => {
-    setExpandedJobs(prev => {
+    setExpandedJobs((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(jobId)) {
         newSet.delete(jobId);
@@ -298,15 +333,15 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
   const handleCreateList = () => {
     if (!newListName.trim()) {
-      toast({ 
-        title: "Please enter a list name", 
-        variant: "destructive" 
+      toast({
+        title: "Please enter a list name",
+        variant: "destructive",
       });
       return;
     }
-    createListMutation.mutate({ 
-      name: newListName, 
-      designerIds: Array.from(selectedDesigners) 
+    createListMutation.mutate({
+      name: newListName,
+      designerIds: Array.from(selectedDesigners),
     });
   };
 
@@ -324,13 +359,11 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
         <div>
           <h1 className="text-3xl font-bold mb-2 font-serif">Hiring</h1>
           <p className="text-muted-foreground font-serif">
-            Create job descriptions and find matching designers from your directory
+            Create job descriptions and find matching designers from your
+            directory
           </p>
         </div>
-        <Button 
-          onClick={() => setShowCreateJobDialog(true)}
-          className="gap-2"
-        >
+        <Button onClick={() => setShowCreateJobDialog(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Create job
         </Button>
@@ -343,8 +376,6 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
             <h2 className="text-xl font-semibold font-serif">Job Postings</h2>
           </div>
 
-
-
           {/* Jobs List */}
           <div className="space-y-3">
             {isLoadingJobs ? (
@@ -356,44 +387,27 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                 <CardContent className="py-8 text-center">
                   <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No jobs created yet</p>
-                  <p className="text-sm text-muted-foreground/80 mt-2">Click "Create job" above to get started</p>
+                  <p className="text-sm text-muted-foreground/80 mt-2">
+                    Click "Create job" above to get started
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               jobs.map((job: Job) => (
-                <Card 
-                  key={job.id} 
+                <Card
+                  key={job.id}
                   className={`cursor-pointer transition-colors hover:bg-accent/50 ${
                     selectedJob?.id === job.id ? "ring-2 ring-primary" : ""
                   }`}
                   onClick={() => setSelectedJob(job)}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="mb-2">
                       <h3 className="font-semibold font-serif">{job.title}</h3>
-                      <Badge variant="outline">{job.status}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {job.description.split('\n')[0].replace(/^#+\s*/, '')}
+                      {job.description.split("\n")[0].replace(/^#+\s*/, "")}
                     </p>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(job.createdAt).toLocaleDateString()}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFindMatches(job);
-                        }}
-                        disabled={findMatchesMutation.isPending}
-                        className="gap-2"
-                      >
-                        <Search className="h-3 w-3" />
-                        Find Matches
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
               ))
@@ -409,9 +423,28 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="font-serif">{selectedJob.title}</CardTitle>
+                    <CardTitle className="font-serif">
+                      {selectedJob.title}
+                    </CardTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{selectedJob.status}</Badge>
+                      <Button
+                        onClick={() => handleFindMatches(selectedJob)}
+                        disabled={isAnalyzing || findMatchesMutation.isPending}
+                        size="sm"
+                        className="gap-2"
+                      >
+                        {isAnalyzing || findMatchesMutation.isPending ? (
+                          <>
+                            <Sparkles className="h-4 w-4 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Search className="h-4 w-4" />
+                            Find Matches
+                          </>
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -430,38 +463,14 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                 {expandedJobs.has(selectedJob.id) && (
                   <CardContent>
                     <div className="prose prose-sm max-w-none">
-                      <MDEditor.Markdown 
-                        source={selectedJob.description} 
-                        style={{ whiteSpace: 'pre-wrap' }}
+                      <MDEditor.Markdown
+                        source={selectedJob.description}
+                        style={{ whiteSpace: "pre-wrap" }}
                       />
                     </div>
                   </CardContent>
                 )}
-                <CardContent className="pt-0">
-                  <Separator className="mb-4" />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Created {new Date(selectedJob.createdAt).toLocaleDateString()}
-                    </span>
-                    <Button
-                      onClick={() => handleFindMatches(selectedJob)}
-                      disabled={isAnalyzing || findMatchesMutation.isPending}
-                      className="gap-2"
-                    >
-                      {isAnalyzing || findMatchesMutation.isPending ? (
-                        <>
-                          <Sparkles className="h-4 w-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="h-4 w-4" />
-                          Find Matches
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
+
               </Card>
 
               {/* Analysis & Matches */}
@@ -473,20 +482,42 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                         <Users className="h-5 w-5" />
                         Designer Matches ({matches.length})
                       </CardTitle>
-                      {matches.length > 0 && selectedDesigners.size > 0 && (
+                      <div className="flex items-center gap-2">
                         <Button
-                          onClick={() => setShowCreateListDialog(true)}
-                          variant="outline"
+                          onClick={() => handleFindMatches(selectedJob)}
+                          disabled={isAnalyzing || findMatchesMutation.isPending}
                           size="sm"
                           className="gap-2"
                         >
-                          <Plus className="h-4 w-4" />
-                          Create List ({selectedDesigners.size})
+                          {isAnalyzing || findMatchesMutation.isPending ? (
+                            <>
+                              <Sparkles className="h-4 w-4 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <Search className="h-4 w-4" />
+                              Find Matches
+                            </>
+                          )}
                         </Button>
-                      )}
+                        {matches.length > 0 && selectedDesigners.size > 0 && (
+                          <Button
+                            onClick={() => setShowCreateListDialog(true)}
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Create List ({selectedDesigners.size})
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {analysis && (
-                      <p className="text-sm text-muted-foreground">{analysis}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {analysis}
+                      </p>
                     )}
                   </CardHeader>
                   <CardContent>
@@ -494,7 +525,8 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                       <div className="text-center py-8">
                         <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <p className="text-muted-foreground">
-                          No matches found. Try adjusting your job description or add more designers to your directory.
+                          No matches found. Try adjusting your job description
+                          or add more designers to your directory.
                         </p>
                       </div>
                     ) : (
@@ -504,7 +536,9 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                             key={match.designerId}
                             match={match}
                             isSelected={selectedDesigners.has(match.designerId)}
-                            onSelectionChange={() => handleToggleDesigner(match.designerId)}
+                            onSelectionChange={() =>
+                              handleToggleDesigner(match.designerId)
+                            }
                             showSelection={true}
                           />
                         ))}
@@ -518,9 +552,12 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
             <Card>
               <CardContent className="py-16 text-center">
                 <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2 font-serif">Select a Job</h3>
+                <h3 className="text-lg font-semibold mb-2 font-serif">
+                  Select a Job
+                </h3>
                 <p className="text-muted-foreground">
-                  Choose a job from the list to view details and find matching designers
+                  Choose a job from the list to view details and find matching
+                  designers
                 </p>
               </CardContent>
             </Card>
@@ -530,7 +567,10 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
       {/* Analyzing Dialog */}
       <Dialog open={findMatchesMutation.isPending} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md" aria-describedby="analyzing-description">
+        <DialogContent
+          className="sm:max-w-md"
+          aria-describedby="analyzing-description"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-serif">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -548,32 +588,24 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                 </div>
               </div>
               <p id="analyzing-description" className="text-muted-foreground">
-                Using AI to analyze your job requirements and match them with designers in your directory...
+                Using AI to analyze your job requirements and match them with
+                designers in your directory...
               </p>
-            </div>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-primary rounded-full"></div>
-                Analyzing job requirements
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-primary rounded-full"></div>
-                Evaluating designer skills
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-primary rounded-full"></div>
-                Calculating match confidence
-              </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Create List Dialog */}
-      <Dialog open={showCreateListDialog} onOpenChange={setShowCreateListDialog}>
+      <Dialog
+        open={showCreateListDialog}
+        onOpenChange={setShowCreateListDialog}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-serif">Create List from Matches</DialogTitle>
+            <DialogTitle className="font-serif">
+              Create List from Matches
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -582,20 +614,21 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                 id="listName"
                 value={newListName}
                 onChange={(e) => setNewListName(e.target.value)}
-                placeholder={`Candidates for ${selectedJob?.title || 'position'}`}
+                placeholder={`Candidates for ${selectedJob?.title || "position"}`}
               />
             </div>
             <div className="text-sm text-muted-foreground">
-              {selectedDesigners.size} designer{selectedDesigners.size !== 1 ? 's' : ''} selected
+              {selectedDesigners.size} designer
+              {selectedDesigners.size !== 1 ? "s" : ""} selected
             </div>
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowCreateListDialog(false)}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreateList}
                 disabled={createListMutation.isPending || !newListName.trim()}
               >
@@ -634,13 +667,13 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowCreateJobDialog(false)}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreateJob}
                 disabled={createJobMutation.isPending}
               >

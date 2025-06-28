@@ -21,19 +21,36 @@ const authSchema = z.object({
 type AuthFormData = z.infer<typeof authSchema>;
 
 export default function AuthPage() {
-  console.log('AuthPage rendering');
-  
+  console.log("AuthPage rendering");
+
   return (
-    <div style={{ width: '100%', minHeight: '300px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '600', textAlign: 'center', color: '#111827' }}>
+    <div style={{ width: "100%", minHeight: "300px" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "600",
+            textAlign: "center",
+            color: "#111827",
+          }}
+        >
           Sign in
         </h2>
       </div>
       <LoginForm />
-      <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: '#6b7280' }}>
+      <div
+        style={{
+          marginTop: "24px",
+          textAlign: "center",
+          fontSize: "14px",
+          color: "#6b7280",
+        }}
+      >
         Don't have an account?{" "}
-        <Link href="/register" style={{ color: '#C8944B', textDecoration: 'underline' }}>
+        <Link
+          href="/register"
+          style={{ color: "#C8944B", textDecoration: "underline" }}
+        >
           Sign up here
         </Link>
       </div>
@@ -48,7 +65,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  console.log('LoginForm rendering');
+  console.log("LoginForm rendering");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +80,7 @@ function LoginForm() {
         });
       } else {
         // Login successful - trigger modal close
-        window.dispatchEvent(new CustomEvent('closeAuthModal'));
+        window.dispatchEvent(new CustomEvent("closeAuthModal"));
       }
     } catch (error) {
       toast({
@@ -77,50 +94,53 @@ function LoginForm() {
   };
 
   return (
-    <div style={{ backgroundColor: 'white', width: '100%' }}>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ backgroundColor: "white", width: "100%" }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+      >
         <div>
-          <label 
-            htmlFor="email" 
-            style={{ 
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '8px'
+          <label
+            htmlFor="email"
+            style={{
+              display: "block",
+              fontSize: "14px",
+              fontWeight: "500",
+              color: "#374151",
+              marginBottom: "8px",
             }}
           >
-            Email Address
+            Email
           </label>
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ 
-              width: '100%',
-              padding: '12px 16px',
-              border: '2px solid #d1d5db',
-              borderRadius: '6px',
-              backgroundColor: 'white',
-              color: '#111827',
-              fontSize: '16px',
-              outline: 'none',
-              boxSizing: 'border-box'
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              border: "2px solid #d1d5db",
+              borderRadius: "6px",
+              backgroundColor: "white",
+              color: "#111827",
+              fontSize: "16px",
+              outline: "none",
+              boxSizing: "border-box",
             }}
             placeholder="Enter your email"
             required
           />
         </div>
         <div>
-          <label 
-            htmlFor="password" 
-            style={{ 
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '8px'
+          <label
+            htmlFor="password"
+            style={{
+              display: "block",
+              fontSize: "14px",
+              fontWeight: "500",
+              color: "#374151",
+              marginBottom: "8px",
             }}
           >
             Password
@@ -130,16 +150,16 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{ 
-              width: '100%',
-              padding: '12px 16px',
-              border: '2px solid #d1d5db',
-              borderRadius: '6px',
-              backgroundColor: 'white',
-              color: '#111827',
-              fontSize: '16px',
-              outline: 'none',
-              boxSizing: 'border-box'
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              border: "2px solid #d1d5db",
+              borderRadius: "6px",
+              backgroundColor: "white",
+              color: "#111827",
+              fontSize: "16px",
+              outline: "none",
+              boxSizing: "border-box",
             }}
             placeholder="Enter your password"
             required
@@ -148,20 +168,20 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          style={{ 
-            width: '100%',
-            padding: '12px 16px',
-            borderRadius: '6px',
-            fontWeight: '500',
-            backgroundColor: '#C8944B',
-            color: 'white',
-            border: 'none',
-            fontSize: '16px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
+          style={{
+            width: "100%",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            fontWeight: "500",
+            backgroundColor: "#C8944B",
+            color: "white",
+            border: "none",
+            fontSize: "16px",
+            cursor: isLoading ? "not-allowed" : "pointer",
             opacity: isLoading ? 0.7 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

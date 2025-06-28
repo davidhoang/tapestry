@@ -200,6 +200,9 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Implemented comprehensive workspace management in profile settings: users can view all workspace memberships with role indicators, leave non-owned workspaces with confirmation dialogs, and backend API with owner protection and audit logging
 - June 28, 2025. Fixed critical workspace data isolation bug: resolved cross-workspace data leakage where users were seeing designers from other workspaces, implemented proper workspace context extraction from URL headers, added complete cache clearing on workspace switching, and workspace-based image cache-busting to prevent thumbnail cross-contamination. Root cause: DirectoryPage was using wrong hook file (use-designer.ts vs use-designers.ts), fixed by consolidating into single hook with workspace context extraction
 - June 28, 2025. Implemented sentence case styling for all buttons across the application, replacing uppercase text transformations with proper capitalization
+- June 28, 2025. Fixed AI matchmaker functionality: resolved workspace context extraction issues in /api/jobs/matches endpoint, added comprehensive error handling and OpenAI API key validation, corrected syntax errors in nested try-catch blocks. Users can now successfully use "Find Matches" feature with proper workspace isolation
+- June 28, 2025. Cleaned up job card UI design: removed draft badges, creation dates, and "Find Matches" buttons from job cards for cleaner, simpler interface focused on job titles and descriptions
+- June 28, 2025. Repositioned "Find Matches" button to top right of Designer Matches section header for better accessibility and workflow integration
 
 ## User Preferences
 

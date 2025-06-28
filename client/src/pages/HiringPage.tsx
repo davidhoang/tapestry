@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Briefcase, Users, Sparkles, FileText, Loader2, Star } from "lucide-react";
+import { Plus, Search, Briefcase, Users, Sparkles, FileText, Loader2, Star, ChevronDown, ChevronUp } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import DesignerCard from "../components/DesignerCard";
 
@@ -96,6 +96,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   const [selectedDesigners, setSelectedDesigners] = useState<Set<number>>(new Set());
   const [showCreateListDialog, setShowCreateListDialog] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
 
   // Fetch user's jobs
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
@@ -224,7 +225,25 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
     setMatches([]);
     setAnalysis("");
     setSelectedDesigners(new Set());
+    // Collapse the job description during analysis
+    setExpandedJobs(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(job.id);
+      return newSet;
+    });
     findMatchesMutation.mutate(job.id);
+  };
+
+  const toggleJobExpansion = (jobId: number) => {
+    setExpandedJobs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
   };
 
   const handleToggleDesigner = (designerId: number) => {
@@ -397,17 +416,35 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="font-serif">{selectedJob.title}</CardTitle>
-                    <Badge variant="outline">{selectedJob.status}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{selectedJob.status}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleJobExpansion(selectedJob.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {expandedJobs.has(selectedJob.id) ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none">
-                    <MDEditor.Markdown 
-                      source={selectedJob.description} 
-                      style={{ whiteSpace: 'pre-wrap' }}
-                    />
-                  </div>
-                  <Separator className="my-4" />
+                {expandedJobs.has(selectedJob.id) && (
+                  <CardContent>
+                    <div className="prose prose-sm max-w-none">
+                      <MDEditor.Markdown 
+                        source={selectedJob.description} 
+                        style={{ whiteSpace: 'pre-wrap' }}
+                      />
+                    </div>
+                  </CardContent>
+                )}
+                <CardContent className="pt-0">
+                  <Separator className="mb-4" />
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
                       Created {new Date(selectedJob.createdAt).toLocaleDateString()}

@@ -2058,7 +2058,7 @@ Please analyze this role and recommend the best matching designers.`
       }
     }
 
-    // Check for existing pending invitation
+    // Check for existing pending invitation - if found, update expiry date instead of creating new
     const existingInvitation = await db.query.workspaceInvitations.findFirst({
       where: and(
         eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
@@ -2067,27 +2067,44 @@ Please analyze this role and recommend the best matching designers.`
       ),
     });
 
+    let invitation;
+    let token: string;
+    
     if (existingInvitation) {
-      return res.status(409).json({ error: "An invitation for this email is already pending" });
+      // Update existing invitation with new expiry date
+      const newExpiresAt = new Date();
+      newExpiresAt.setDate(newExpiresAt.getDate() + 7); // Expires in 7 days
+      token = existingInvitation.token; // Reuse existing token
+      
+      [invitation] = await db
+        .update(workspaceInvitations)
+        .set({ 
+          expiresAt: newExpiresAt,
+          role: role, // Update role in case it changed
+          invitedBy: req.user.id,
+          createdAt: new Date() // Update created date for fresh invitation
+        })
+        .where(eq(workspaceInvitations.id, existingInvitation.id))
+        .returning();
+    } else {
+      // Generate invitation token
+      token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+
+      // Create new invitation
+      [invitation] = await db
+        .insert(workspaceInvitations)
+        .values({
+          workspaceId: parseInt(workspaceId),
+          email,
+          role,
+          token,
+          invitedBy: req.user.id,
+          expiresAt,
+        })
+        .returning();
     }
-
-    // Generate invitation token
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
-
-    // Create invitation
-    const [invitation] = await db
-      .insert(workspaceInvitations)
-      .values({
-        workspaceId: parseInt(workspaceId),
-        email,
-        role,
-        token,
-        invitedBy: req.user.id,
-        expiresAt,
-      })
-      .returning();
 
     // Send invitation email
     try {
@@ -2099,7 +2116,7 @@ Please analyze this role and recommend the best matching designers.`
 Click the link below to accept the invitation:
 ${inviteLink}
 
-This invitation will expire on ${expiresAt.toLocaleDateString()}.
+This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}.
 
 If you don't have an account yet, you'll be prompted to create one.
 

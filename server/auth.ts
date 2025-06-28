@@ -123,7 +123,37 @@ export function setupAuth(app: Express) {
         .limit(1);
 
       if (existingUser) {
-        return res.status(400).send("Email already exists");
+        // Check if user has pending invitations they should accept instead
+        const { sql } = await import('drizzle-orm');
+        const { workspaceInvitations } = await import('@db/schema');
+        
+        const pendingInvitations = await db.query.workspaceInvitations.findMany({
+          where: and(
+            eq(workspaceInvitations.email, email),
+            sql`${workspaceInvitations.acceptedAt} IS NULL`
+          ),
+          with: {
+            workspace: true,
+          },
+        });
+
+        const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
+        
+        if (validInvitations.length > 0) {
+          return res.status(409).json({ 
+            error: "An account with this email already exists. Please sign in to accept your pending workspace invitations.",
+            hasInvitations: true,
+            invitations: validInvitations.map(inv => ({
+              workspaceName: inv.workspace.name,
+              role: inv.role
+            }))
+          });
+        }
+        
+        return res.status(400).json({ 
+          error: "An account with this email already exists. Please sign in instead.",
+          hasInvitations: false 
+        });
       }
 
       const hashedPassword = await crypto.hash(password);

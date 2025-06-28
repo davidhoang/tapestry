@@ -128,6 +128,18 @@ export const recommendationFeedback = pgTable("recommendation_feedback", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const aiSystemPrompts = pgTable("ai_system_prompts", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  systemPrompt: text("system_prompt").notNull(),
+  isActive: boolean("is_active").default(false),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],
@@ -139,6 +151,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   conversations: many(conversations),
   invitations: many(workspaceInvitations),
   jobs: many(jobs),
+  aiSystemPrompts: many(aiSystemPrompts),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -237,6 +250,17 @@ export const recommendationFeedbackRelations = relations(recommendationFeedback,
   }),
 }));
 
+export const aiSystemPromptRelations = relations(aiSystemPrompts, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [aiSystemPrompts.workspaceId],
+    references: [workspaces.id],
+  }),
+  createdBy: one(users, {
+    fields: [aiSystemPrompts.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -296,3 +320,8 @@ export const insertRecommendationFeedbackSchema = createInsertSchema(recommendat
 export const selectRecommendationFeedbackSchema = createSelectSchema(recommendationFeedback);
 export type InsertRecommendationFeedback = typeof recommendationFeedback.$inferInsert;
 export type SelectRecommendationFeedback = typeof recommendationFeedback.$inferSelect;
+
+export const insertAiSystemPromptSchema = createInsertSchema(aiSystemPrompts);
+export const selectAiSystemPromptSchema = createSelectSchema(aiSystemPrompts);
+export type InsertAiSystemPrompt = typeof aiSystemPrompts.$inferInsert;
+export type SelectAiSystemPrompt = typeof aiSystemPrompts.$inferSelect;

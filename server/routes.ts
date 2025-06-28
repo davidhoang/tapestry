@@ -2610,57 +2610,97 @@ The Tapestry Team`;
 
   app.post("/api/jobs/matches", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+      return res.status(401).json({ error: "Authentication required" });
     }
 
-    const { jobId } = req.body;
+    try {
+      const { jobId } = req.body;
 
-    if (!jobId) {
-      return res.status(400).json({ error: "Job ID is required" });
-    }
+      if (!jobId) {
+        return res.status(400).json({ error: "Job ID is required" });
+      }
 
-    const userWorkspace = await getUserWorkspace(req.user.id);
-    if (!userWorkspace) {
-      return res.status(403).json({ error: "No workspace access" });
-    }
-
-    // Get the job
-    const job = await db.query.jobs.findFirst({
-      where: and(eq(jobs.id, jobId), eq(jobs.workspaceId, userWorkspace.id))
-    });
-
-    if (!job) {
-      return res.status(404).json({ error: "Job not found" });
-    }
-
-    // Get all designers from user's workspace
-    const allDesigners = await db.query.designers.findMany({
-      where: eq(designers.workspaceId, userWorkspace.id),
-      orderBy: desc(designers.createdAt),
-    });
-
-    if (allDesigners.length === 0) {
-      return res.json({ 
-        recommendations: [],
-        analysis: "No designers found in database to match against.",
-        jobId
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
       });
-    }
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
 
-    // Create a summary of all designers for OpenAI using correct field names
-    const designerSummaries = allDesigners.map(designer => ({
-      id: designer.id,
-      name: designer.name,
-      title: designer.title,
-      company: designer.company,
-      skills: designer.skills,
-      description: designer.description,
-      level: designer.level,
-      location: designer.location
-    }));
+      // Get the job
+      const job = await db.query.jobs.findFirst({
+        where: and(eq(jobs.id, jobId), eq(jobs.workspaceId, workspaceId))
+      });
 
-    // Use OpenAI to analyze and recommend matches
-    const completion = await openai.chat.completions.create({
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Get all designers from user's workspace
+      const allDesigners = await db.query.designers.findMany({
+        where: eq(designers.workspaceId, workspaceId),
+        orderBy: desc(designers.createdAt),
+      });
+
+      if (allDesigners.length === 0) {
+        return res.json({ 
+          recommendations: [],
+          analysis: "No designers found in database to match against.",
+          jobId
+        });
+      }
+
+      // Create a summary of all designers for OpenAI using correct field names
+      const designerSummaries = allDesigners.map(designer => ({
+        id: designer.id,
+        name: designer.name,
+        title: designer.title,
+        company: designer.company,
+        skills: designer.skills,
+        description: designer.description,
+        level: designer.level,
+        location: designer.location
+      }));
+
+      // Check if OpenAI API key is available
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ error: "OpenAI API key not configured" });
+      }
+
+      // Use OpenAI to analyze and recommend matches
+      const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -2704,26 +2744,30 @@ Please analyze this job and recommend the best matching designers.`
       return res.status(500).json({ error: "Failed to get AI analysis" });
     }
 
-    try {
-      const analysis = JSON.parse(aiResponse);
-      
-      // Enrich recommendations with full designer data
-      const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
-        const designer = allDesigners.find(d => d.id === rec.designerId);
-        return {
-          ...rec,
-          designer
-        };
-      }).filter((rec: any) => rec.designer);
+      try {
+        const analysis = JSON.parse(aiResponse);
+        
+        // Enrich recommendations with full designer data
+        const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+          const designer = allDesigners.find(d => d.id === rec.designerId);
+          return {
+            ...rec,
+            designer
+          };
+        }).filter((rec: any) => rec.designer);
 
-      res.json({
-        analysis: analysis.analysis,
-        recommendations: enrichedRecommendations,
-        jobId
-      });
-    } catch (error) {
-      console.error('Failed to parse AI response:', error);
-      res.status(500).json({ error: "Failed to parse AI analysis" });
+        res.json({
+          analysis: analysis.analysis,
+          recommendations: enrichedRecommendations,
+          jobId
+        });
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        res.status(500).json({ error: "Failed to parse AI analysis" });
+      }
+    } catch (error: any) {
+      console.error('Error in job matching:', error);
+      res.status(500).json({ error: "Failed to find matches. Please try again or check your connection." });
     }
   }));
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -46,11 +46,13 @@ export default function RecommendationFeedbackModal({
   const queryClient = useQueryClient();
 
   // Set initial feedback type when modal opens
-  useState(() => {
+  useEffect(() => {
     if (open && initialFeedbackType) {
       setFeedbackType(initialFeedbackType);
+    } else if (open && !initialFeedbackType) {
+      setFeedbackType("");
     }
-  });
+  }, [open, initialFeedbackType]);
 
   const submitFeedbackMutation = useMutation({
     mutationFn: async (feedbackData: FeedbackData) => {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import type { SelectDesigner } from "@db/schema";
 
 export function useDesigners() {
@@ -10,20 +11,28 @@ export function useDesigners() {
   const workspaceSlug = pathParts[1]; // This will be undefined if not in workspace URL
   
   console.log('useDesigners - current location:', location);
+  console.log('useDesigners - pathParts:', pathParts);
   console.log('useDesigners - extracted workspaceSlug:', workspaceSlug);
+  
+  // Add effect to debug location changes
+  useEffect(() => {
+    console.log('useDesigners - useEffect triggered - location:', location, 'workspaceSlug:', workspaceSlug);
+  }, [location, workspaceSlug]);
   
   return useQuery<SelectDesigner[]>({
     queryKey: ["/api/designers", workspaceSlug],
     queryFn: async () => {
       const headers: Record<string, string> = {};
       
-      // Only add workspace header if we have a workspace slug from URL
-      if (workspaceSlug) {
+      // Always try to add workspace header if we have a workspace slug from URL
+      if (workspaceSlug && workspaceSlug.length > 0) {
         headers['x-workspace-slug'] = workspaceSlug;
-        console.log('useDesigners - sending header:', workspaceSlug);
+        console.log('useDesigners - sending header x-workspace-slug:', workspaceSlug);
       } else {
-        console.log('useDesigners - no workspace slug found, no header sent');
+        console.log('useDesigners - no valid workspace slug found, no header sent');
       }
+      
+      console.log('useDesigners - making request with headers:', headers);
       
       const response = await fetch("/api/designers", {
         headers,
@@ -33,7 +42,7 @@ export function useDesigners() {
       }
       return response.json();
     },
-    enabled: !!workspaceSlug, // Only enable query if we have a workspace slug
+    enabled: !!workspaceSlug && workspaceSlug.length > 0, // Only enable query if we have a valid workspace slug
   });
 }
 

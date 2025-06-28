@@ -53,7 +53,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - Comprehensive role-based permissions system with 4 roles:
   - **Owner**: Full access including workspace settings, billing, and member management
   - **Admin**: Can manage content and invite members, but not workspace settings
-  - **Member**: Can create and edit content, but limited deletion and management permissions
+  - **Member**: Can view designers directory, add designers, and use AI matchmaker. No access to lists or hiring by default
   - **Viewer**: Read-only access to workspace content
 - Advanced permission enforcement with 25+ granular permissions across:
   - Designer Management (create, edit, delete, view, export, import, bulk operations)
@@ -192,6 +192,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Fixed modal positioning issues - all dialogs now properly center on desktop, tablet, and mobile
 - June 28, 2025. Enhanced invitation system: allows multiple invitations to same email, graceful duplicate account handling, and auto-acceptance of pending invitations
 - June 28, 2025. Implemented comprehensive role-based permission system with 25+ granular permissions, server-side middleware enforcement, audit logging, and workspace member management interface
+- June 28, 2025. Updated Member role permissions: restricted access to lists and hiring by default, retained directory, matchmaker, and designer creation access
 
 ## User Preferences
 

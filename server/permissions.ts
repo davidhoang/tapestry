@@ -149,37 +149,50 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
   
   if (isMember) {
     return {
+      // Designer Management - Can view directory and add designers
       canCreateDesigners: true,
       canEditDesigners: true,
       canDeleteDesigners: false,
       canViewDesigners: true,
-      canExportDesigners: true,
-      canImportDesigners: true,
+      canExportDesigners: false,
+      canImportDesigners: false,
       canBulkEditDesigners: false,
-      canCreateLists: true,
-      canEditLists: true,
+      
+      // List Management - No access by default
+      canCreateLists: false,
+      canEditLists: false,
       canDeleteLists: false,
-      canViewLists: true,
-      canShareLists: true,
+      canViewLists: false,
+      canShareLists: false,
       canPublishLists: false,
-      canCreateJobs: true,
-      canEditJobs: true,
+      
+      // Hiring & Jobs - No access by default
+      canCreateJobs: false,
+      canEditJobs: false,
       canDeleteJobs: false,
-      canViewJobs: true,
+      canViewJobs: false,
       canManageJobCandidates: false,
-      canAccessAIMatching: true,
+      canAccessAIMatching: true, // Can use Matchmaker
+      
+      // Workspace Management - Limited access
       canInviteMembers: false,
       canRemoveMembers: false,
       canChangeRoles: false,
       canManageWorkspaceSettings: false,
       canDeleteWorkspace: false,
-      canViewMembersList: true,
+      canViewMembersList: false,
       canManageInvitations: false,
+      
+      // Data & Analytics - Limited access
       canAccessAnalytics: false,
-      canExportData: true,
+      canExportData: false,
       canViewAuditLogs: false,
+      
+      // AI Features - Basic access
       canUseAIEnrichment: true,
       canConfigureAI: false,
+      
+      // Billing & Admin - No access
       canManageBilling: false,
       canViewUsage: false,
     };

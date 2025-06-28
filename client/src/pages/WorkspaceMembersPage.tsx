@@ -57,7 +57,7 @@ const roleColors = {
 const roleDescriptions = {
   owner: "Full access to everything including workspace settings and billing",
   admin: "Can manage content and invite members, but can't change workspace settings",
-  member: "Can create and edit content, but can't delete or manage members",
+  member: "Can view designers directory, add designers, and use AI matchmaker. No access to lists or hiring by default",
   viewer: "Read-only access to workspace content",
 };
 
@@ -425,10 +425,10 @@ export default function WorkspaceMembersPage() {
                         )}
                         {role === 'member' && (
                           <>
-                            <div>• Create and edit designers</div>
-                            <div>• Create and edit lists</div>
-                            <div>• Use AI matching and jobs</div>
-                            <div>• Export data</div>
+                            <div>• View designers directory</div>
+                            <div>• Add and edit designers</div>
+                            <div>• Use AI matchmaker</div>
+                            <div>• No access to lists or hiring</div>
                           </>
                         )}
                         {role === 'viewer' && (

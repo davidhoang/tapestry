@@ -2485,15 +2485,61 @@ The Tapestry Team`;
   }));
 
   // Jobs API endpoints
-  app.get("/api/jobs", requireWorkspaceMembership(), requirePermission('canViewJobs'), withErrorHandler(async (req, res) => {
-    const context = (req as any).workspaceContext;
+  app.get("/api/jobs", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
 
-    const userJobs = await db.query.jobs.findMany({
-      where: eq(jobs.workspaceId, context.workspaceId),
-      orderBy: desc(jobs.createdAt),
-    });
+    try {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
 
-    res.json(userJobs);
+      const userJobs = await db.query.jobs.findMany({
+        where: eq(jobs.workspaceId, workspaceId),
+        orderBy: desc(jobs.createdAt),
+      });
+
+      res.json(userJobs);
+    } catch (error: any) {
+      console.error('Error fetching jobs:', error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
   }));
 
   app.post("/api/jobs", requireWorkspaceMembership(), requirePermission('canCreateJobs'), withErrorHandler(async (req, res) => {

@@ -373,10 +373,15 @@ export function requireWorkspaceMembership() {
         const workspaceSlug = req.headers['x-workspace-slug'] as string || 
                              req.query.workspaceSlug as string;
         
+        console.log('requireWorkspaceMembership - received headers:', req.headers);
+        console.log('requireWorkspaceMembership - workspaceSlug:', workspaceSlug);
+        
         if (workspaceSlug) {
           const workspace = await db.query.workspaces.findFirst({
             where: eq(workspaces.slug, workspaceSlug),
           });
+          
+          console.log('requireWorkspaceMembership - found workspace:', workspace);
           
           if (workspace) {
             workspaceId = workspace.id;

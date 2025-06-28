@@ -112,6 +112,22 @@ export const jobs = pgTable("jobs", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const recommendationFeedback = pgTable("recommendation_feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  jobId: integer("job_id").references(() => jobs.id, { onDelete: "cascade" }),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: "cascade" }).notNull(),
+  matchScore: integer("match_score").notNull(), // Original AI match score
+  feedbackType: text("feedback_type").notNull(), // "irrelevant_experience", "under_qualified", "over_qualified", "location_mismatch", "good_match"
+  rating: integer("rating"), // 1-5 scale optional rating
+  comments: text("comments"), // Optional user comments
+  jobDescription: text("job_description"), // Store job description for context
+  designerSnapshot: json("designer_snapshot"), // Store designer data at time of feedback
+  aiReasoning: text("ai_reasoning"), // Store original AI reasoning
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],
@@ -190,7 +206,7 @@ export const messageRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, { fields: [messages.conversationId], references: [conversations.id] }),
 }));
 
-export const jobRelations = relations(jobs, ({ one }) => ({
+export const jobRelations = relations(jobs, ({ one, many }) => ({
   user: one(users, {
     fields: [jobs.userId],
     references: [users.id],
@@ -198,6 +214,26 @@ export const jobRelations = relations(jobs, ({ one }) => ({
   workspace: one(workspaces, {
     fields: [jobs.workspaceId],
     references: [workspaces.id],
+  }),
+  feedback: many(recommendationFeedback),
+}));
+
+export const recommendationFeedbackRelations = relations(recommendationFeedback, ({ one }) => ({
+  user: one(users, {
+    fields: [recommendationFeedback.userId],
+    references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [recommendationFeedback.workspaceId],
+    references: [workspaces.id],
+  }),
+  job: one(jobs, {
+    fields: [recommendationFeedback.jobId],
+    references: [jobs.id],
+  }),
+  designer: one(designers, {
+    fields: [recommendationFeedback.designerId],
+    references: [designers.id],
   }),
 }));
 
@@ -255,3 +291,8 @@ export const insertJobSchema = createInsertSchema(jobs);
 export const selectJobSchema = createSelectSchema(jobs);
 export type InsertJob = typeof jobs.$inferInsert;
 export type SelectJob = typeof jobs.$inferSelect;
+
+export const insertRecommendationFeedbackSchema = createInsertSchema(recommendationFeedback);
+export const selectRecommendationFeedbackSchema = createSelectSchema(recommendationFeedback);
+export type InsertRecommendationFeedback = typeof recommendationFeedback.$inferInsert;
+export type SelectRecommendationFeedback = typeof recommendationFeedback.$inferSelect;

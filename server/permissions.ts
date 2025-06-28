@@ -3,7 +3,7 @@ import { db } from '@db';
 import { workspaceMembers, workspaces } from '@db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
-export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'member' | 'viewer';
 
 export interface PermissionContext {
   userId: number;
@@ -11,6 +11,7 @@ export interface PermissionContext {
   role: WorkspaceRole;
   isOwner: boolean;
   isAdmin: boolean;
+  isEditor: boolean;
   isMember: boolean;
   isViewer: boolean;
 }
@@ -68,6 +69,7 @@ export interface WorkspacePermissions {
 export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions {
   const isOwner = role === 'owner';
   const isAdmin = role === 'admin';
+  const isEditor = role === 'editor';
   const isMember = role === 'member';
   const isViewer = role === 'viewer';
   
@@ -142,6 +144,57 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
       canViewAuditLogs: false,
       canUseAIEnrichment: true,
       canConfigureAI: false,
+      canManageBilling: false,
+      canViewUsage: true,
+    };
+  }
+  
+  if (isEditor) {
+    return {
+      // Designer Management - Full access like Admin
+      canCreateDesigners: true,
+      canEditDesigners: true,
+      canDeleteDesigners: true,
+      canViewDesigners: true,
+      canExportDesigners: true,
+      canImportDesigners: true,
+      canBulkEditDesigners: true,
+      
+      // List Management - Full access
+      canCreateLists: true,
+      canEditLists: true,
+      canDeleteLists: true,
+      canViewLists: true,
+      canShareLists: true,
+      canPublishLists: true,
+      
+      // Hiring & Jobs - Full access
+      canCreateJobs: true,
+      canEditJobs: true,
+      canDeleteJobs: true,
+      canViewJobs: true,
+      canManageJobCandidates: true,
+      canAccessAIMatching: true,
+      
+      // Workspace Management - Limited (cannot change roles or workspace settings)
+      canInviteMembers: false,
+      canRemoveMembers: false,
+      canChangeRoles: false,
+      canManageWorkspaceSettings: false,
+      canDeleteWorkspace: false,
+      canViewMembersList: true,
+      canManageInvitations: false,
+      
+      // Data & Analytics
+      canAccessAnalytics: true,
+      canExportData: true,
+      canViewAuditLogs: false,
+      
+      // AI Features
+      canUseAIEnrichment: true,
+      canConfigureAI: false,
+      
+      // Billing & Admin
       canManageBilling: false,
       canViewUsage: true,
     };
@@ -289,8 +342,8 @@ async function getUserWorkspace(userId: number) {
     return null;
   }
   
-  // Prioritize by role: owner first, then admin (for personal workspaces), then by earliest joined
-  const roleOrder = { 'owner': 4, 'admin': 3, 'member': 2, 'viewer': 1 };
+  // Prioritize by role: owner first, then admin (for personal workspaces), then editor, member, viewer
+  const roleOrder = { 'owner': 5, 'admin': 4, 'editor': 3, 'member': 2, 'viewer': 1 };
   
   memberships.sort((a, b) => {
     const roleA = roleOrder[a.role as keyof typeof roleOrder] || 0;

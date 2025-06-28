@@ -222,8 +222,8 @@ export function registerRoutes(app: Express): Server {
       return null;
     }
     
-    // Prioritize by role: owner first, then admin (for personal workspaces), then by earliest joined
-    const roleOrder = { 'owner': 4, 'admin': 3, 'member': 2, 'viewer': 1 };
+    // Prioritize by role: owner first, then admin (for personal workspaces), then editor, member, viewer
+    const roleOrder = { 'owner': 5, 'admin': 4, 'editor': 3, 'member': 2, 'viewer': 1 };
     
     memberships.sort((a, b) => {
       const roleA = roleOrder[a.role as keyof typeof roleOrder] || 0;

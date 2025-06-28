@@ -50,10 +50,11 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 
 ### Workspace System
 - Multi-tenant architecture with workspace isolation
-- Comprehensive role-based permissions system with 4 roles:
-  - **Owner**: Full access including workspace settings, billing, and member management
-  - **Admin**: Can manage content and invite members, but not workspace settings
-  - **Member**: Can view designers directory, add designers, and use AI matchmaker. No access to lists or hiring by default
+- Comprehensive role-based permissions system with 5 roles:
+  - **Admin**: The main admin account (david@davidhoang.com) with full application access
+  - **Owner**: Users who create accounts and maintain their personal workspace with full workspace control
+  - **Editor**: Users added to a workspace with edit access granted by the Owner (enhanced member permissions)
+  - **Member**: Users added to a workspace with limited access (view designers, use AI matchmaker, restricted from lists/hiring)
   - **Viewer**: Read-only access to workspace content
 - Advanced permission enforcement with 25+ granular permissions across:
   - Designer Management (create, edit, delete, view, export, import, bulk operations)

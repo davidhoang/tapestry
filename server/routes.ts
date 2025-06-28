@@ -575,45 +575,15 @@ export function registerRoutes(app: Express): Server {
   }));
 
   // List routes with workspace support
-  app.post("/api/lists", requirePermission('canCreateLists'), withErrorHandler(async (req, res) => {
+  app.post("/api/lists", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     try {
-      let workspaceId: number | null = null;
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
       
-      // Try to get workspace from URL headers (set by frontend)
-      const workspaceSlug = req.headers['x-workspace-slug'] as string;
-      
-      if (workspaceSlug) {
-        const workspace = await db.query.workspaces.findFirst({
-          where: eq(workspaces.slug, workspaceSlug),
-        });
-        
-        if (workspace) {
-          workspaceId = workspace.id;
-        }
-      }
-      
-      // If no workspace slug header, fall back to user's default workspace
-      if (!workspaceId) {
-        const userWorkspace = await getUserWorkspace(req.user.id);
-        if (userWorkspace) {
-          workspaceId = userWorkspace.id;
-        }
-      }
-      
-      if (!workspaceId) {
-        return res.status(400).json({ error: "Workspace ID required" });
-      }
-      
-      // Verify user has access to this workspace
-      const membership = await db.query.workspaceMembers.findFirst({
-        where: and(
-          eq(workspaceMembers.userId, req.user.id),
-          eq(workspaceMembers.workspaceId, workspaceId)
-        ),
-      });
-      
-      if (!membership) {
-        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      // Check if user has permission to create lists
+      if (!permissions.canCreateLists) {
+        return res.status(403).json({ error: "Permission denied: Cannot create lists" });
       }
 
       const result = await db.transaction(async (tx) => {
@@ -623,7 +593,7 @@ export function registerRoutes(app: Express): Server {
           .values({
             ...listData,
             userId: req.user.id,
-            workspaceId: workspaceId,
+            workspaceId: workspaceContext.workspaceId,
           })
           .returning();
 

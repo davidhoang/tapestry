@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts } from "@db/schema";
-import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, asc, isNull } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
 import crypto from "crypto";
@@ -3048,14 +3048,17 @@ Please analyze this job and recommend the best matching designers.`
     }
 
     // Build where clause based on filters
-    let whereClause = eq(recommendationFeedback.workspaceId, context.workspaceId);
+    const baseWhere = eq(recommendationFeedback.workspaceId, context.workspaceId);
+    let whereClause;
     
     if (promptId && promptId !== 'all') {
       if (promptId === 'null') {
-        whereClause = and(whereClause, isNull(recommendationFeedback.systemPromptId));
+        whereClause = and(baseWhere, sql`${recommendationFeedback.systemPromptId} IS NULL`);
       } else {
-        whereClause = and(whereClause, eq(recommendationFeedback.systemPromptId, parseInt(promptId as string)));
+        whereClause = and(baseWhere, eq(recommendationFeedback.systemPromptId, parseInt(promptId as string)));
       }
+    } else {
+      whereClause = baseWhere;
     }
 
     const feedbackData = await db.query.recommendationFeedback.findMany({
@@ -3076,7 +3079,8 @@ Please analyze this job and recommend the best matching designers.`
       averageMatchScore: 0,
       averageRating: 0,
       commonConcerns: [] as string[],
-      recentTrends: [] as any[]
+      recentTrends: [] as any[],
+      promptPerformance: [] as any[]
     };
 
     if (feedbackData.length > 0) {
@@ -3118,6 +3122,52 @@ Please analyze this job and recommend the best matching designers.`
         total: count,
         recent: recentFeedback.filter(f => f.feedbackType === type).length
       }));
+
+      // Calculate system prompt performance if not filtering by specific prompt
+      if (!promptId || promptId === 'all') {
+        // Get all feedback grouped by system prompt
+        const allFeedback = await db.query.recommendationFeedback.findMany({
+          where: eq(recommendationFeedback.workspaceId, context.workspaceId),
+          orderBy: desc(recommendationFeedback.createdAt),
+          limit: 1000
+        });
+
+        // Get system prompts for name mapping
+        const systemPrompts = await db.query.aiSystemPrompts.findMany({
+          where: eq(aiSystemPrompts.workspaceId, context.workspaceId)
+        });
+
+        const promptGroups = new Map<number | null, any[]>();
+        
+        allFeedback.forEach(feedback => {
+          const promptId = feedback.systemPromptId;
+          if (!promptGroups.has(promptId)) {
+            promptGroups.set(promptId, []);
+          }
+          promptGroups.get(promptId)!.push(feedback);
+        });
+
+        analytics.promptPerformance = Array.from(promptGroups.entries()).map(([promptId, feedbacks]) => {
+          const promptName = promptId 
+            ? systemPrompts.find(p => p.id === promptId)?.name || `Prompt ${promptId}`
+            : 'Default Prompt (No Custom Prompt)';
+          
+          const goodMatches = feedbacks.filter(f => f.feedbackType === 'good_match').length;
+          const totalFeedback = feedbacks.length;
+          const successRate = totalFeedback > 0 ? Math.round((goodMatches / totalFeedback) * 100) : 0;
+          const averageScore = totalFeedback > 0 
+            ? Math.round(feedbacks.reduce((sum, f) => sum + f.matchScore, 0) / totalFeedback)
+            : 0;
+
+          return {
+            promptId,
+            promptName,
+            totalFeedback,
+            successRate,
+            averageScore
+          };
+        }).sort((a, b) => b.successRate - a.successRate); // Sort by success rate
+      }
     }
 
     res.json(analytics);

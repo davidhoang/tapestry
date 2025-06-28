@@ -145,6 +145,29 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - ⚠️ **DO NOT change from inline styles to CSS classes**
 - Minor UX improvements only - major rewrites prohibited
 
+## Modal Positioning System
+
+### Dialog Components
+- **Status**: ✅ WORKING - DO NOT REWRITE
+- **Implementation**: Radix UI Dialog with custom positioning
+- **Location**: `client/src/components/ui/dialog.tsx` and `client/src/components/ui/alert-dialog.tsx`
+- **Key Features**:
+  - Proper center positioning using `left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]`
+  - Consistent modal placement across desktop, tablet, and mobile
+  - Enhanced CSS rules in `client/src/index.css` for Radix dialog components
+
+### Critical Implementation Details
+- Uses standard CSS transform positioning for reliable centering
+- Enhanced CSS targeting `[data-radix-dialog-content]` ensures proper positioning
+- Simplified class structure prevents corner positioning issues
+- Safe permissions checking with optional chaining (`permissions?.canAccessNotes`)
+
+### Future Maintenance
+- ⚠️ **DO NOT rewrite dialog positioning CSS**
+- ⚠️ **DO NOT change back to complex responsive positioning**
+- ⚠️ **DO NOT remove enhanced CSS rules for Radix components**
+- Modal positioning tested and working across all screen sizes
+
 ## Changelog
 - June 27, 2025. Initial setup
 - June 27, 2025. Fixed login modal visibility and auto-dismiss UX
@@ -152,6 +175,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Fixed workspace access issues for all alpha users by creating personal workspaces
 - June 28, 2025. Implemented comprehensive workspace invitation system with token-based flow
 - June 28, 2025. Fixed workspace loading issue in settings page by adding missing /api/workspaces endpoint
+- June 28, 2025. Fixed modal positioning issues - all dialogs now properly center on desktop, tablet, and mobile
 
 ## User Preferences
 

@@ -82,8 +82,18 @@ export function useUser() {
 
   const registerMutation = useMutation<RequestResult, Error, InsertUser & { workspaceName?: string }>({
     mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      
+      // Auto-accept any pending workspace invitations after registration
+      try {
+        await fetch('/api/invitations/auto-accept', {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error('Failed to auto-accept invitations:', error);
+      }
     },
   });
 

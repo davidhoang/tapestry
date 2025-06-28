@@ -1095,11 +1095,47 @@ Please analyze this role and recommend the best matching designers.`
     }
 
     try {
+      // Check if user already exists
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.email, email)
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ 
+          success: false, 
+          error: "User already exists" 
+        });
+      }
+
+      // Get admin's workspace to invite to
+      const adminWorkspace = await getUserWorkspace(req.user.id);
+      if (!adminWorkspace) {
+        return res.status(403).json({ 
+          success: false, 
+          error: "Admin has no workspace access" 
+        });
+      }
+
+      // Generate invitation token
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+
+      // Create invitation record
+      await db.insert(workspaceInvitations).values({
+        workspaceId: adminWorkspace.id,
+        email,
+        role: 'member',
+        token,
+        invitedBy: req.user.id,
+        expiresAt,
+      });
+
       // Import sendEmail function
       const { sendEmail } = await import("./email");
       
-      // Create invite link pointing to registration page
-      const inviteLink = `${req.protocol}://${req.get('host')}/register`;
+      // Create invite link pointing to invitation page
+      const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
       const finalMessage = message.replace('[INVITE_LINK]', inviteLink);
       
       // Send the invite email
@@ -1871,7 +1907,7 @@ Please analyze this role and recommend the best matching designers.`
     const invitation = await db.query.workspaceInvitations.findFirst({
       where: and(
         eq(workspaceInvitations.token, token),
-        eq(workspaceInvitations.acceptedAt, null)
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
       ),
       with: {
         workspace: true,
@@ -1887,7 +1923,7 @@ Please analyze this role and recommend the best matching designers.`
     }
 
     // Check if user's email matches invitation
-    if (req.user.email !== invitation.email) {
+    if (req.user!.email !== invitation.email) {
       return res.status(403).json({ error: "This invitation is for a different email address" });
     }
 
@@ -1895,7 +1931,7 @@ Please analyze this role and recommend the best matching designers.`
     const existingMembership = await db.query.workspaceMembers.findFirst({
       where: and(
         eq(workspaceMembers.workspaceId, invitation.workspaceId),
-        eq(workspaceMembers.userId, req.user.id)
+        eq(workspaceMembers.userId, req.user!.id)
       ),
     });
 
@@ -1908,7 +1944,7 @@ Please analyze this role and recommend the best matching designers.`
       // Add user to workspace
       await tx.insert(workspaceMembers).values({
         workspaceId: invitation.workspaceId,
-        userId: req.user.id,
+        userId: req.user!.id,
         role: invitation.role,
       });
 
@@ -1976,7 +2012,7 @@ Please analyze this role and recommend the best matching designers.`
       where: and(
         eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
         eq(workspaceInvitations.email, email),
-        eq(workspaceInvitations.acceptedAt, null)
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
       ),
     });
 
@@ -2015,7 +2051,8 @@ ${inviteLink}
 
 This invitation will expire on ${expiresAt.toLocaleDateString()}.
 
-If you don't have an account yet, you'll be prompted to create one.`
+If you don't have an account yet, you'll be prompted to create one.`,
+        req.user!.email
       );
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError);
@@ -2196,6 +2233,81 @@ Please analyze this job and recommend the best matching designers.`
       console.error('Failed to parse AI response:', error);
       res.status(500).json({ error: "Failed to parse AI analysis" });
     }
+  }));
+
+  // Route to check pending invitations for an email
+  app.get("/api/invitations/check/:email", withErrorHandler(async (req, res) => {
+    const { email } = req.params;
+    
+    const pendingInvitations = await db.query.workspaceInvitations.findMany({
+      where: and(
+        eq(workspaceInvitations.email, decodeURIComponent(email)),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
+
+    res.json({ invitations: validInvitations });
+  }));
+
+  // Auto-accept pending invitations after registration
+  app.post("/api/invitations/auto-accept", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const pendingInvitations = await db.query.workspaceInvitations.findMany({
+      where: and(
+        eq(workspaceInvitations.email, req.user!.email),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
+    
+    if (validInvitations.length === 0) {
+      return res.json({ acceptedCount: 0 });
+    }
+
+    let acceptedCount = 0;
+    
+    for (const invitation of validInvitations) {
+      // Check if user is already a member of this workspace
+      const existingMembership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, invitation.workspaceId),
+          eq(workspaceMembers.userId, req.user!.id)
+        ),
+      });
+
+      if (!existingMembership) {
+        await db.transaction(async (tx) => {
+          // Add user to workspace
+          await tx.insert(workspaceMembers).values({
+            workspaceId: invitation.workspaceId,
+            userId: req.user!.id,
+            role: invitation.role,
+          });
+
+          // Mark invitation as accepted
+          await tx
+            .update(workspaceInvitations)
+            .set({ acceptedAt: new Date() })
+            .where(eq(workspaceInvitations.id, invitation.id));
+        });
+        
+        acceptedCount++;
+      }
+    }
+
+    res.json({ acceptedCount, workspaceNames: validInvitations.map(inv => inv.workspace.name) });
   }));
 
   const httpServer = createServer(app);

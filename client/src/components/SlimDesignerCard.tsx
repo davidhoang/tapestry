@@ -129,14 +129,15 @@ export default function SlimDesignerCard({
 
       {/* Feedback Button */}
       {showFeedback && (
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex flex-col gap-1">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setFeedbackModalOpen(true)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2 text-xs gap-1"
           >
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare className="h-3 w-3" />
+            Feedback
           </Button>
         </div>
       )}

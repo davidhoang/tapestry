@@ -18,10 +18,7 @@ interface EmailParams {
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   const msg = {
     to: params.to,
-    from: {
-      email: params.from,
-      name: "Tapestry Team",
-    },
+    from: params.from,
     subject: params.subject,
     html: params.html || params.text,
     text: params.text,

@@ -408,6 +408,7 @@ export default function ProfilePage() {
                     </DialogContent>
                   </Dialog>
                 )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

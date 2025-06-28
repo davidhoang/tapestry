@@ -8,6 +8,7 @@ import { useLocation, useParams } from "wouter";
 import { useState } from "react";
 import { getDesignerCoverImage } from "@/utils/coverImages";
 import { slugify } from "@/utils/slugify";
+import { useWorkspacePermissions } from "@/hooks/use-permissions";
 
 interface DesignerCardProps {
   designer: SelectDesigner;
@@ -33,6 +34,7 @@ export default function DesignerCard({
   const [, setLocation] = useLocation();
   const { workspaceSlug } = useParams();
   const [isSkillsExpanded, setIsSkillsExpanded] = useState(false);
+  const permissions = useWorkspacePermissions(workspaceSlug);
   
   // Parse skills string into array and check if skills overflow one line
   const skillsArray = (designer.skills && typeof designer.skills === 'string') 
@@ -90,7 +92,7 @@ export default function DesignerCard({
           )}
           
           {/* Open to Roles badge - positioned below cover image */}
-          {designer.available && (
+          {permissions.canAccessOpenToRoles && designer.available && (
             <div className="absolute -bottom-2 right-3 z-10">
               <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-200 shadow-sm">
                 Open to Roles

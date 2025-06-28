@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDesigners, useCreateDesigner, useUpdateDesigner, useDeleteDesigners } from "@/hooks/use-designer";
 import { useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
+import { useWorkspacePermissions } from "@/hooks/use-permissions";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import DesignerCard from "@/components/DesignerCard";
@@ -110,6 +111,7 @@ export default function DirectoryPage() {
   const { workspaceSlug } = useParams();
   const { data: designers, isLoading } = useDesigners();
   const deleteDesigners = useDeleteDesigners();
+  const permissions = useWorkspacePermissions(workspaceSlug);
   const [searchTerm, setSearchTerm] = useState("");
   const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -867,61 +869,65 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ''}${currentValues.a
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Notes</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAISuggestNotes(field)}
-                      disabled={isGeneratingNotes}
-                    >
-                      {isGeneratingNotes ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          AI suggest
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <FormControl>
-                    <MarkdownEditor
-                      value={field.value}
-                      onChange={(value) => field.onChange(value || '')}
-                      data-color-mode="light"
-                      preview="edit"
-                      height={200}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {permissions.canAccessNotes && (
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Notes</FormLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAISuggestNotes(field)}
+                        disabled={isGeneratingNotes}
+                      >
+                        {isGeneratingNotes ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            AI suggest
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <FormControl>
+                      <MarkdownEditor
+                        value={field.value}
+                        onChange={(value) => field.onChange(value || '')}
+                        data-color-mode="light"
+                        preview="edit"
+                        height={200}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-            <FormField
-              control={form.control}
-              name="available"
-              render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel className="!mt-0">Open to Roles</FormLabel>
-                </FormItem>
-              )}
-            />
+            {permissions.canAccessOpenToRoles && (
+              <FormField
+                control={form.control}
+                name="available"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Open to Roles</FormLabel>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex flex-col space-y-3 sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-2">
               <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancel</Button>

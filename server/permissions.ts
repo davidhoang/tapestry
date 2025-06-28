@@ -360,9 +360,15 @@ export function requireWorkspaceMembership() {
     const user = req.user as any;
     
     // Try to get workspace ID from various sources
-    let workspaceId = parseInt(req.params.workspaceId) || 
-                     parseInt(req.body.workspaceId) || 
-                     parseInt(req.query.workspaceId as string);
+    let workspaceId = 0;
+    
+    if (req.params.workspaceId) {
+      workspaceId = parseInt(req.params.workspaceId);
+    } else if (req.body.workspaceId) {
+      workspaceId = parseInt(req.body.workspaceId);
+    } else if (req.query.workspaceId) {
+      workspaceId = parseInt(req.query.workspaceId as string);
+    }
     
     // If no workspace ID, try to get workspace slug and convert it
     if (!workspaceId) {

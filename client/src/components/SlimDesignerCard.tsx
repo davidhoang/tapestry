@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Star, MessageSquare } from "lucide-react";
+import { Star, MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
 import RecommendationFeedbackModal from "./RecommendationFeedbackModal";
 
 interface Designer {
@@ -53,6 +53,7 @@ export default function SlimDesignerCard({
 }: SlimDesignerCardProps) {
   const { designer, matchScore, reasoning, matchedSkills, concerns } = match;
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [initialFeedbackType, setInitialFeedbackType] = useState<string | null>(null);
 
   return (
     <div className="flex items-center gap-4 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
@@ -127,17 +128,44 @@ export default function SlimDesignerCard({
         )}
       </div>
 
-      {/* Feedback Button */}
+      {/* Feedback Controls */}
       {showFeedback && (
-        <div className="flex-shrink-0 flex flex-col gap-1">
+        <div className="flex-shrink-0 flex gap-1">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => setFeedbackModalOpen(true)}
-            className="h-8 px-2 text-xs gap-1"
+            onClick={() => {
+              setInitialFeedbackType("good_match");
+              setFeedbackModalOpen(true);
+            }}
+            className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+            title="Good match"
           >
-            <MessageSquare className="h-3 w-3" />
-            Feedback
+            <ThumbsUp className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setInitialFeedbackType("irrelevant_experience");
+              setFeedbackModalOpen(true);
+            }}
+            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+            title="Poor match"
+          >
+            <ThumbsDown className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setInitialFeedbackType(null);
+              setFeedbackModalOpen(true);
+            }}
+            className="h-8 w-8 p-0"
+            title="Detailed feedback"
+          >
+            <MessageSquare className="h-4 w-4" />
           </Button>
         </div>
       )}
@@ -145,12 +173,18 @@ export default function SlimDesignerCard({
       {/* Feedback Modal */}
       <RecommendationFeedbackModal
         open={feedbackModalOpen}
-        onOpenChange={setFeedbackModalOpen}
+        onOpenChange={(open) => {
+          setFeedbackModalOpen(open);
+          if (!open) {
+            setInitialFeedbackType(null);
+          }
+        }}
         designerId={designer.id}
         designerName={designer.name}
         matchScore={Math.round(matchScore * 100)}
         aiReasoning={reasoning}
         jobId={jobId}
+        initialFeedbackType={initialFeedbackType}
       />
     </div>
   );

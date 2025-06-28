@@ -16,6 +16,7 @@ interface RecommendationFeedbackModalProps {
   matchScore: number;
   aiReasoning?: string;
   jobId?: number;
+  initialFeedbackType?: string | null;
 }
 
 interface FeedbackData {
@@ -35,13 +36,21 @@ export default function RecommendationFeedbackModal({
   designerName,
   matchScore,
   aiReasoning,
-  jobId
+  jobId,
+  initialFeedbackType
 }: RecommendationFeedbackModalProps) {
   const [feedbackType, setFeedbackType] = useState<string>("");
   const [rating, setRating] = useState<number | null>(null);
   const [comments, setComments] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Set initial feedback type when modal opens
+  useState(() => {
+    if (open && initialFeedbackType) {
+      setFeedbackType(initialFeedbackType);
+    }
+  });
 
   const submitFeedbackMutation = useMutation({
     mutationFn: async (feedbackData: FeedbackData) => {

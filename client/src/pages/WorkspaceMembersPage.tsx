@@ -43,8 +43,8 @@ interface WorkspaceInvitation {
 const roleIcons = {
   owner: Crown,
   admin: Shield,
+  editor: Shield,
   member: UserCheck,
-  viewer: Eye,
 };
 
 const roleColors = {

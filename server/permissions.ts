@@ -3,7 +3,7 @@ import { db } from '@db';
 import { workspaceMembers, workspaces } from '@db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
-export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'member' | 'viewer';
+export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'member';
 
 export interface PermissionContext {
   userId: number;
@@ -13,7 +13,6 @@ export interface PermissionContext {
   isAdmin: boolean;
   isEditor: boolean;
   isMember: boolean;
-  isViewer: boolean;
 }
 
 export interface WorkspacePermissions {
@@ -71,7 +70,7 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
   const isAdmin = role === 'admin';
   const isEditor = role === 'editor';
   const isMember = role === 'member';
-  const isViewer = role === 'viewer';
+
   
   if (isOwner) {
     return {
@@ -251,44 +250,6 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
     };
   }
   
-  if (isViewer) {
-    return {
-      canCreateDesigners: false,
-      canEditDesigners: false,
-      canDeleteDesigners: false,
-      canViewDesigners: true,
-      canExportDesigners: false,
-      canImportDesigners: false,
-      canBulkEditDesigners: false,
-      canCreateLists: false,
-      canEditLists: false,
-      canDeleteLists: false,
-      canViewLists: true,
-      canShareLists: false,
-      canPublishLists: false,
-      canCreateJobs: false,
-      canEditJobs: false,
-      canDeleteJobs: false,
-      canViewJobs: true,
-      canManageJobCandidates: false,
-      canAccessAIMatching: false,
-      canInviteMembers: false,
-      canRemoveMembers: false,
-      canChangeRoles: false,
-      canManageWorkspaceSettings: false,
-      canDeleteWorkspace: false,
-      canViewMembersList: true,
-      canManageInvitations: false,
-      canAccessAnalytics: false,
-      canExportData: false,
-      canViewAuditLogs: false,
-      canUseAIEnrichment: false,
-      canConfigureAI: false,
-      canManageBilling: false,
-      canViewUsage: false,
-    };
-  }
-  
   // Fallback - no permissions
   return {
     canCreateDesigners: false,
@@ -383,7 +344,7 @@ export async function getUserWorkspaceContext(userId: number, workspaceId: numbe
     isAdmin: role === 'admin',
     isEditor: role === 'editor',
     isMember: role === 'member',
-    isViewer: role === 'viewer',
+
   };
 }
 

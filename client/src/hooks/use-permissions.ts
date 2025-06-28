@@ -211,21 +211,21 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canImportDesigners: true,
       canBulkEditDesigners: false, // Members can't bulk edit
       
-      // List Management
-      canCreateLists: true,
-      canEditLists: true,
-      canDeleteLists: false, // Members can't delete lists
-      canViewLists: true,
-      canShareLists: true,
-      canPublishLists: false, // Members can't publish lists
+      // List Management - Members restricted from lists
+      canCreateLists: false,
+      canEditLists: false,
+      canDeleteLists: false,
+      canViewLists: false,
+      canShareLists: false,
+      canPublishLists: false,
       
-      // Hiring & Jobs
-      canCreateJobs: true,
-      canEditJobs: true,
-      canDeleteJobs: false, // Members can't delete jobs
-      canViewJobs: true,
-      canManageJobCandidates: false, // Members can't manage candidates
-      canAccessAIMatching: true,
+      // Hiring & Jobs - Members restricted from hiring
+      canCreateJobs: false,
+      canEditJobs: false,
+      canDeleteJobs: false,
+      canViewJobs: false,
+      canManageJobCandidates: false,
+      canAccessAIMatching: true, // Can still use Matchmaker
       
       // Workspace Management (very limited)
       canInviteMembers: false, // Members can't invite
@@ -252,7 +252,7 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       // Legacy permissions
       canAccessNotes: false,
       canAccessOpenToRoles: false,
-      canAccessHiring: true,
+      canAccessHiring: false, // Members cannot access hiring
       canManageWorkspace: false,
       
       role,

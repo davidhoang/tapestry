@@ -176,6 +176,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Implemented comprehensive workspace invitation system with token-based flow
 - June 28, 2025. Fixed workspace loading issue in settings page by adding missing /api/workspaces endpoint
 - June 28, 2025. Fixed modal positioning issues - all dialogs now properly center on desktop, tablet, and mobile
+- June 28, 2025. Enhanced invitation system: allows multiple invitations to same email, graceful duplicate account handling, and auto-acceptance of pending invitations
 
 ## User Preferences
 

@@ -8,6 +8,14 @@ import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
 import crypto from "crypto";
 import { enrichDesignerProfile, generateDesignerSkills, type DesignerEnrichmentData } from "./enrichment";
+import { 
+  requirePermission, 
+  requireWorkspaceMembership, 
+  requireRole,
+  getUserWorkspaceContext,
+  logPermissionAction,
+  type WorkspaceRole 
+} from "./permissions";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -1909,6 +1917,213 @@ Please analyze this role and recommend the best matching designers.`
         details: error.message 
       });
     }
+  }));
+
+  // Workspace member management routes
+  app.get("/api/workspaces/:workspaceId/members", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const context = (req as any).workspaceContext;
+    const permissions = (req as any).permissions;
+
+    if (!permissions.canViewMembersList) {
+      return res.status(403).json({ error: "Not authorized to view members list" });
+    }
+
+    const members = await db.query.workspaceMembers.findMany({
+      where: eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            email: true,
+            username: true,
+            profilePhotoUrl: true,
+            createdAt: true,
+          }
+        },
+      },
+      orderBy: [
+        sql`CASE WHEN ${workspaceMembers.role} = 'owner' THEN 1 
+                 WHEN ${workspaceMembers.role} = 'admin' THEN 2 
+                 WHEN ${workspaceMembers.role} = 'member' THEN 3 
+                 WHEN ${workspaceMembers.role} = 'viewer' THEN 4 
+                 ELSE 5 END`,
+        asc(workspaceMembers.joinedAt)
+      ],
+    });
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'view_members',
+      resource: 'workspace_members',
+    });
+
+    res.json(members.map(member => ({
+      id: member.id,
+      userId: member.userId,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      user: member.user,
+    })));
+  }));
+
+  app.patch("/api/workspaces/:workspaceId/members/:memberId/role", requirePermission('canChangeRoles'), withErrorHandler(async (req, res) => {
+    const { workspaceId, memberId } = req.params;
+    const { role } = req.body;
+    const context = (req as any).workspaceContext;
+
+    if (!['owner', 'admin', 'member', 'viewer'].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    // Can't change owner role
+    const targetMember = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+        eq(workspaceMembers.id, parseInt(memberId))
+      ),
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    if (targetMember.role === 'owner' && role !== 'owner') {
+      return res.status(400).json({ error: "Cannot change owner role" });
+    }
+
+    // Can't promote someone to owner unless you are owner
+    if (role === 'owner' && !context.isOwner) {
+      return res.status(403).json({ error: "Only owners can promote to owner" });
+    }
+
+    const [updatedMember] = await db
+      .update(workspaceMembers)
+      .set({ role })
+      .where(eq(workspaceMembers.id, parseInt(memberId)))
+      .returning();
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'change_role',
+      resource: 'workspace_member',
+      resourceId: parseInt(memberId),
+      metadata: { oldRole: targetMember.role, newRole: role },
+    });
+
+    res.json(updatedMember);
+  }));
+
+  app.delete("/api/workspaces/:workspaceId/members/:memberId", requirePermission('canRemoveMembers'), withErrorHandler(async (req, res) => {
+    const { workspaceId, memberId } = req.params;
+    const context = (req as any).workspaceContext;
+
+    // Can't remove owner
+    const targetMember = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+        eq(workspaceMembers.id, parseInt(memberId))
+      ),
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    if (targetMember.role === 'owner') {
+      return res.status(400).json({ error: "Cannot remove workspace owner" });
+    }
+
+    // Can't remove yourself unless transferring ownership
+    if (targetMember.userId === context.userId) {
+      return res.status(400).json({ error: "Cannot remove yourself from workspace" });
+    }
+
+    await db
+      .delete(workspaceMembers)
+      .where(eq(workspaceMembers.id, parseInt(memberId)));
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'remove_member',
+      resource: 'workspace_member',
+      resourceId: parseInt(memberId),
+      metadata: { removedRole: targetMember.role },
+    });
+
+    res.json({ success: true });
+  }));
+
+  app.get("/api/workspaces/:workspaceId/invitations", requirePermission('canManageInvitations'), withErrorHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const context = (req as any).workspaceContext;
+
+    const invitations = await db.query.workspaceInvitations.findMany({
+      where: and(
+        eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        inviter: {
+          columns: {
+            id: true,
+            email: true,
+            username: true,
+          }
+        },
+      },
+      orderBy: desc(workspaceInvitations.createdAt),
+    });
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'view_invitations',
+      resource: 'workspace_invitations',
+    });
+
+    res.json(invitations.map(invitation => ({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      createdAt: invitation.createdAt,
+      expiresAt: invitation.expiresAt,
+      invitedBy: invitation.inviter,
+    })));
+  }));
+
+  app.delete("/api/workspaces/:workspaceId/invitations/:invitationId", requirePermission('canManageInvitations'), withErrorHandler(async (req, res) => {
+    const { workspaceId, invitationId } = req.params;
+    const context = (req as any).workspaceContext;
+
+    const invitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
+        eq(workspaceInvitations.id, parseInt(invitationId))
+      ),
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found" });
+    }
+
+    await db
+      .delete(workspaceInvitations)
+      .where(eq(workspaceInvitations.id, parseInt(invitationId)));
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'cancel_invitation',
+      resource: 'workspace_invitation',
+      resourceId: parseInt(invitationId),
+      metadata: { email: invitation.email, role: invitation.role },
+    });
+
+    res.json({ success: true });
   }));
 
   // Workspace invitation routes

@@ -207,15 +207,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get user's default workspace
+  // Get user's default workspace (prioritize owned workspace)
   const getUserWorkspace = async (userId: number) => {
-    // Try to get workspace from request context first (if available)
+    // First try to find workspace they own
+    const ownedMember = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, userId),
+        eq(workspaceMembers.role, 'owner')
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+    
+    if (ownedMember) {
+      return ownedMember.workspace;
+    }
+    
+    // Fallback to first workspace they're member of
     const member = await db.query.workspaceMembers.findFirst({
       where: eq(workspaceMembers.userId, userId),
       with: {
         workspace: true,
       },
-      orderBy: [desc(workspaceMembers.joinedAt)], // Get most recent workspace
+      orderBy: [desc(workspaceMembers.joinedAt)],
     });
     return member?.workspace || null;
   };
@@ -246,6 +261,7 @@ export function registerRoutes(app: Express): Server {
     }
 
     const userWorkspace = await getUserWorkspace(req.user.id);
+    console.log(`POST /api/designers - User ${req.user.id} default workspace:`, userWorkspace ? `${userWorkspace.name} (${userWorkspace.slug})` : 'none');
     if (!userWorkspace) {
       return res.status(403).json({ error: "No workspace access" });
     }

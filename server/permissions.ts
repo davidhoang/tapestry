@@ -276,12 +276,28 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
 
 // Get user's first workspace (for fallback)
 async function getUserWorkspace(userId: number) {
+  // First try to find workspace they own
+  const ownedMember = await db.query.workspaceMembers.findFirst({
+    where: and(
+      eq(workspaceMembers.userId, userId),
+      eq(workspaceMembers.role, 'owner')
+    ),
+    with: {
+      workspace: true,
+    },
+  });
+  
+  if (ownedMember) {
+    return ownedMember.workspace;
+  }
+  
+  // Fallback to first workspace they're member of
   const member = await db.query.workspaceMembers.findFirst({
     where: eq(workspaceMembers.userId, userId),
     with: {
       workspace: true,
     },
-    orderBy: [desc(workspaceMembers.joinedAt)], // Get most recent workspace
+    orderBy: [desc(workspaceMembers.joinedAt)],
   });
   return member?.workspace || null;
 }

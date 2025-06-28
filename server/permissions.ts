@@ -346,7 +346,36 @@ export function requireWorkspaceMembership() {
     }
 
     const user = req.user as any;
-    const workspaceId = parseInt(req.params.workspaceId) || parseInt(req.body.workspaceId);
+    
+    // Try to get workspace ID from various sources
+    let workspaceId = parseInt(req.params.workspaceId) || 
+                     parseInt(req.body.workspaceId) || 
+                     parseInt(req.query.workspaceId as string);
+    
+    // If no workspace ID, try to get workspace slug and convert it
+    if (!workspaceId) {
+      const workspaceSlug = req.headers['x-workspace-slug'] as string || 
+                           req.query.workspaceSlug as string;
+      
+      if (workspaceSlug) {
+        // Get workspace by slug
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+    }
+    
+    // If still no workspace ID, try to get user's default workspace
+    if (!workspaceId) {
+      const userWorkspace = await getUserWorkspace(user.id);
+      if (userWorkspace) {
+        workspaceId = userWorkspace.id;
+      }
+    }
     
     if (!workspaceId) {
       return res.status(400).json({ error: "Workspace ID required" });

@@ -538,31 +538,22 @@ export function registerRoutes(app: Express): Server {
     res.json(result);
   }));
 
-  app.get("/api/lists", requirePermission('canViewLists'), async (req, res) => {
-
-    try {
-      const userWorkspace = await getUserWorkspace(req.user.id);
-      if (!userWorkspace) {
-        return res.status(403).json({ error: "No workspace access" });
-      }
-
-      const userLists = await db.query.lists.findMany({
-        where: eq(lists.workspaceId, userWorkspace.id),
-        orderBy: desc(lists.createdAt),
-        with: {
-          designers: {
-            with: {
-              designer: true,
-            },
+  app.get("/api/lists", requireWorkspaceMembership(), requirePermission('canViewLists'), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    
+    const userLists = await db.query.lists.findMany({
+      where: eq(lists.workspaceId, context.workspaceId),
+      orderBy: desc(lists.createdAt),
+      with: {
+        designers: {
+          with: {
+            designer: true,
           },
         },
-      });
-      res.json(userLists);
-    } catch (err) {
-      console.error('Error fetching lists:', err);
-      res.status(500).json({ error: "Failed to fetch lists" });
-    }
-  });
+      },
+    });
+    res.json(userLists);
+  }));
 
   // Update list route (modified to handle notes)
   app.put("/api/lists/:id", withErrorHandler(async (req, res) => {
@@ -2358,37 +2349,28 @@ The Tapestry Team`;
   }));
 
   // Jobs API endpoints
-  app.get("/api/jobs", requirePermission('canViewJobs'), withErrorHandler(async (req, res) => {
-
-    const userWorkspace = await getUserWorkspace(req.user.id);
-    if (!userWorkspace) {
-      return res.status(403).json({ error: "No workspace access" });
-    }
+  app.get("/api/jobs", requireWorkspaceMembership(), requirePermission('canViewJobs'), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
 
     const userJobs = await db.query.jobs.findMany({
-      where: eq(jobs.workspaceId, userWorkspace.id),
+      where: eq(jobs.workspaceId, context.workspaceId),
       orderBy: desc(jobs.createdAt),
     });
 
     res.json(userJobs);
   }));
 
-  app.post("/api/jobs", requirePermission('canCreateJobs'), withErrorHandler(async (req, res) => {
-
+  app.post("/api/jobs", requireWorkspaceMembership(), requirePermission('canCreateJobs'), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
     const { title, description } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ error: "Title and description are required" });
     }
 
-    const userWorkspace = await getUserWorkspace(req.user.id);
-    if (!userWorkspace) {
-      return res.status(403).json({ error: "No workspace access" });
-    }
-
     const [newJob] = await db.insert(jobs).values({
-      userId: req.user.id,
-      workspaceId: userWorkspace.id,
+      userId: context.userId,
+      workspaceId: context.workspaceId,
       title,
       description,
       status: "draft"

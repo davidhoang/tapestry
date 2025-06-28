@@ -2254,6 +2254,40 @@ Please analyze this job and recommend the best matching designers.`
     res.json({ invitations: validInvitations });
   }));
 
+  // Get user's workspaces
+  app.get("/api/workspaces", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspaces = await db.query.workspaceMembers.findMany({
+      where: eq(workspaceMembers.userId, req.user.id),
+      with: {
+        workspace: {
+          with: {
+            owner: true,
+          },
+        },
+      },
+      orderBy: asc(workspaceMembers.createdAt),
+    });
+
+    const workspacesWithDetails = userWorkspaces.map(member => ({
+      id: member.workspace.id,
+      name: member.workspace.name,
+      slug: member.workspace.slug,
+      description: member.workspace.description,
+      role: member.role,
+      joinedAt: member.createdAt,
+      owner: {
+        id: member.workspace.owner.id,
+        email: member.workspace.owner.email,
+      },
+    }));
+
+    res.json(workspacesWithDetails);
+  }));
+
   // Auto-accept pending invitations after registration
   app.post("/api/invitations/auto-accept", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {

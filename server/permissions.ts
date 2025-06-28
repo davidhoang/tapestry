@@ -359,24 +359,16 @@ export function requireWorkspaceMembership() {
       }
 
       const user = req.user as any;
-      let workspaceId = 0;
+      let workspaceId: number | null = null;
       
-      // Check URL parameters first
-      if (req.params.workspaceId && !isNaN(parseInt(req.params.workspaceId))) {
-        workspaceId = parseInt(req.params.workspaceId);
-      }
+      // Try to get workspace ID from various sources
+      const paramId = req.params.workspaceId ? parseInt(req.params.workspaceId) : null;
+      const bodyId = req.body.workspaceId ? parseInt(req.body.workspaceId) : null;
+      const queryId = req.query.workspaceId ? parseInt(req.query.workspaceId as string) : null;
       
-      // Check request body
-      if (!workspaceId && req.body.workspaceId && !isNaN(parseInt(req.body.workspaceId))) {
-        workspaceId = parseInt(req.body.workspaceId);
-      }
+      workspaceId = paramId || bodyId || queryId;
       
-      // Check query parameters
-      if (!workspaceId && req.query.workspaceId && !isNaN(parseInt(req.query.workspaceId as string))) {
-        workspaceId = parseInt(req.query.workspaceId as string);
-      }
-      
-      // If no workspace ID, try to get workspace slug and convert it
+      // If no workspace ID, try workspace slug
       if (!workspaceId) {
         const workspaceSlug = req.headers['x-workspace-slug'] as string || 
                              req.query.workspaceSlug as string;
@@ -392,7 +384,7 @@ export function requireWorkspaceMembership() {
         }
       }
       
-      // If still no workspace ID, try to get user's default workspace
+      // If still no workspace ID, get user's default workspace
       if (!workspaceId) {
         const userWorkspace = await getUserWorkspace(user.id);
         if (userWorkspace) {

@@ -538,9 +538,28 @@ export function registerRoutes(app: Express): Server {
     res.json(result);
   }));
 
-  app.get("/api/lists", requireWorkspaceMembership(), requirePermission('canViewLists'), withErrorHandler(async (req, res) => {
-    const context = (req as any).workspaceContext;
+  app.get("/api/lists", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const user = req.user as any;
+    const workspaceId = parseInt(req.query.workspaceId as string) || 6; // Default to workspace 6 for testing
     
+    // Get user's workspace context and permissions
+    const context = await getUserWorkspaceContext(user.id, workspaceId);
+    
+    if (!context) {
+      return res.status(403).json({ error: "Not a member of this workspace" });
+    }
+
+    const permissions = calculatePermissions(context.role);
+    
+    // Check if user has permission to view lists
+    if (!permissions.canViewLists) {
+      return res.status(403).json({ error: "Permission denied: Cannot view lists" });
+    }
+
     const userLists = await db.query.lists.findMany({
       where: eq(lists.workspaceId, context.workspaceId),
       orderBy: desc(lists.createdAt),

@@ -381,6 +381,7 @@ export async function getUserWorkspaceContext(userId: number, workspaceId: numbe
     role,
     isOwner: role === 'owner',
     isAdmin: role === 'admin',
+    isEditor: role === 'editor',
     isMember: role === 'member',
     isViewer: role === 'viewer',
   };

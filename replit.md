@@ -209,6 +209,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Fixed Lists API workspace context extraction: updated POST and GET /api/lists endpoints to use same workspace detection pattern as jobs and designers, resolving "Workspace ID required" error when creating lists
 - June 28, 2025. Completed Lists API workspace isolation: updated all list hooks (useLists, useCreateList, useUpdateList, useDeleteList) to extract workspace context from URL and send x-workspace-slug headers, ensuring proper workspace data isolation across all list operations
 - June 28, 2025. Fixed critical workspace assignment bug: resolved issue where users creating designers were assigned to invited workspaces instead of their default workspace. Updated getUserWorkspace functions to prioritize by role (owner > admin > member > viewer) then by earliest joined date, ensuring users create content in their personal workspaces by default
+- June 28, 2025. Implemented Editor role in permission system: added new role type between Admin and Member with full content access but limited workspace management permissions. Updated role hierarchy to owner > admin > editor > member > viewer for proper workspace selection priority
 
 ## User Preferences
 

@@ -20,6 +20,7 @@ import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
 import OnboardingProvider from "./components/OnboardingProvider";
+import InvitePage from "./pages/InvitePage";
 
 function App() {
   const { user, isLoading } = useUser();
@@ -61,6 +62,7 @@ function App() {
             <Switch>
               {!user && <Route path="/" component={HomePage} />}
               <Route path="/register" component={RegisterPage} />
+              <Route path="/invite/:token" component={InvitePage} />
               {user ? (
                 <>
                   <Route path="/" component={MatchmakerPage} />

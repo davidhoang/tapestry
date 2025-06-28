@@ -1824,6 +1824,215 @@ Please analyze this role and recommend the best matching designers.`
     }
   });
 
+  // Workspace invitation routes
+  app.get("/api/invitations/:token", withErrorHandler(async (req, res) => {
+    const { token } = req.params;
+    
+    const invitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.token, token),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+        inviter: true,
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found or already accepted" });
+    }
+
+    if (new Date() > invitation.expiresAt) {
+      return res.status(410).json({ error: "Invitation has expired" });
+    }
+
+    res.json({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      workspace: {
+        id: invitation.workspace.id,
+        name: invitation.workspace.name,
+        description: invitation.workspace.description,
+      },
+      invitedBy: invitation.inviter.email,
+      expiresAt: invitation.expiresAt,
+    });
+  }));
+
+  app.post("/api/invitations/:token/accept", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { token } = req.params;
+    
+    const invitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.token, token),
+        eq(workspaceInvitations.acceptedAt, null)
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found or already accepted" });
+    }
+
+    if (new Date() > invitation.expiresAt) {
+      return res.status(410).json({ error: "Invitation has expired" });
+    }
+
+    // Check if user's email matches invitation
+    if (req.user.email !== invitation.email) {
+      return res.status(403).json({ error: "This invitation is for a different email address" });
+    }
+
+    // Check if user is already a member of this workspace
+    const existingMembership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, invitation.workspaceId),
+        eq(workspaceMembers.userId, req.user.id)
+      ),
+    });
+
+    if (existingMembership) {
+      return res.status(409).json({ error: "You are already a member of this workspace" });
+    }
+
+    // Accept the invitation in a transaction
+    await db.transaction(async (tx) => {
+      // Add user to workspace
+      await tx.insert(workspaceMembers).values({
+        workspaceId: invitation.workspaceId,
+        userId: req.user.id,
+        role: invitation.role,
+      });
+
+      // Mark invitation as accepted
+      await tx
+        .update(workspaceInvitations)
+        .set({ acceptedAt: new Date() })
+        .where(eq(workspaceInvitations.id, invitation.id));
+    });
+
+    res.json({ 
+      success: true, 
+      workspace: invitation.workspace,
+      role: invitation.role,
+    });
+  }));
+
+  app.post("/api/workspaces/:workspaceId/invite", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { workspaceId } = req.params;
+    const { email, role = "member" } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Check if user has permission to invite to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+        eq(workspaceMembers.userId, req.user.id)
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      return res.status(403).json({ error: "Not authorized to invite users to this workspace" });
+    }
+
+    // Check if user is already a member
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (existingUser) {
+      const existingMembership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+          eq(workspaceMembers.userId, existingUser.id)
+        ),
+      });
+
+      if (existingMembership) {
+        return res.status(409).json({ error: "User is already a member of this workspace" });
+      }
+    }
+
+    // Check for existing pending invitation
+    const existingInvitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
+        eq(workspaceInvitations.email, email),
+        eq(workspaceInvitations.acceptedAt, null)
+      ),
+    });
+
+    if (existingInvitation) {
+      return res.status(409).json({ error: "An invitation for this email is already pending" });
+    }
+
+    // Generate invitation token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+
+    // Create invitation
+    const [invitation] = await db
+      .insert(workspaceInvitations)
+      .values({
+        workspaceId: parseInt(workspaceId),
+        email,
+        role,
+        token,
+        invitedBy: req.user.id,
+        expiresAt,
+      })
+      .returning();
+
+    // Send invitation email
+    try {
+      const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
+      await sendListEmail(
+        email,
+        `Invitation to join ${membership.workspace.name}`,
+        `You've been invited to join the workspace "${membership.workspace.name}" on Tapestry.
+        
+Click the link below to accept the invitation:
+${inviteLink}
+
+This invitation will expire on ${expiresAt.toLocaleDateString()}.
+
+If you don't have an account yet, you'll be prompted to create one.`
+      );
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.json({ 
+      success: true,
+      invitation: {
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        expiresAt: invitation.expiresAt,
+      },
+    });
+  }));
+
   // Jobs API endpoints
   app.get("/api/jobs", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {

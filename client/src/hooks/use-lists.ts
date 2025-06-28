@@ -1,14 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import type { SelectList } from "@db/schema";
 
 export function useLists() {
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+
+  const headers: Record<string, string> = {};
+  if (workspaceSlug && workspaceSlug.length > 0) {
+    headers["x-workspace-slug"] = workspaceSlug;
+  }
+
   return useQuery<SelectList[]>({
-    queryKey: ["/api/lists"],
+    queryKey: ["/api/lists", workspaceSlug],
+    queryFn: async () => {
+      const response = await fetch("/api/lists", {
+        headers,
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch lists");
+      return response.json();
+    },
+    enabled: !!workspaceSlug && workspaceSlug.length > 0,
   });
 }
 
 export function useCreateList() {
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
 
   return useMutation({
     mutationFn: async (data: { 
@@ -16,11 +38,17 @@ export function useCreateList() {
       description?: string; 
       designerIds?: number[];
     }) => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers["x-workspace-slug"] = workspaceSlug;
+      }
+
       const response = await fetch("/api/lists", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(data),
         credentials: "include",
       });
@@ -50,13 +78,16 @@ export function useCreateList() {
       return list;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
     },
   });
 }
 
 export function useUpdateList() {
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
 
   return useMutation({
     mutationFn: async (data: { id: number; name: string; description?: string }) => {
@@ -76,13 +107,16 @@ export function useUpdateList() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
     },
   });
 }
 
 export function useDeleteList() {
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
 
   return useMutation({
     mutationFn: async (listId: number) => {
@@ -98,7 +132,7 @@ export function useDeleteList() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
     },
   });
 }

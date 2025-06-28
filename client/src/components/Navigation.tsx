@@ -30,6 +30,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import AuthPage from "../pages/AuthPage";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -142,6 +143,9 @@ export default function Navigation() {
         </div>
         
         <div className="flex items-center space-x-4 ml-auto">
+          {/* Workspace Switcher */}
+          {user && <WorkspaceSwitcher className="mr-2" />}
+          
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
@@ -159,56 +163,11 @@ export default function Navigation() {
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      {userWorkspace?.name && (
-                        <p className="font-medium">
-                          {userWorkspace.owner?.email === user.email ? 'My Workspace' : userWorkspace.name}
-                        </p>
-                      )}
                       <p className="w-[200px] truncate text-sm text-muted-foreground">
                         {user.email}
                       </p>
                     </div>
                   </div>
-                  {workspaces && workspaces.length > 1 && (
-                    <>
-                      <div className="border-t"></div>
-                      <div className="p-1">
-                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                          Switch Workspace
-                        </div>
-                        {workspaces.map((workspace) => (
-                          <DropdownMenuItem
-                            key={workspace.id}
-                            asChild
-                            className="cursor-pointer"
-                          >
-                            <Link
-                              href={`/${workspace.slug}/directory`}
-                              className="flex items-center justify-between w-full px-2 py-1.5"
-                              onClick={() => {
-                                if (workspace.slug !== currentWorkspaceSlug) {
-                                  handleWorkspaceSwitch(workspace);
-                                }
-                              }}
-                            >
-                              <div className="flex items-center">
-                                <Building2 className="mr-2 h-4 w-4" />
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {workspace.owner?.email === user.email ? 'My Workspace' : workspace.name}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground capitalize">{workspace.role}</span>
-                                </div>
-                              </div>
-                              {workspace.slug === currentWorkspaceSlug && (
-                                <Check className="h-4 w-4" />
-                              )}
-                            </Link>
-                          </DropdownMenuItem>
-                        ))}
-                      </div>
-                    </>
-                  )}
                   <div className="border-t"></div>
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="flex items-center w-full">
@@ -270,6 +229,11 @@ export default function Navigation() {
                 <div className="flex flex-col space-y-4 mt-6">
                   {user ? (
                     <>
+                      {/* Mobile Workspace Switcher */}
+                      <div className="px-4 pb-2 border-b border-gray-200">
+                        <WorkspaceSwitcher className="w-full" />
+                      </div>
+                      
                       <Link
                         href={`/${workspaceSlug}/matchmaker`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${

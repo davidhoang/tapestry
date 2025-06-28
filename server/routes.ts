@@ -2992,12 +2992,21 @@ Please analyze this job and recommend the best matching designers.`
       return res.status(404).json({ error: "Job not found" });
     }
 
+    // Get active system prompt for the workspace
+    const activePrompt = await db.query.aiSystemPrompts.findFirst({
+      where: and(
+        eq(aiSystemPrompts.workspaceId, context.workspaceId),
+        eq(aiSystemPrompts.isActive, true)
+      )
+    });
+
     // Store feedback with contextual data
     const [feedback] = await db.insert(recommendationFeedback)
       .values({
         userId: context.userId,
         workspaceId: context.workspaceId,
         jobId: jobId || null,
+        systemPromptId: activePrompt?.id || null,
         designerId,
         matchScore,
         feedbackType,

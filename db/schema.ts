@@ -118,6 +118,7 @@ export const recommendationFeedback = pgTable("recommendation_feedback", {
   workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
   jobId: integer("job_id").references(() => jobs.id, { onDelete: "cascade" }),
   designerId: integer("designer_id").references(() => designers.id, { onDelete: "cascade" }).notNull(),
+  systemPromptId: integer("system_prompt_id").references(() => aiSystemPrompts.id, { onDelete: "set null" }),
   matchScore: integer("match_score").notNull(), // Original AI match score
   feedbackType: text("feedback_type").notNull(), // "irrelevant_experience", "under_qualified", "over_qualified", "location_mismatch", "good_match"
   rating: integer("rating"), // 1-5 scale optional rating
@@ -247,6 +248,10 @@ export const recommendationFeedbackRelations = relations(recommendationFeedback,
   designer: one(designers, {
     fields: [recommendationFeedback.designerId],
     references: [designers.id],
+  }),
+  systemPrompt: one(aiSystemPrompts, {
+    fields: [recommendationFeedback.systemPromptId],
+    references: [aiSystemPrompts.id],
   }),
 }));
 

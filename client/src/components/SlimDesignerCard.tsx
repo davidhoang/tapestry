@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, MessageSquare } from "lucide-react";
+import RecommendationFeedbackModal from "./RecommendationFeedbackModal";
 
 interface Designer {
   id: number;
@@ -36,15 +39,20 @@ interface SlimDesignerCardProps {
   isSelected?: boolean;
   onSelectionChange?: (selected: boolean) => void;
   showSelection?: boolean;
+  jobId?: number;
+  showFeedback?: boolean;
 }
 
 export default function SlimDesignerCard({ 
   match, 
   isSelected = false, 
   onSelectionChange, 
-  showSelection = false 
+  showSelection = false,
+  jobId,
+  showFeedback = true
 }: SlimDesignerCardProps) {
   const { designer, matchScore, reasoning, matchedSkills, concerns } = match;
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-4 p-3 border rounded-lg hover:bg-accent/50 transition-colors">

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -2935,6 +2935,314 @@ Please analyze this job and recommend the best matching designers.`
     }
 
     res.json({ acceptedCount, workspaceNames: validInvitations.map(inv => inv.workspace.name) });
+  }));
+
+  // RLHF Feedback Collection API endpoints
+  app.post("/api/recommendations/feedback", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const { 
+      designerId, 
+      jobId, 
+      matchScore, 
+      feedbackType, 
+      rating, 
+      comments, 
+      aiReasoning 
+    } = req.body;
+
+    const context = (req as any).workspaceContext;
+
+    if (!designerId || !feedbackType || matchScore === undefined) {
+      return res.status(400).json({ error: "Designer ID, feedback type, and match score are required" });
+    }
+
+    // Validate feedback type
+    const validFeedbackTypes = [
+      'irrelevant_experience', 
+      'under_qualified', 
+      'over_qualified', 
+      'location_mismatch', 
+      'good_match'
+    ];
+    
+    if (!validFeedbackTypes.includes(feedbackType)) {
+      return res.status(400).json({ error: "Invalid feedback type" });
+    }
+
+    // Get designer and job data for context
+    const [designer, job] = await Promise.all([
+      db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, context.workspaceId)
+        )
+      }),
+      jobId ? db.query.jobs.findFirst({
+        where: and(
+          eq(jobs.id, jobId),
+          eq(jobs.workspaceId, context.workspaceId)
+        )
+      }) : Promise.resolve(null)
+    ]);
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    if (jobId && !job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Store feedback with contextual data
+    const [feedback] = await db.insert(recommendationFeedback)
+      .values({
+        userId: context.userId,
+        workspaceId: context.workspaceId,
+        jobId: jobId || null,
+        designerId,
+        matchScore,
+        feedbackType,
+        rating: rating || null,
+        comments: comments || null,
+        jobDescription: job?.description || null,
+        designerSnapshot: {
+          name: designer.name,
+          title: designer.title,
+          skills: designer.skills,
+          location: designer.location,
+          level: designer.level,
+          description: designer.description
+        },
+        aiReasoning: aiReasoning || null
+      })
+      .returning();
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: context.workspaceId,
+      action: 'submit_feedback',
+      resource: 'recommendation_feedback',
+      resourceId: feedback.id,
+      metadata: { feedbackType, designerId, jobId }
+    });
+
+    res.json({ success: true, feedbackId: feedback.id });
+  }));
+
+  // Get feedback analytics for improving recommendations
+  app.get("/api/recommendations/feedback/analytics", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const permissions = (req as any).permissions;
+
+    if (!permissions.canAccessAnalytics) {
+      return res.status(403).json({ error: "Not authorized to view analytics" });
+    }
+
+    const feedbackData = await db.query.recommendationFeedback.findMany({
+      where: eq(recommendationFeedback.workspaceId, context.workspaceId),
+      orderBy: desc(recommendationFeedback.createdAt),
+      limit: 500 // Limit to recent feedback
+    });
+
+    const analytics = {
+      totalFeedback: feedbackData.length,
+      feedbackByType: {
+        irrelevant_experience: 0,
+        under_qualified: 0,
+        over_qualified: 0,
+        location_mismatch: 0,
+        good_match: 0
+      },
+      averageMatchScore: 0,
+      averageRating: 0,
+      commonConcerns: [] as string[],
+      recentTrends: [] as any[]
+    };
+
+    if (feedbackData.length > 0) {
+      feedbackData.forEach(feedback => {
+        if (analytics.feedbackByType.hasOwnProperty(feedback.feedbackType)) {
+          analytics.feedbackByType[feedback.feedbackType as keyof typeof analytics.feedbackByType]++;
+        }
+      });
+
+      analytics.averageMatchScore = Math.round(
+        feedbackData.reduce((sum, f) => sum + f.matchScore, 0) / feedbackData.length
+      );
+
+      const ratingsCount = feedbackData.filter(f => f.rating !== null).length;
+      if (ratingsCount > 0) {
+        analytics.averageRating = Math.round(
+          (feedbackData.reduce((sum, f) => sum + (f.rating || 0), 0) / ratingsCount) * 10
+        ) / 10;
+      }
+
+      const comments = feedbackData
+        .filter(f => f.comments && f.comments.trim().length > 0)
+        .map(f => f.comments!.toLowerCase());
+      
+      const concernKeywords = ['location', 'experience', 'skill', 'remote', 'salary', 'time zone', 'portfolio'];
+      analytics.commonConcerns = concernKeywords.filter(keyword =>
+        comments.some(comment => comment.includes(keyword))
+      );
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentFeedback = feedbackData.filter(f => 
+        f.createdAt && new Date(f.createdAt) >= thirtyDaysAgo
+      );
+
+      analytics.recentTrends = Object.entries(analytics.feedbackByType).map(([type, count]) => ({
+        type,
+        total: count,
+        recent: recentFeedback.filter(f => f.feedbackType === type).length
+      }));
+    }
+
+    res.json(analytics);
+  }));
+
+  // Enhanced recommendation endpoint that learns from feedback
+  app.post("/api/recommendations/enhanced", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const { roleDescription, jobId } = req.body;
+    const context = (req as any).workspaceContext;
+
+    if (!roleDescription || roleDescription.trim().length === 0) {
+      return res.status(400).json({ error: "Role description is required" });
+    }
+
+    const allDesigners = await db.query.designers.findMany({
+      where: eq(designers.workspaceId, context.workspaceId),
+      orderBy: desc(designers.createdAt),
+    });
+
+    if (allDesigners.length === 0) {
+      return res.json({ 
+        recommendations: [],
+        analysis: "No designers found in database to match against.",
+        jobId
+      });
+    }
+
+    // Get historical feedback for learning
+    const historicalFeedback = await db.query.recommendationFeedback.findMany({
+      where: eq(recommendationFeedback.workspaceId, context.workspaceId),
+      orderBy: desc(recommendationFeedback.createdAt),
+      limit: 100
+    });
+
+    const feedbackInsights = {
+      commonNegativeFeedback: historicalFeedback
+        .filter(f => ['irrelevant_experience', 'under_qualified', 'over_qualified', 'location_mismatch'].includes(f.feedbackType))
+        .slice(0, 20)
+        .map(f => ({
+          type: f.feedbackType,
+          reasoning: f.aiReasoning,
+          comments: f.comments,
+          designerData: f.designerSnapshot
+        })),
+      successfulMatches: historicalFeedback
+        .filter(f => f.feedbackType === 'good_match' && f.rating && f.rating >= 4)
+        .slice(0, 10)
+        .map(f => ({
+          reasoning: f.aiReasoning,
+          designerData: f.designerSnapshot,
+          rating: f.rating
+        }))
+    };
+
+    const designerSummaries = allDesigners.map(designer => ({
+      id: designer.id,
+      name: designer.name,
+      title: designer.title,
+      company: designer.company,
+      skills: designer.skills,
+      description: designer.description,
+      level: designer.level,
+      location: designer.location
+    }));
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "OpenAI API key not configured" });
+    }
+
+    const systemPrompt = `You are an expert design recruiter with access to historical feedback data. Learn from past recommendations to improve future matches.
+
+IMPORTANT FEEDBACK INSIGHTS:
+${feedbackInsights.commonNegativeFeedback.length > 0 ? `
+Common issues in past recommendations:
+${feedbackInsights.commonNegativeFeedback.map(f => `- ${f.type}: ${f.comments || 'No specific comments'}`).join('\n')}
+` : ''}
+
+${feedbackInsights.successfulMatches.length > 0 ? `
+Successful matches in the past:
+${feedbackInsights.successfulMatches.map(f => `- Rating ${f.rating}/5: Designer with skills ${JSON.stringify(f.designerData?.skills)} was successful`).join('\n')}
+` : ''}
+
+Based on feedback history, prioritize:
+1. Location alignment when specified
+2. Experience level matching
+3. Skill relevance
+4. Patterns from successful matches
+
+Return JSON response:
+{
+  "analysis": "Brief analysis including how feedback influenced recommendations",
+  "recommendations": [
+    {
+      "designerId": number,
+      "matchScore": number (0-100),
+      "reasoning": "Match explanation considering feedback",
+      "matchedSkills": ["skill1", "skill2"],
+      "concerns": "Potential concerns (optional)",
+      "confidenceLevel": "high|medium|low"
+    }
+  ]
+}
+
+Only include matches with score 70+ (raised due to feedback learning). Limit to 8 matches.`;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Role Description: ${roleDescription}
+
+Available Designers:
+${JSON.stringify(designerSummaries, null, 2)}
+
+Analyze this role and recommend matching designers, considering feedback patterns.`
+          }
+        ],
+        temperature: 0.2,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content;
+      if (!aiResponse) {
+        return res.status(500).json({ error: "Failed to get AI analysis" });
+      }
+
+      const analysis = JSON.parse(aiResponse);
+      
+      const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+        const designer = allDesigners.find(d => d.id === rec.designerId);
+        return { ...rec, designer };
+      }).filter((rec: any) => rec.designer);
+
+      res.json({
+        analysis: analysis.analysis,
+        recommendations: enrichedRecommendations,
+        roleDescription,
+        feedbackLearningApplied: true,
+        historicalInsightsCount: historicalFeedback.length
+      });
+    } catch (error) {
+      console.error('Enhanced recommendation error:', error);
+      res.status(500).json({ error: "Failed to generate enhanced recommendations" });
+    }
   }));
 
   const httpServer = createServer(app);

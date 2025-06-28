@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User, Users } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import AuthPage from "../pages/AuthPage";
 
@@ -149,6 +149,39 @@ export default function Navigation() {
                       </p>
                     </div>
                   </div>
+                  {workspaces && workspaces.length > 1 && (
+                    <>
+                      <div className="border-t"></div>
+                      <div className="p-1">
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          Switch Workspace
+                        </div>
+                        {workspaces.map((workspace) => (
+                          <DropdownMenuItem
+                            key={workspace.id}
+                            asChild
+                            className="cursor-pointer"
+                          >
+                            <Link
+                              href={`/${workspace.slug}/directory`}
+                              className="flex items-center justify-between w-full px-2 py-1.5"
+                            >
+                              <div className="flex items-center">
+                                <Building2 className="mr-2 h-4 w-4" />
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">{workspace.name}</span>
+                                  <span className="text-xs text-muted-foreground capitalize">{workspace.role}</span>
+                                </div>
+                              </div>
+                              {workspace.slug === currentWorkspaceSlug && (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    </>
+                  )}
                   <div className="border-t"></div>
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="flex items-center w-full">

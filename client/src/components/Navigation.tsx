@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import AuthPage from "../pages/AuthPage";
 

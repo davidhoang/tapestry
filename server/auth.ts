@@ -5,9 +5,9 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type SelectUser } from "@db/schema";
+import { users, workspaces, workspaceMembers, workspaceInvitations, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -124,9 +124,6 @@ export function setupAuth(app: Express) {
 
       if (existingUser) {
         // Check if user has pending invitations they should accept instead
-        const { sql } = await import('drizzle-orm');
-        const { workspaceInvitations } = await import('@db/schema');
-        
         const pendingInvitations = await db.query.workspaceInvitations.findMany({
           where: and(
             eq(workspaceInvitations.email, email),
@@ -182,6 +179,7 @@ export function setupAuth(app: Express) {
           name: finalWorkspaceName,
           slug: finalWorkspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
           description: `Personal workspace for ${email}`,
+          ownerId: newUser.id,
         })
         .returning();
 

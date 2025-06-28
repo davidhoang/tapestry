@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useUser } from "../hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,9 +63,14 @@ interface JobMatchResponse {
 }
 
 export default function HiringPage() {
+  const [location] = useLocation();
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Extract workspace slug from URL path
+  const pathParts = location.split('/');
+  const workspaceSlug = pathParts[1];
   
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showNewJobForm, setShowNewJobForm] = useState(false);
@@ -101,23 +107,40 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
   // Fetch user's jobs
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
-    queryKey: ["/api/jobs"],
+    queryKey: ["/api/jobs", workspaceSlug],
     queryFn: async () => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
       const response = await fetch("/api/jobs", {
+        headers,
         credentials: "include"
       });
       if (!response.ok) throw new Error("Failed to fetch jobs");
       return response.json();
     },
-    enabled: !!user,
+    enabled: !!user && !!workspaceSlug && workspaceSlug.length > 0,
   });
 
   // Create job mutation
   const createJobMutation = useMutation({
     mutationFn: async ({ title, description }: { title: string; description: string }) => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
       const response = await fetch("/api/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ title, description }),
       });
@@ -125,7 +148,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", workspaceSlug] });
       setShowNewJobForm(false);
       setNewJobTitle("");
       setNewJobDescription("");
@@ -142,9 +165,17 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   // Find matches mutation
   const findMatchesMutation = useMutation({
     mutationFn: async (jobId: number): Promise<JobMatchResponse> => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
       const response = await fetch("/api/jobs/matches", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ jobId }),
       });
@@ -171,9 +202,17 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   // Create list mutation
   const createListMutation = useMutation({
     mutationFn: async ({ name, designerIds }: { name: string; designerIds: number[] }) => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
       const response = await fetch("/api/lists", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ 
           name, 

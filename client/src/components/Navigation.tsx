@@ -99,12 +99,14 @@ export default function Navigation() {
               >
                 Directory
               </Link>
-              <Link
-                href={`/${workspaceSlug}/lists`}
-                className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-              >
-                Lists
-              </Link>
+              {permissions.canViewLists && (
+                <Link
+                  href={`/${workspaceSlug}/lists`}
+                  className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                >
+                  Lists
+                </Link>
+              )}
               {permissions.canAccessHiring && (
                 <Link
                   href={`/${workspaceSlug}/hiring`}
@@ -226,17 +228,19 @@ export default function Navigation() {
                       >
                         Directory
                       </Link>
-                      <Link
-                        href={`/${workspaceSlug}/lists`}
-                        className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === `/${workspaceSlug}/lists`
-                            ? "text-gray-900 bg-gray-100 font-bold" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Lists
-                      </Link>
+                      {permissions.canViewLists && (
+                        <Link
+                          href={`/${workspaceSlug}/lists`}
+                          className={`text-lg py-2 px-4 rounded transition-colors ${
+                            location === `/${workspaceSlug}/lists`
+                              ? "text-gray-900 bg-gray-100 font-bold" 
+                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                          }`}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          Lists
+                        </Link>
+                      )}
                       {permissions.canAccessHiring && (
                         <Link
                           href={`/${workspaceSlug}/hiring`}

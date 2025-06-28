@@ -113,7 +113,6 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
   if (isLoading || !currentWorkspace) {
     return (
       <Button variant="ghost" size="sm" disabled className={className}>
-        <Building2 className="w-4 h-4 mr-2" />
         <span className="hidden sm:inline">Loading...</span>
         <ChevronDown className="w-3 h-3 ml-2 opacity-50" />
       </Button>
@@ -127,7 +126,6 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className={`${className} justify-between min-w-[140px]`}>
           <div className="flex items-center">
-            <Building2 className="w-4 h-4 mr-2 text-gray-600" />
             <span className="hidden sm:inline font-medium truncate max-w-[120px]">
               {displayName}
             </span>
@@ -154,7 +152,6 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
             >
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center">
-                  <Building2 className="w-4 h-4 mr-3 text-gray-500" />
                   <div className="flex flex-col">
                     <span className="font-medium text-sm">
                       {workspaceName}

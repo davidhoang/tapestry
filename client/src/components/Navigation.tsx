@@ -27,6 +27,7 @@ import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Menu, X, Settings, User, Users, Building2, Check } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import AuthPage from "../pages/AuthPage";
 
 export default function Navigation() {
@@ -34,6 +35,17 @@ export default function Navigation() {
   const { user, logout } = useUser();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
+
+  // Handle workspace switching with visual feedback
+  const handleWorkspaceSwitch = (workspace: any) => {
+    const workspaceName = workspace.owner?.email === user?.email ? 'My Workspace' : workspace.name;
+    toast({
+      title: "Workspace switched",
+      description: `Now viewing ${workspaceName}`,
+      duration: 3000,
+    });
+  };
 
   // Listen for successful login to close modal
   useEffect(() => {
@@ -86,7 +98,7 @@ export default function Navigation() {
     <nav className="border-b border-gray-200 bg-nav-cream fixed top-0 left-0 right-0 z-50">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 mx-auto">
         <div className="flex items-center">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
+          <Link href={user ? `/${workspaceSlug}/directory` : "/"} className="mr-6 flex items-center space-x-2">
             <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
           </Link>
           {user && (
@@ -165,6 +177,11 @@ export default function Navigation() {
                             <Link
                               href={`/${workspace.slug}/directory`}
                               className="flex items-center justify-between w-full px-2 py-1.5"
+                              onClick={() => {
+                                if (workspace.slug !== currentWorkspaceSlug) {
+                                  handleWorkspaceSwitch(workspace);
+                                }
+                              }}
                             >
                               <div className="flex items-center">
                                 <Building2 className="mr-2 h-4 w-4" />

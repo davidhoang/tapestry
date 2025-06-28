@@ -195,6 +195,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Updated Member role permissions: restricted access to lists and hiring by default, retained directory, matchmaker, and designer creation access
 - June 28, 2025. Completed comprehensive permission enforcement: Members properly blocked from Lists API ("Permission denied: Cannot view lists"), while maintaining full access to Designer Directory, AI Matchmaker, and designer creation capabilities
 - June 28, 2025. Implemented workspace switching in profile dropdown: users can seamlessly switch between workspaces they have access to, with role indicators and current workspace highlighting
+- June 28, 2025. Updated home navigation link: "Tapestry" logo now routes authenticated users to their current workspace directory instead of admin page, creating more intuitive navigation flow
 
 ## User Preferences
 

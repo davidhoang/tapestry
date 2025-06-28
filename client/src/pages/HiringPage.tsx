@@ -372,9 +372,6 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Jobs List */}
         <div className="lg:col-span-1">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold font-serif">Job Postings</h2>
-          </div>
 
           {/* Jobs List */}
           <div className="space-y-3">

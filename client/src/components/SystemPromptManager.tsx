@@ -84,7 +84,7 @@ export default function SystemPromptManager() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts", workspaceSlug] });
       setIsCreateModalOpen(false);
       resetForm();
       toast({
@@ -105,7 +105,10 @@ export default function SystemPromptManager() {
     mutationFn: async ({ id, data }: { id: number; data: SystemPromptFormData }) => {
       const response = await fetch(`/api/system-prompts/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-workspace-slug": workspaceSlug,
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -115,7 +118,7 @@ export default function SystemPromptManager() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts", workspaceSlug] });
       setEditingPrompt(null);
       resetForm();
       toast({
@@ -136,6 +139,9 @@ export default function SystemPromptManager() {
     mutationFn: async (id: number) => {
       const response = await fetch(`/api/system-prompts/${id}`, {
         method: "DELETE",
+        headers: {
+          "x-workspace-slug": workspaceSlug,
+        },
       });
       if (!response.ok) {
         const error = await response.json();
@@ -144,7 +150,7 @@ export default function SystemPromptManager() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts", workspaceSlug] });
       toast({
         title: "System prompt deleted",
         description: "The system prompt has been deleted successfully.",
@@ -163,6 +169,9 @@ export default function SystemPromptManager() {
     mutationFn: async (id: number) => {
       const response = await fetch(`/api/system-prompts/${id}/activate`, {
         method: "POST",
+        headers: {
+          "x-workspace-slug": workspaceSlug,
+        },
       });
       if (!response.ok) {
         const error = await response.json();
@@ -171,7 +180,7 @@ export default function SystemPromptManager() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/system-prompts", workspaceSlug] });
       toast({
         title: "System prompt activated",
         description: "The system prompt is now active and will be used for AI matching.",

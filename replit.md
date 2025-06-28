@@ -198,6 +198,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Updated home navigation link: "Tapestry" logo now routes authenticated users to their current workspace directory instead of admin page, creating more intuitive navigation flow
 - June 28, 2025. Added visual feedback for workspace switching: toast notifications appear when users switch workspaces, showing "My Workspace" for owned workspaces and actual names for collaborative ones, providing clear context for the fast transition
 - June 28, 2025. Implemented comprehensive workspace management in profile settings: users can view all workspace memberships with role indicators, leave non-owned workspaces with confirmation dialogs, and backend API with owner protection and audit logging
+- June 28, 2025. Fixed critical workspace data isolation bug: resolved cross-workspace data leakage where users were seeing designers from other workspaces, implemented proper workspace context extraction from URL headers, added complete cache clearing on workspace switching, and workspace-based image cache-busting to prevent thumbnail cross-contamination
 
 ## User Preferences
 

@@ -9,6 +9,7 @@ import DesignerDetailsPage from "./pages/DesignerDetailsPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
 import HiringPage from "./pages/HiringPage";
+import FeedbackAnalyticsPage from "./pages/FeedbackAnalyticsPage";
 
 import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
@@ -84,6 +85,7 @@ function App() {
                   <Route path="/:workspaceSlug/lists" component={ListsPage} />
                   <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
                   <Route path="/:workspaceSlug/hiring" component={HiringPage} />
+                  <Route path="/:workspaceSlug/feedback-analytics" component={FeedbackAnalyticsPage} />
                 </>
               ) : (
                 <Route path="*" component={HomePage} />

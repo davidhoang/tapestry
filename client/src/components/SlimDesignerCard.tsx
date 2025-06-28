@@ -126,6 +126,31 @@ export default function SlimDesignerCard({
           </p>
         )}
       </div>
+
+      {/* Feedback Button */}
+      {showFeedback && (
+        <div className="flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFeedbackModalOpen(true)}
+            className="h-8 w-8 p-0"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      <RecommendationFeedbackModal
+        open={feedbackModalOpen}
+        onOpenChange={setFeedbackModalOpen}
+        designerId={designer.id}
+        designerName={designer.name}
+        matchScore={Math.round(matchScore * 100)}
+        aiReasoning={reasoning}
+        jobId={jobId}
+      />
     </div>
   );
 }

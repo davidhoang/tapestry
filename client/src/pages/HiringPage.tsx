@@ -517,6 +517,8 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
                               handleToggleDesigner(match.designerId)
                             }
                             showSelection={true}
+                            jobId={selectedJob?.id}
+                            showFeedback={true}
                           />
                         ))}
                       </div>

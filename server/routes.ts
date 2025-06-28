@@ -346,13 +346,47 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const userWorkspace = await getUserWorkspace(req.user.id);
-      if (!userWorkspace) {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
         return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
       }
 
       const allDesigners = await db.query.designers.findMany({
-        where: eq(designers.workspaceId, userWorkspace.id),
+        where: eq(designers.workspaceId, workspaceId),
         orderBy: desc(designers.createdAt),
       });
       
@@ -376,14 +410,48 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const { slug } = req.params;
-      const userWorkspace = await getUserWorkspace(req.user.id);
-      if (!userWorkspace) {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
         return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
       }
 
       const designer = await db.query.designers.findFirst({
         where: and(
-          eq(designers.workspaceId, userWorkspace.id),
+          eq(designers.workspaceId, workspaceId),
           sql`LOWER(REPLACE(REPLACE(${designers.name}, ' ', '-'), '.', '')) = ${slug.toLowerCase()}`
         ),
       });

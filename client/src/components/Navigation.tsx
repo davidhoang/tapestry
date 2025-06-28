@@ -169,7 +169,9 @@ export default function Navigation() {
                               <div className="flex items-center">
                                 <Building2 className="mr-2 h-4 w-4" />
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-medium">{workspace.name}</span>
+                                  <span className="text-sm font-medium">
+                                    {workspace.owner?.email === user.email ? 'My Workspace' : workspace.name}
+                                  </span>
                                   <span className="text-xs text-muted-foreground capitalize">{workspace.role}</span>
                                 </div>
                               </div>

@@ -24,11 +24,17 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     },
     subject: params.subject,
     html: params.html || params.text,
+    text: params.text,
   };
 
   try {
-    await sgMail.send(msg);
+    const [response] = await sgMail.send(msg);
     console.log(`Email successfully sent to ${params.to}`);
+    console.log('SendGrid response:', {
+      statusCode: response.statusCode,
+      headers: response.headers,
+      messageId: response.headers['x-message-id']
+    });
     return true;
   } catch (error: any) {
     console.error('SendGrid email error:', error);

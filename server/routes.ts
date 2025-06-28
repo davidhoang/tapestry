@@ -1879,6 +1879,38 @@ Please analyze this role and recommend the best matching designers.`
     }
   });
 
+  // Test email endpoint for debugging
+  app.post("/api/test-email", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    try {
+      const { sendEmail } = await import("./email");
+      
+      await sendEmail({
+        to: email,
+        from: "david@davidhoang.com",
+        subject: "Test Email from Tapestry",
+        text: "This is a test email to verify SendGrid delivery.",
+        html: "<p>This is a test email to verify SendGrid delivery.</p>"
+      });
+
+      res.json({ success: true, message: "Test email sent successfully" });
+    } catch (error: any) {
+      console.error('Test email failed:', error);
+      res.status(500).json({ 
+        error: "Failed to send test email", 
+        details: error.message 
+      });
+    }
+  }));
+
   // Workspace invitation routes
   app.get("/api/invitations/:token", withErrorHandler(async (req, res) => {
     const { token } = req.params;

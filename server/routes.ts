@@ -2269,7 +2269,6 @@ Please analyze this job and recommend the best matching designers.`
           },
         },
       },
-      orderBy: asc(workspaceMembers.createdAt),
     });
 
     const workspacesWithDetails = userWorkspaces.map(member => ({
@@ -2278,7 +2277,7 @@ Please analyze this job and recommend the best matching designers.`
       slug: member.workspace.slug,
       description: member.workspace.description,
       role: member.role,
-      joinedAt: member.createdAt,
+      joinedAt: member.joinedAt,
       owner: {
         id: member.workspace.owner.id,
         email: member.workspace.owner.email,

@@ -2059,20 +2059,28 @@ Please analyze this role and recommend the best matching designers.`
 
     // Send invitation email
     try {
+      const { sendEmail } = await import("./email");
       const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
-      await sendListEmail(
-        email,
-        `Invitation to join ${membership.workspace.name}`,
-        `You've been invited to join the workspace "${membership.workspace.name}" on Tapestry.
-        
+      
+      const emailContent = `You've been invited to join the workspace "${membership.workspace.name}" on Tapestry.
+
 Click the link below to accept the invitation:
 ${inviteLink}
 
 This invitation will expire on ${expiresAt.toLocaleDateString()}.
 
-If you don't have an account yet, you'll be prompted to create one.`,
-        req.user!.email
-      );
+If you don't have an account yet, you'll be prompted to create one.
+
+Best regards,
+The Tapestry Team`;
+
+      await sendEmail({
+        to: email,
+        from: "david@davidhoang.com",
+        subject: `Invitation to join ${membership.workspace.name}`,
+        text: emailContent,
+        html: emailContent.replace(/\n/g, '<br>')
+      });
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError);
       // Don't fail the request if email fails

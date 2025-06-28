@@ -7,6 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TrendingUp, TrendingDown, Star, AlertTriangle, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 
+interface SystemPrompt {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
 interface FeedbackAnalytics {
   totalFeedback: number;
   feedbackByType: {
@@ -24,13 +30,45 @@ interface FeedbackAnalytics {
     total: number;
     recent: number;
   }>;
+  promptPerformance: Array<{
+    promptId: number | null;
+    promptName: string;
+    totalFeedback: number;
+    successRate: number;
+    averageScore: number;
+  }>;
 }
 
 export default function FeedbackAnalyticsDashboard() {
-  const { data: analytics, isLoading, error } = useQuery<FeedbackAnalytics>({
-    queryKey: ["/api/recommendations/feedback/analytics"],
+  const [location] = useLocation();
+  const [selectedPromptId, setSelectedPromptId] = useState<string>("all");
+  
+  // Extract workspace slug from URL
+  const workspaceSlug = location.split('/')[1];
+
+  // Fetch system prompts for filtering
+  const { data: systemPrompts = [] } = useQuery<SystemPrompt[]>({
+    queryKey: ["/api/system-prompts", workspaceSlug],
     queryFn: async () => {
-      const response = await fetch("/api/recommendations/feedback/analytics");
+      const response = await fetch("/api/system-prompts", {
+        headers: { "x-workspace-slug": workspaceSlug },
+      });
+      if (!response.ok) throw new Error("Failed to fetch system prompts");
+      return response.json();
+    },
+  });
+
+  const { data: analytics, isLoading, error } = useQuery<FeedbackAnalytics>({
+    queryKey: ["/api/recommendations/feedback/analytics", workspaceSlug, selectedPromptId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedPromptId !== "all") {
+        params.append("promptId", selectedPromptId);
+      }
+      
+      const response = await fetch(`/api/recommendations/feedback/analytics?${params}`, {
+        headers: { "x-workspace-slug": workspaceSlug },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch analytics");
       }
@@ -40,18 +78,24 @@ export default function FeedbackAnalyticsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="pb-2">
-              <div className="h-4 bg-muted rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 bg-muted rounded w-1/3 mb-2"></div>
-              <div className="h-3 bg-muted rounded w-full"></div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-6 bg-muted rounded w-48"></div>
+          <div className="h-10 bg-muted rounded w-64"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-1/3 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-full"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -91,6 +135,28 @@ export default function FeedbackAnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* System Prompt Filter */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">RLHF Analytics Dashboard</h2>
+        <div className="flex items-center gap-2">
+          <Settings className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedPromptId} onValueChange={setSelectedPromptId}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Filter by system prompt" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All System Prompts</SelectItem>
+              <SelectItem value="null">Default Prompt (No Custom Prompt)</SelectItem>
+              {systemPrompts.map((prompt) => (
+                <SelectItem key={prompt.id} value={prompt.id.toString()}>
+                  {prompt.name} {prompt.isActive && "(Active)"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Feedback */}
         <Card>
@@ -259,6 +325,46 @@ export default function FeedbackAnalyticsDashboard() {
             <p className="text-sm text-muted-foreground mt-3">
               Keywords frequently mentioned in feedback comments
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* System Prompt Performance */}
+      {analytics.promptPerformance && analytics.promptPerformance.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>System Prompt Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analytics.promptPerformance.map((prompt) => (
+                <div key={prompt.promptId || 'default'} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">{prompt.promptName}</h4>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={prompt.successRate >= 70 ? "default" : "secondary"}>
+                        {prompt.successRate}% Success Rate
+                      </Badge>
+                      <Badge variant="outline">
+                        {prompt.totalFeedback} feedback
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                    <div>
+                      <span className="font-medium">Average Match Score:</span> {prompt.averageScore}%
+                    </div>
+                    <div>
+                      <span className="font-medium">Total Recommendations:</span> {prompt.totalFeedback}
+                    </div>
+                  </div>
+                  <Progress 
+                    value={prompt.successRate} 
+                    className="mt-2 h-2"
+                  />
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -3041,13 +3041,25 @@ Please analyze this job and recommend the best matching designers.`
   app.get("/api/recommendations/feedback/analytics", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const context = (req as any).workspaceContext;
     const permissions = (req as any).permissions;
+    const { promptId } = req.query;
 
     if (!permissions.canAccessAnalytics) {
       return res.status(403).json({ error: "Not authorized to view analytics" });
     }
 
+    // Build where clause based on filters
+    let whereClause = eq(recommendationFeedback.workspaceId, context.workspaceId);
+    
+    if (promptId && promptId !== 'all') {
+      if (promptId === 'null') {
+        whereClause = and(whereClause, isNull(recommendationFeedback.systemPromptId));
+      } else {
+        whereClause = and(whereClause, eq(recommendationFeedback.systemPromptId, parseInt(promptId as string)));
+      }
+    }
+
     const feedbackData = await db.query.recommendationFeedback.findMany({
-      where: eq(recommendationFeedback.workspaceId, context.workspaceId),
+      where: whereClause,
       orderBy: desc(recommendationFeedback.createdAt),
       limit: 500 // Limit to recent feedback
     });

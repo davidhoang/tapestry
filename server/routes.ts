@@ -576,38 +576,76 @@ export function registerRoutes(app: Express): Server {
 
   // List routes with workspace support
   app.post("/api/lists", requirePermission('canCreateLists'), withErrorHandler(async (req, res) => {
-
-    const userWorkspace = await getUserWorkspace(req.user.id);
-    if (!userWorkspace) {
-      return res.status(403).json({ error: "No workspace access" });
-    }
-
-    const result = await db.transaction(async (tx) => {
-      const { designerIds, ...listData } = req.body;
-      const [list] = await tx
-        .insert(lists)
-        .values({
-          ...listData,
-          userId: req.user.id,
-          workspaceId: userWorkspace.id,
-        })
-        .returning();
-
-      // If designerIds are provided, add them to the list
-      if (designerIds?.length) {
-        await tx.insert(listDesigners)
-          .values(
-            designerIds.map((designerId: number) => ({
-              listId: list.id,
-              designerId,
-            }))
-          );
+    try {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(400).json({ error: "Workspace ID required" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
       }
 
-      return list;
-    });
+      const result = await db.transaction(async (tx) => {
+        const { designerIds, ...listData } = req.body;
+        const [list] = await tx
+          .insert(lists)
+          .values({
+            ...listData,
+            userId: req.user.id,
+            workspaceId: workspaceId,
+          })
+          .returning();
 
-    res.json(result);
+        // If designerIds are provided, add them to the list
+        if (designerIds?.length) {
+          await tx.insert(listDesigners)
+            .values(
+              designerIds.map((designerId: number) => ({
+                listId: list.id,
+                designerId,
+              }))
+            );
+        }
+
+        return list;
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error creating list:', error);
+      res.status(500).json({ error: "Failed to create list" });
+    }
   }));
 
   app.get("/api/lists", withErrorHandler(async (req, res) => {
@@ -615,35 +653,64 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const user = req.user as any;
-    const workspaceId = parseInt(req.query.workspaceId as string) || 6; // Default to workspace 6 for testing
-    
-    // Get user's workspace context and permissions
-    const context = await getUserWorkspaceContext(user.id, workspaceId);
-    
-    if (!context) {
-      return res.status(403).json({ error: "Not a member of this workspace" });
-    }
+    try {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Get user's workspace context and permissions
+      const context = await getUserWorkspaceContext(req.user.id, workspaceId);
+      
+      if (!context) {
+        return res.status(403).json({ error: "Not a member of this workspace" });
+      }
 
-    const permissions = calculatePermissions(context.role);
-    
-    // Check if user has permission to view lists
-    if (!permissions.canViewLists) {
-      return res.status(403).json({ error: "Permission denied: Cannot view lists" });
-    }
+      const permissions = calculatePermissions(context.role);
+      
+      // Check if user has permission to view lists
+      if (!permissions.canViewLists) {
+        return res.status(403).json({ error: "Permission denied: Cannot view lists" });
+      }
 
-    const userLists = await db.query.lists.findMany({
-      where: eq(lists.workspaceId, context.workspaceId),
-      orderBy: desc(lists.createdAt),
-      with: {
-        designers: {
-          with: {
-            designer: true,
+      const userLists = await db.query.lists.findMany({
+        where: eq(lists.workspaceId, workspaceId),
+        orderBy: desc(lists.createdAt),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
           },
         },
-      },
-    });
-    res.json(userLists);
+      });
+      res.json(userLists);
+    } catch (error: any) {
+      console.error('Error fetching lists:', error);
+      res.status(500).json({ error: "Failed to fetch lists" });
+    }
   }));
 
   // Update list route (modified to handle notes)

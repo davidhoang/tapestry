@@ -104,52 +104,48 @@ export default function Navigation() {
   return (
     <nav className="border-b border-gray-200 bg-nav-cream fixed top-0 left-0 right-0 z-50">
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 mx-auto">
-        {/* Left: Logo */}
+        {/* Left: Logo + Navigation Links */}
         <div className="flex items-center">
           <Link href={user ? `/${workspaceSlug}/directory` : "/"} className="mr-6 flex items-center space-x-2">
             <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
           </Link>
-        </div>
-
-        {/* Center: Navigation + Workspace Switcher */}
-        <div className="flex-1 flex items-center justify-center">
           {user && (
-            <div className="flex items-center space-x-6">
-              <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
+            <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
+              <Link
+                href={`/${workspaceSlug}/matchmaker`}
+                className={location === `/${workspaceSlug}/matchmaker` || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Matchmaker
+              </Link>
+              <Link
+                href={`/${workspaceSlug}/directory`}
+                className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Directory
+              </Link>
+              {permissions.canViewLists && (
                 <Link
-                  href={`/${workspaceSlug}/matchmaker`}
-                  className={location === `/${workspaceSlug}/matchmaker` || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                  href={`/${workspaceSlug}/lists`}
+                  className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
                 >
-                  Matchmaker
+                  Lists
                 </Link>
+              )}
+              {permissions.canAccessHiring && (
                 <Link
-                  href={`/${workspaceSlug}/directory`}
-                  className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                  href={`/${workspaceSlug}/hiring`}
+                  className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
                 >
-                  Directory
+                  Hiring
                 </Link>
-                {permissions.canViewLists && (
-                  <Link
-                    href={`/${workspaceSlug}/lists`}
-                    className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-                  >
-                    Lists
-                  </Link>
-                )}
-                {permissions.canAccessHiring && (
-                  <Link
-                    href={`/${workspaceSlug}/hiring`}
-                    className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-                  >
-                    Hiring
-                  </Link>
-                )}
-              </div>
-              
-              {/* Workspace Switcher in Center */}
-              <WorkspaceSwitcher className="ml-6" />
+              )}
             </div>
           )}
+        </div>
+
+        {/* Center: Workspace Switcher */}
+        <div className="flex-1 flex items-center justify-center">
+          {user && <WorkspaceSwitcher />}
         </div>
         
         {/* Right: User Menu */}

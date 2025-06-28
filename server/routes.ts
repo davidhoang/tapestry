@@ -3166,18 +3166,38 @@ Please analyze this job and recommend the best matching designers.`
       return res.status(500).json({ error: "OpenAI API key not configured" });
     }
 
-    const systemPrompt = `You are an expert design recruiter with access to historical feedback data. Learn from past recommendations to improve future matches.
+    // Get active system prompt for this workspace
+    const activePrompt = await db.query.aiSystemPrompts.findFirst({
+      where: and(
+        eq(aiSystemPrompts.workspaceId, context.workspaceId),
+        eq(aiSystemPrompts.isActive, true)
+      )
+    });
 
-IMPORTANT FEEDBACK INSIGHTS:
+    // Prepare feedback insights for injection into prompt
+    const feedbackInsightsText = `
 ${feedbackInsights.commonNegativeFeedback.length > 0 ? `
 Common issues in past recommendations:
 ${feedbackInsights.commonNegativeFeedback.map(f => `- ${f.type}: ${f.comments || 'No specific comments'}`).join('\n')}
-` : ''}
+` : 'No negative feedback patterns identified yet.'}
 
 ${feedbackInsights.successfulMatches.length > 0 ? `
 Successful matches in the past:
 ${feedbackInsights.successfulMatches.map(f => `- Rating ${f.rating}/5: Designer with skills ${JSON.stringify(f.designerData?.skills)} was successful`).join('\n')}
-` : ''}
+` : 'No successful match patterns identified yet.'}
+`.trim();
+
+    // Use custom system prompt if available, otherwise use default
+    let systemPrompt;
+    if (activePrompt) {
+      // Replace {feedbackInsights} placeholder with actual insights
+      systemPrompt = activePrompt.systemPrompt.replace('{feedbackInsights}', feedbackInsightsText);
+    } else {
+      // Default fallback prompt
+      systemPrompt = `You are an expert design recruiter with access to historical feedback data. Learn from past recommendations to improve future matches.
+
+IMPORTANT FEEDBACK INSIGHTS:
+${feedbackInsightsText}
 
 Based on feedback history, prioritize:
 1. Location alignment when specified
@@ -3201,6 +3221,7 @@ Return JSON response:
 }
 
 Only include matches with score 70+ (raised due to feedback learning). Limit to 8 matches.`;
+    }
 
     try {
       const completion = await openai.chat.completions.create({
@@ -3237,7 +3258,9 @@ Analyze this role and recommend matching designers, considering feedback pattern
         recommendations: enrichedRecommendations,
         roleDescription,
         feedbackLearningApplied: true,
-        historicalInsightsCount: historicalFeedback.length
+        historicalInsightsCount: historicalFeedback.length,
+        customPromptUsed: !!activePrompt,
+        promptName: activePrompt?.name
       });
     } catch (error) {
       console.error('Enhanced recommendation error:', error);

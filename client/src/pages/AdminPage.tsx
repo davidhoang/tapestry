@@ -569,6 +569,10 @@ export default function AdminPage() {
           <TabsContent value="rlhf-analytics">
             <FeedbackAnalyticsDashboard />
           </TabsContent>
+
+          <TabsContent value="system-prompts">
+            <SystemPromptManager />
+          </TabsContent>
         </Tabs>
       </div>
     </AdminRoute>

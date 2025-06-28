@@ -430,6 +430,25 @@ export default function MatchmakerPage() {
           </div>
         )}
       </div>
+      
+      {/* Feedback Modal */}
+      {selectedDesignerForFeedback && (
+        <RecommendationFeedbackModal
+          open={feedbackModalOpen}
+          onOpenChange={(open) => {
+            setFeedbackModalOpen(open);
+            if (!open) {
+              setSelectedDesignerForFeedback(null);
+              setInitialFeedbackType(null);
+            }
+          }}
+          designerId={selectedDesignerForFeedback.designer.id}
+          designerName={selectedDesignerForFeedback.designer.name}
+          matchScore={selectedDesignerForFeedback.matchScore}
+          aiReasoning={selectedDesignerForFeedback.reasoning}
+          initialFeedbackType={initialFeedbackType}
+        />
+      )}
     </div>
   );
 }

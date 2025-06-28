@@ -60,6 +60,7 @@ interface WorkspacePermissions {
   role: WorkspaceRole | null;
   isOwner: boolean;
   isAdmin: boolean;
+  isEditor: boolean;
   isMember: boolean;
   isViewer: boolean;
 }
@@ -259,39 +260,39 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       isOwner: false,
       isAdmin: false,
       isMember: true,
-      isViewer: false,
+      isEditor: false,
     };
   }
   
-  // Viewer has minimal read-only permissions
-  if (isViewer) {
+  // Editor has content management permissions but limited workspace management
+  if (isEditor) {
     return {
-      // Designer Management (read-only)
-      canCreateDesigners: false,
-      canEditDesigners: false,
-      canDeleteDesigners: false,
+      // Designer Management
+      canCreateDesigners: true,
+      canEditDesigners: true,
+      canDeleteDesigners: true,
       canViewDesigners: true,
-      canExportDesigners: false,
-      canImportDesigners: false,
-      canBulkEditDesigners: false,
+      canExportDesigners: true,
+      canImportDesigners: true,
+      canBulkEditDesigners: true,
       
-      // List Management (read-only)
-      canCreateLists: false,
-      canEditLists: false,
-      canDeleteLists: false,
+      // List Management
+      canCreateLists: true,
+      canEditLists: true,
+      canDeleteLists: true,
       canViewLists: true,
-      canShareLists: false,
-      canPublishLists: false,
+      canShareLists: true,
+      canPublishLists: true,
       
-      // Hiring & Jobs (read-only)
-      canCreateJobs: false,
-      canEditJobs: false,
-      canDeleteJobs: false,
+      // Hiring & Jobs
+      canCreateJobs: true,
+      canEditJobs: true,
+      canDeleteJobs: true,
       canViewJobs: true,
-      canManageJobCandidates: false,
-      canAccessAIMatching: false,
+      canManageJobCandidates: true,
+      canAccessAIMatching: true,
       
-      // Workspace Management (none)
+      // Workspace Management (limited)
       canInviteMembers: false,
       canRemoveMembers: false,
       canChangeRoles: false,
@@ -300,30 +301,30 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canViewMembersList: true,
       canManageInvitations: false,
       
-      // Data & Analytics (none)
-      canAccessAnalytics: false,
-      canExportData: false,
+      // Data & Analytics
+      canAccessAnalytics: true,
+      canExportData: true,
       canViewAuditLogs: false,
       
-      // AI Features (none)
-      canUseAIEnrichment: false,
+      // AI Features
+      canUseAIEnrichment: true,
       canConfigureAI: false,
       
-      // Billing & Admin (none)
+      // Billing & Admin
       canManageBilling: false,
       canViewUsage: false,
       
       // Legacy permissions
-      canAccessNotes: false,
-      canAccessOpenToRoles: false,
-      canAccessHiring: false,
+      canAccessNotes: true,
+      canAccessOpenToRoles: true,
+      canAccessHiring: true,
       canManageWorkspace: false,
       
       role,
       isOwner: false,
       isAdmin: false,
+      isEditor: true,
       isMember: false,
-      isViewer: true,
     };
   }
   
@@ -370,7 +371,7 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
     isOwner: false,
     isAdmin: false,
     isMember: false,
-    isViewer: false,
+    isEditor: false,
   };
 }
 

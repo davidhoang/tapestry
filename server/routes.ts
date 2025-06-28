@@ -208,11 +208,13 @@ export function registerRoutes(app: Express): Server {
 
   // Get user's default workspace
   const getUserWorkspace = async (userId: number) => {
+    // Try to get workspace from request context first (if available)
     const member = await db.query.workspaceMembers.findFirst({
       where: eq(workspaceMembers.userId, userId),
       with: {
         workspace: true,
       },
+      orderBy: [desc(workspaceMembers.joinedAt)], // Get most recent workspace
     });
     return member?.workspace || null;
   };

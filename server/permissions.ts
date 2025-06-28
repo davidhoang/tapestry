@@ -276,30 +276,35 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
 
 // Get user's first workspace (for fallback)
 async function getUserWorkspace(userId: number) {
-  // First try to find workspace they own
-  const ownedMember = await db.query.workspaceMembers.findFirst({
-    where: and(
-      eq(workspaceMembers.userId, userId),
-      eq(workspaceMembers.role, 'owner')
-    ),
-    with: {
-      workspace: true,
-    },
-  });
-  
-  if (ownedMember) {
-    return ownedMember.workspace;
-  }
-  
-  // Fallback to first workspace they're member of
-  const member = await db.query.workspaceMembers.findFirst({
+  // Get all memberships ordered by role priority (owner > admin > member > viewer)
+  const memberships = await db.query.workspaceMembers.findMany({
     where: eq(workspaceMembers.userId, userId),
     with: {
       workspace: true,
     },
     orderBy: [desc(workspaceMembers.joinedAt)],
   });
-  return member?.workspace || null;
+  
+  if (!memberships.length) {
+    return null;
+  }
+  
+  // Prioritize by role: owner first, then admin (for personal workspaces), then by earliest joined
+  const roleOrder = { 'owner': 4, 'admin': 3, 'member': 2, 'viewer': 1 };
+  
+  memberships.sort((a, b) => {
+    const roleA = roleOrder[a.role as keyof typeof roleOrder] || 0;
+    const roleB = roleOrder[b.role as keyof typeof roleOrder] || 0;
+    
+    if (roleA !== roleB) {
+      return roleB - roleA; // Higher role first
+    }
+    
+    // Same role, prefer earlier joined (original workspace)
+    return new Date(a.joinedAt || 0).getTime() - new Date(b.joinedAt || 0).getTime();
+  });
+  
+  return memberships[0].workspace;
 }
 
 // Get user's workspace membership and permissions

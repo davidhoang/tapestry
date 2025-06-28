@@ -155,18 +155,7 @@ export default function SlimDesignerCard({
           >
             <ThumbsDown className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setInitialFeedbackType(null);
-              setFeedbackModalOpen(true);
-            }}
-            className="h-8 w-8 p-0"
-            title="Detailed feedback"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </Button>
+
         </div>
       )}
 

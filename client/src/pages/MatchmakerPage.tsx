@@ -406,19 +406,7 @@ export default function MatchmakerPage() {
                             >
                               <ThumbsDown className="h-3 w-3" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedDesignerForFeedback(rec);
-                                setInitialFeedbackType(null);
-                                setFeedbackModalOpen(true);
-                              }}
-                              className="h-7 w-7 p-0"
-                              title="Detailed feedback"
-                            >
-                              <MessageSquare className="h-3 w-3" />
-                            </Button>
+
                           </div>
                         </div>
                       </div>

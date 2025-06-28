@@ -34,7 +34,6 @@ export default function Navigation() {
   const { user, logout } = useUser();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const permissions = useWorkspacePermissions();
 
   // Listen for successful login to close modal
   useEffect(() => {
@@ -64,8 +63,13 @@ export default function Navigation() {
     enabled: !!user,
   });
 
-  const userWorkspace = workspaces?.[0];
-  const workspaceSlug = userWorkspace?.slug || "david-hoang";
+  // Get current workspace from URL path
+  const currentWorkspaceSlug = location.split('/')[1] || "david-v-hoang";
+  const userWorkspace = workspaces?.find(w => w.slug === currentWorkspaceSlug) || workspaces?.[0];
+  const workspaceSlug = userWorkspace?.slug || "david-v-hoang";
+
+  // Update permissions to use current workspace context
+  const permissions = useWorkspacePermissions(currentWorkspaceSlug);
 
   const getUserInitials = () => {
     if (!user) return 'U';

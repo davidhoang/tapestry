@@ -9,6 +9,9 @@ export function useDesigners() {
   const pathParts = location.split('/');
   const workspaceSlug = pathParts[1]; // This will be undefined if not in workspace URL
   
+  console.log('useDesigners - current location:', location);
+  console.log('useDesigners - extracted workspaceSlug:', workspaceSlug);
+  
   return useQuery<SelectDesigner[]>({
     queryKey: ["/api/designers", workspaceSlug],
     queryFn: async () => {
@@ -17,6 +20,9 @@ export function useDesigners() {
       // Only add workspace header if we have a workspace slug from URL
       if (workspaceSlug) {
         headers['x-workspace-slug'] = workspaceSlug;
+        console.log('useDesigners - sending header:', workspaceSlug);
+      } else {
+        console.log('useDesigners - no workspace slug found, no header sent');
       }
       
       const response = await fetch("/api/designers", {

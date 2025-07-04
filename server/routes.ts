@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -3464,6 +3464,465 @@ Analyze this role and recommend matching designers, considering feedback pattern
     }
 
     res.json(activatedPrompt);
+  }));
+
+  // Portfolio Management API endpoints
+  // Get all portfolios for a designer
+  app.get("/api/designers/:id/portfolios", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const designerId = parseInt(req.params.id);
+
+    // Verify designer exists in workspace
+    const designer = await db.query.designers.findFirst({
+      where: and(
+        eq(designers.id, designerId),
+        eq(designers.workspaceId, context.workspaceId)
+      )
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    const portfoliosData = await db.query.portfolios.findMany({
+      where: eq(portfolios.designerId, designerId),
+      orderBy: desc(portfolios.updatedAt),
+      with: {
+        projects: {
+          orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)]
+        }
+      }
+    });
+
+    res.json(portfoliosData);
+  }));
+
+  // Get a single portfolio with projects
+  app.get("/api/portfolios/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: {
+        designer: true,
+        projects: {
+          orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)],
+          with: {
+            media: {
+              orderBy: asc(portfolioMedia.sortOrder)
+            }
+          }
+        }
+      }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    // Verify designer is in current workspace
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    res.json(portfolio);
+  }));
+
+  // Create a new portfolio
+  app.post("/api/portfolios", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { designerId, title, description, tagline, theme, primaryColor, isPublic } = req.body;
+
+    if (!designerId || !title) {
+      return res.status(400).json({ error: "Designer ID and title are required" });
+    }
+
+    // Verify designer exists in workspace
+    const designer = await db.query.designers.findFirst({
+      where: and(
+        eq(designers.id, designerId),
+        eq(designers.workspaceId, context.workspaceId)
+      )
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Generate unique slug
+    let slug = slugify(title);
+    let counter = 1;
+    while (true) {
+      const existingSlug = await db.query.portfolios.findFirst({
+        where: eq(portfolios.slug, slug)
+      });
+      if (!existingSlug) break;
+      slug = `${slugify(title)}-${counter}`;
+      counter++;
+    }
+
+    const [newPortfolio] = await db.insert(portfolios)
+      .values({
+        designerId,
+        title,
+        slug,
+        description,
+        tagline,
+        theme: theme || "modern",
+        primaryColor: primaryColor || "#C8944B",
+        isPublic: isPublic !== undefined ? isPublic : true,
+        settings: {
+          showContact: true,
+          showSocialLinks: true,
+          showResume: false,
+          showAvailability: true,
+          allowMessages: true,
+          requireApproval: false
+        }
+      })
+      .returning();
+
+    res.json(newPortfolio);
+  }));
+
+  // Update a portfolio
+  app.put("/api/portfolios/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+    const updates = req.body;
+
+    // Verify portfolio exists and user has access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Update slug if title changed
+    if (updates.title && updates.title !== portfolio.title) {
+      let slug = slugify(updates.title);
+      let counter = 1;
+      while (true) {
+        const existingSlug = await db.query.portfolios.findFirst({
+          where: and(
+            eq(portfolios.slug, slug),
+            ne(portfolios.id, portfolioId)
+          )
+        });
+        if (!existingSlug) break;
+        slug = `${slugify(updates.title)}-${counter}`;
+        counter++;
+      }
+      updates.slug = slug;
+    }
+
+    const [updatedPortfolio] = await db.update(portfolios)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(portfolios.id, portfolioId))
+      .returning();
+
+    res.json(updatedPortfolio);
+  }));
+
+  // Delete a portfolio
+  app.delete("/api/portfolios/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+
+    // Verify portfolio exists and user has access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await db.delete(portfolios)
+      .where(eq(portfolios.id, portfolioId));
+
+    res.json({ success: true });
+  }));
+
+  // Portfolio Projects API endpoints
+  // Get all projects for a portfolio
+  app.get("/api/portfolios/:id/projects", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+
+    // Verify portfolio access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const projects = await db.query.portfolioProjects.findMany({
+      where: eq(portfolioProjects.portfolioId, portfolioId),
+      orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)],
+      with: {
+        media: {
+          orderBy: asc(portfolioMedia.sortOrder)
+        }
+      }
+    });
+
+    res.json(projects);
+  }));
+
+  // Create a new project
+  app.post("/api/portfolios/:id/projects", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+    const { title, description, category, tags, content, projectUrl, clientName, isPublic, isFeatured } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: "Project title is required" });
+    }
+
+    // Verify portfolio access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Generate unique slug for project
+    let slug = slugify(title);
+    let counter = 1;
+    while (true) {
+      const existingSlug = await db.query.portfolioProjects.findFirst({
+        where: and(
+          eq(portfolioProjects.portfolioId, portfolioId),
+          eq(portfolioProjects.slug, slug)
+        )
+      });
+      if (!existingSlug) break;
+      slug = `${slugify(title)}-${counter}`;
+      counter++;
+    }
+
+    const [newProject] = await db.insert(portfolioProjects)
+      .values({
+        portfolioId,
+        title,
+        slug,
+        description,
+        content,
+        category,
+        tags: tags || [],
+        projectUrl,
+        clientName,
+        isPublic: isPublic !== undefined ? isPublic : true,
+        isFeatured: isFeatured || false,
+        sortOrder: 0
+      })
+      .returning();
+
+    res.json(newProject);
+  }));
+
+  // Update a project
+  app.put("/api/portfolios/:portfolioId/projects/:projectId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.portfolioId);
+    const projectId = parseInt(req.params.projectId);
+    const updates = req.body;
+
+    // Verify access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const project = await db.query.portfolioProjects.findFirst({
+      where: and(
+        eq(portfolioProjects.id, projectId),
+        eq(portfolioProjects.portfolioId, portfolioId)
+      )
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    // Update slug if title changed
+    if (updates.title && updates.title !== project.title) {
+      let slug = slugify(updates.title);
+      let counter = 1;
+      while (true) {
+        const existingSlug = await db.query.portfolioProjects.findFirst({
+          where: and(
+            eq(portfolioProjects.portfolioId, portfolioId),
+            eq(portfolioProjects.slug, slug),
+            ne(portfolioProjects.id, projectId)
+          )
+        });
+        if (!existingSlug) break;
+        slug = `${slugify(updates.title)}-${counter}`;
+        counter++;
+      }
+      updates.slug = slug;
+    }
+
+    const [updatedProject] = await db.update(portfolioProjects)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(portfolioProjects.id, projectId))
+      .returning();
+
+    res.json(updatedProject);
+  }));
+
+  // Delete a project
+  app.delete("/api/portfolios/:portfolioId/projects/:projectId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.portfolioId);
+    const projectId = parseInt(req.params.projectId);
+
+    // Verify access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await db.delete(portfolioProjects)
+      .where(and(
+        eq(portfolioProjects.id, projectId),
+        eq(portfolioProjects.portfolioId, portfolioId)
+      ));
+
+    res.json({ success: true });
+  }));
+
+  // Public portfolio view (no authentication required)
+  app.get("/api/public/portfolios/:slug", withErrorHandler(async (req, res) => {
+    const slug = req.params.slug;
+
+    const portfolio = await db.query.portfolios.findFirst({
+      where: and(
+        eq(portfolios.slug, slug),
+        eq(portfolios.isPublic, true),
+        eq(portfolios.isActive, true)
+      ),
+      with: {
+        designer: true,
+        projects: {
+          where: and(
+            eq(portfolioProjects.isPublic, true),
+            eq(portfolioProjects.status, "published")
+          ),
+          orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)],
+          with: {
+            media: {
+              orderBy: asc(portfolioMedia.sortOrder)
+            }
+          }
+        }
+      }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    // Track portfolio view
+    const userAgent = req.get('User-Agent') || '';
+    const viewerIp = req.ip || req.connection.remoteAddress || '';
+    const referrer = req.get('Referer') || '';
+
+    await db.insert(portfolioViews)
+      .values({
+        portfolioId: portfolio.id,
+        viewerIp,
+        userAgent,
+        referrer,
+        device: userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+      })
+      .catch(() => {}); // Ignore errors for view tracking
+
+    res.json(portfolio);
+  }));
+
+  // Submit portfolio inquiry
+  app.post("/api/public/portfolios/:slug/inquiries", withErrorHandler(async (req, res) => {
+    const slug = req.params.slug;
+    const { name, email, company, subject, message, phone, budget, timeline, projectType } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Name, email, and message are required" });
+    }
+
+    const portfolio = await db.query.portfolios.findFirst({
+      where: and(
+        eq(portfolios.slug, slug),
+        eq(portfolios.isPublic, true),
+        eq(portfolios.isActive, true)
+      )
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    const [inquiry] = await db.insert(portfolioInquiries)
+      .values({
+        portfolioId: portfolio.id,
+        name,
+        email,
+        company,
+        subject,
+        message,
+        phone,
+        budget,
+        timeline,
+        projectType
+      })
+      .returning();
+
+    res.json({ success: true, inquiryId: inquiry.id });
   }));
 
   const httpServer = createServer(app);

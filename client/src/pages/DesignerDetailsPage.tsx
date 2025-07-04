@@ -32,6 +32,7 @@ import {
 import SkillsInput from "@/components/SkillsInput";
 import { useToast } from "@/hooks/use-toast";
 import { getDesignerCoverImage } from "@/utils/coverImages";
+import PortfolioManager from "@/components/PortfolioManager";
 
 const EXPERIENCE_LEVELS = [
   "Mid-level",
@@ -614,6 +615,11 @@ export default function DesignerDetailsPage() {
                     </a>
                   )}
                 </div>
+              </div>
+
+              {/* Portfolio Management Section */}
+              <div className="border-t pt-12">
+                <PortfolioManager designer={designer} />
               </div>
             </>
           )}

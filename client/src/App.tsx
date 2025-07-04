@@ -13,6 +13,7 @@ import FeedbackAnalyticsPage from "./pages/FeedbackAnalyticsPage";
 
 import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
+import PublicPortfolioPage from "./pages/PublicPortfolioPage";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
@@ -28,7 +29,7 @@ function App() {
   const { user, isLoading } = useUser();
   const [, setLocation] = useLocation();
 
-  // Handle public list routes first
+  // Handle public routes first
   if (window.location.pathname.startsWith('/lists/')) {
     const listId = window.location.pathname.split('/')[2];
     if (listId) {
@@ -40,6 +41,19 @@ function App() {
             </div>
             <Footer />
           </div>
+          <Toaster />
+        </QueryClientProvider>
+      );
+    }
+  }
+
+  // Handle public portfolio routes
+  if (window.location.pathname.startsWith('/portfolio/')) {
+    const portfolioSlug = window.location.pathname.split('/')[2];
+    if (portfolioSlug) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <PublicPortfolioPage />
           <Toaster />
         </QueryClientProvider>
       );

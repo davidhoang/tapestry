@@ -141,6 +141,135 @@ export const aiSystemPrompts = pgTable("ai_system_prompts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const portfolios = pgTable("portfolios", {
+  id: serial("id").primaryKey(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  tagline: text("tagline"),
+  isPublic: boolean("is_public").default(true),
+  isActive: boolean("is_active").default(true),
+  theme: text("theme").default("modern"), // "modern", "minimal", "creative", "professional"
+  primaryColor: text("primary_color").default("#C8944B"),
+  customDomain: text("custom_domain"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  socialLinks: json("social_links").$type<{
+    website?: string;
+    linkedin?: string;
+    twitter?: string;
+    instagram?: string;
+    dribbble?: string;
+    behance?: string;
+    github?: string;
+  }>(),
+  contactInfo: json("contact_info").$type<{
+    email?: string;
+    phone?: string;
+    location?: string;
+    timezone?: string;
+    availableForWork?: boolean;
+    hourlyRate?: string;
+    preferredContact?: string;
+  }>(),
+  settings: json("settings").$type<{
+    showContact?: boolean;
+    showSocialLinks?: boolean;
+    showResume?: boolean;
+    showAvailability?: boolean;
+    allowMessages?: boolean;
+    requireApproval?: boolean;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const portfolioProjects = pgTable("portfolio_projects", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id, { onDelete: 'cascade' }).notNull(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  content: text("content"), // Rich text/markdown content
+  category: text("category"), // "web", "mobile", "branding", "illustration", etc.
+  tags: json("tags").$type<string[]>().default([]),
+  coverImageUrl: text("cover_image_url"),
+  status: text("status").default("published"), // "draft", "published", "archived"
+  isPublic: boolean("is_public").default(true),
+  isFeatured: boolean("is_featured").default(false),
+  sortOrder: integer("sort_order").default(0),
+  projectUrl: text("project_url"), // Live project URL
+  sourceUrl: text("source_url"), // GitHub/source code URL
+  clientName: text("client_name"),
+  projectDate: timestamp("project_date"),
+  duration: text("duration"), // "2 weeks", "3 months", etc.
+  technologies: json("technologies").$type<string[]>().default([]),
+  role: text("role"), // "Lead Designer", "UI/UX Designer", etc.
+  teamSize: text("team_size"),
+  challenges: text("challenges"),
+  solution: text("solution"),
+  results: text("results"),
+  testimonial: json("testimonial").$type<{
+    content?: string;
+    author?: string;
+    position?: string;
+    company?: string;
+    rating?: number;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const portfolioMedia = pgTable("portfolio_media", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id, { onDelete: 'cascade' }).notNull(),
+  projectId: integer("project_id").references(() => portfolioProjects.id, { onDelete: 'cascade' }),
+  filename: text("filename").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileType: text("file_type").notNull(), // "image", "video", "document", "audio"
+  mimeType: text("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  duration: integer("duration"), // For video/audio files
+  alt: text("alt"),
+  caption: text("caption"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const portfolioViews = pgTable("portfolio_views", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id, { onDelete: 'cascade' }).notNull(),
+  projectId: integer("project_id").references(() => portfolioProjects.id, { onDelete: 'cascade' }),
+  viewerIp: text("viewer_ip"),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  country: text("country"),
+  city: text("city"),
+  device: text("device"), // "desktop", "tablet", "mobile"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const portfolioInquiries = pgTable("portfolio_inquiries", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id, { onDelete: 'cascade' }).notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  company: text("company"),
+  subject: text("subject"),
+  message: text("message").notNull(),
+  phone: text("phone"),
+  budget: text("budget"),
+  timeline: text("timeline"),
+  projectType: text("project_type"),
+  status: text("status").default("new"), // "new", "read", "replied", "archived"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],
@@ -177,7 +306,7 @@ export const workspaceInvitationRelations = relations(workspaceInvitations, ({ o
   }),
 }));
 
-export const designerRelations = relations(designers, ({ one }) => ({
+export const designerRelations = relations(designers, ({ one, many }) => ({
   user: one(users, {
     fields: [designers.userId],
     references: [users.id],
@@ -186,6 +315,7 @@ export const designerRelations = relations(designers, ({ one }) => ({
     fields: [designers.workspaceId],
     references: [workspaces.id],
   }),
+  portfolios: many(portfolios),
 }));
 
 export const listRelations = relations(lists, ({ one, many }) => ({
@@ -266,6 +396,55 @@ export const aiSystemPromptRelations = relations(aiSystemPrompts, ({ one }) => (
   }),
 }));
 
+export const portfolioRelations = relations(portfolios, ({ one, many }) => ({
+  designer: one(designers, {
+    fields: [portfolios.designerId],
+    references: [designers.id],
+  }),
+  projects: many(portfolioProjects),
+  media: many(portfolioMedia),
+  views: many(portfolioViews),
+  inquiries: many(portfolioInquiries),
+}));
+
+export const portfolioProjectRelations = relations(portfolioProjects, ({ one, many }) => ({
+  portfolio: one(portfolios, {
+    fields: [portfolioProjects.portfolioId],
+    references: [portfolios.id],
+  }),
+  media: many(portfolioMedia),
+  views: many(portfolioViews),
+}));
+
+export const portfolioMediaRelations = relations(portfolioMedia, ({ one }) => ({
+  portfolio: one(portfolios, {
+    fields: [portfolioMedia.portfolioId],
+    references: [portfolios.id],
+  }),
+  project: one(portfolioProjects, {
+    fields: [portfolioMedia.projectId],
+    references: [portfolioProjects.id],
+  }),
+}));
+
+export const portfolioViewRelations = relations(portfolioViews, ({ one }) => ({
+  portfolio: one(portfolios, {
+    fields: [portfolioViews.portfolioId],
+    references: [portfolios.id],
+  }),
+  project: one(portfolioProjects, {
+    fields: [portfolioViews.projectId],
+    references: [portfolioProjects.id],
+  }),
+}));
+
+export const portfolioInquiryRelations = relations(portfolioInquiries, ({ one }) => ({
+  portfolio: one(portfolios, {
+    fields: [portfolioInquiries.portfolioId],
+    references: [portfolios.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -330,3 +509,28 @@ export const insertAiSystemPromptSchema = createInsertSchema(aiSystemPrompts);
 export const selectAiSystemPromptSchema = createSelectSchema(aiSystemPrompts);
 export type InsertAiSystemPrompt = typeof aiSystemPrompts.$inferInsert;
 export type SelectAiSystemPrompt = typeof aiSystemPrompts.$inferSelect;
+
+export const insertPortfolioSchema = createInsertSchema(portfolios);
+export const selectPortfolioSchema = createSelectSchema(portfolios);
+export type InsertPortfolio = typeof portfolios.$inferInsert;
+export type SelectPortfolio = typeof portfolios.$inferSelect;
+
+export const insertPortfolioProjectSchema = createInsertSchema(portfolioProjects);
+export const selectPortfolioProjectSchema = createSelectSchema(portfolioProjects);
+export type InsertPortfolioProject = typeof portfolioProjects.$inferInsert;
+export type SelectPortfolioProject = typeof portfolioProjects.$inferSelect;
+
+export const insertPortfolioMediaSchema = createInsertSchema(portfolioMedia);
+export const selectPortfolioMediaSchema = createSelectSchema(portfolioMedia);
+export type InsertPortfolioMedia = typeof portfolioMedia.$inferInsert;
+export type SelectPortfolioMedia = typeof portfolioMedia.$inferSelect;
+
+export const insertPortfolioViewSchema = createInsertSchema(portfolioViews);
+export const selectPortfolioViewSchema = createSelectSchema(portfolioViews);
+export type InsertPortfolioView = typeof portfolioViews.$inferInsert;
+export type SelectPortfolioView = typeof portfolioViews.$inferSelect;
+
+export const insertPortfolioInquirySchema = createInsertSchema(portfolioInquiries);
+export const selectPortfolioInquirySchema = createSelectSchema(portfolioInquiries);
+export type InsertPortfolioInquiry = typeof portfolioInquiries.$inferInsert;
+export type SelectPortfolioInquiry = typeof portfolioInquiries.$inferSelect;

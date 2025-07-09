@@ -83,12 +83,12 @@ export default function Navigation() {
   });
 
   // Get current workspace from URL path
-  const currentWorkspaceSlug = location.split('/')[1] || "david-v-hoang";
+  const currentWorkspaceSlug = location.split('/')[1] || "david-hoang";
   const userWorkspace = workspaces?.find(w => w.slug === currentWorkspaceSlug) || workspaces?.[0];
-  const workspaceSlug = userWorkspace?.slug || "david-v-hoang";
+  const workspaceSlug = userWorkspace?.slug || "david-hoang";
 
   // Update permissions to use current workspace context
-  const permissions = useWorkspacePermissions(currentWorkspaceSlug);
+  const permissions = useWorkspacePermissions(workspaceSlug);
 
   const getUserInitials = () => {
     if (!user) return 'U';
@@ -123,7 +123,17 @@ export default function Navigation() {
               >
                 Directory
               </Link>
-              {permissions.canViewLists && (
+              
+              {permissions?.canViewLists && (
+                <Link
+                  to={`/${workspaceSlug}/lists`}
+                  className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                >
+                  Lists
+                </Link>
+              )}
+              {/* Debug: Always show Lists for now */}
+              {!permissions?.canViewLists && (
                 <Link
                   to={`/${workspaceSlug}/lists`}
                   className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}

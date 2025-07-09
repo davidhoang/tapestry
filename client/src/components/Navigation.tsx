@@ -132,15 +132,6 @@ export default function Navigation() {
                   Lists
                 </Link>
               )}
-              {/* Debug: Always show Lists for now */}
-              {!permissions?.canViewLists && (
-                <Link
-                  to={`/${workspaceSlug}/lists`}
-                  className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-                >
-                  Lists
-                </Link>
-              )}
               {permissions.canAccessHiring && (
                 <Link
                   to={`/${workspaceSlug}/hiring`}

@@ -215,7 +215,7 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
     };
   }
   
-  // Member has limited permissions - can view designers, create designers, and use AI matchmaker
+  // Member has limited permissions - can view designers, create designers, use AI matchmaker, and access lists
   if (isMember) {
     return {
       canCreateDesigners: true,
@@ -225,11 +225,11 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canExportDesigners: true,
       canImportDesigners: true,
       canBulkEditDesigners: false,
-      canCreateLists: false,
-      canEditLists: false,
+      canCreateLists: true,
+      canEditLists: true,
       canDeleteLists: false,
-      canViewLists: false,
-      canShareLists: false,
+      canViewLists: true,
+      canShareLists: true,
       canPublishLists: false,
       canCreateJobs: false,
       canEditJobs: false,

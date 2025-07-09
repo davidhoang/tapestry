@@ -210,12 +210,12 @@ export function calculatePermissions(role: WorkspaceRole): WorkspacePermissions 
       canImportDesigners: false,
       canBulkEditDesigners: false,
       
-      // List Management - No access by default
-      canCreateLists: false,
-      canEditLists: false,
+      // List Management - Access restored for members
+      canCreateLists: true,
+      canEditLists: true,
       canDeleteLists: false,
-      canViewLists: false,
-      canShareLists: false,
+      canViewLists: true,
+      canShareLists: true,
       canPublishLists: false,
       
       // Hiring & Jobs - No access by default

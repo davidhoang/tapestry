@@ -176,7 +176,7 @@ export default function Navigation() {
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center w-full">
                       <User className="mr-2 h-4 w-4" />
-                      Profile Settings
+                      Profile
                     </Link>
                   </DropdownMenuItem>
                   {permissions?.canViewMembersList && (
@@ -295,7 +295,7 @@ export default function Navigation() {
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        Profile Settings
+                        Profile
                       </Link>
                       {user.isAdmin && (
                         <Link

@@ -262,10 +262,10 @@ export default function ProfilePage() {
       <Navigation />
       <div className="container mx-auto px-4 py-8 pt-24 max-w-2xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Profile Settings Card */}
+          {/* Profile Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Profile Settings</CardTitle>
+              <CardTitle>Profile</CardTitle>
               <CardDescription>
                 Manage your account settings and profile information
               </CardDescription>

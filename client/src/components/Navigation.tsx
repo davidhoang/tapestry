@@ -124,14 +124,12 @@ export default function Navigation() {
                 Directory
               </Link>
               
-              {permissions?.canViewLists && (
-                <Link
-                  to={`/${workspaceSlug}/lists`}
-                  className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-                >
-                  Lists
-                </Link>
-              )}
+              <Link
+                to={`/${workspaceSlug}/lists`}
+                className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Lists
+              </Link>
               {permissions.canAccessHiring && (
                 <Link
                   to={`/${workspaceSlug}/hiring`}

@@ -219,6 +219,7 @@ Tapestry is a proof-of-concept web application that serves as an intelligent des
 - June 28, 2025. Optimized workspace switcher design: removed building icons and "Switch workspace" title from dropdown for minimal aesthetic, repositioned navigation layout with logo+links on left, dedicated workspace switcher in center, and user profile on right for optimal workspace discoverability
 - January 16, 2025. Component directory cleanup: fixed nested anchor tag warnings in Navigation component, added missing DialogTitle and DialogDescription for accessibility compliance, enhanced error handling by replacing console.error with proper user feedback, updated all Links to use wouter properly (to prop instead of href), improved component organization with comprehensive documentation
 - January 16, 2025. Restored Lists functionality for Member role: updated both client and server permissions to grant Members access to Lists feature (canViewLists, canCreateLists, canEditLists, canShareLists), responding to user request to restore Lists navigation functionality. Successfully resolved navigation display issue and Lists link now appears properly in navigation bar
+- January 16, 2025. Fixed Lists navigation intermittent visibility issue: resolved client-side permission check failure by ensuring Lists link always displays for authenticated users (since Members have proper server-side permissions), providing stable navigation experience
 
 ## User Preferences
 

@@ -29,7 +29,7 @@ export default function SkillsInput({ value, onChange }: SkillsInputProps) {
         const skillsArray = Array.isArray(data) ? data : [];
         setAllSkills(skillsArray);
       } catch (error) {
-        console.error('Error fetching skills:', error);
+        // Silently handle error and set empty array
         setAllSkills([]);
       }
     };

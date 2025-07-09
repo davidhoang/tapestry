@@ -5,11 +5,12 @@ This directory contains all reusable UI components for the Tapestry application.
 ## Organization
 
 ### Core Components
-- **ChatInterface** - Main chat interface for AI matchmaking conversations
+- **AdminRoute** - Protected route for admin users
 - **DesignerCard** - Card component for displaying designer profiles
 - **EnrichmentDialog** - Dialog for enriching designer profiles with AI
 - **Navigation** - Main navigation component with authentication
 - **SkillsInput** - Input component for managing designer skills
+- **WorkspaceSwitcher** - Dropdown for switching between workspaces
 
 ### Organized by Category
 
@@ -33,7 +34,7 @@ Shadcn/ui components - low-level UI primitives
 Import components from the main index file:
 
 ```tsx
-import { DesignerCard, ChatInterface, Navigation } from '@/components';
+import { DesignerCard, Navigation, WorkspaceSwitcher } from '@/components';
 ```
 
 Or import from specific categories:
@@ -53,8 +54,13 @@ All components follow accessibility best practices:
 
 ## Recent Improvements
 
-- Fixed nested anchor tag warnings
-- Added proper dialog accessibility attributes
-- Improved Avatar component usage
-- Better error handling in async operations
-- Organized component structure with index files
+- ✅ Fixed nested anchor tag warnings in Navigation component
+- ✅ Added proper dialog accessibility attributes (DialogTitle, DialogDescription)
+- ✅ Improved Avatar component usage in DesignerCard
+- ✅ Better async error handling in SkillsInput and other components
+- ✅ Organized component structure with index files
+- ✅ Enhanced MarkdownEditor and MarkdownPreview wrapper components
+- ✅ Fixed CSS duration warnings and ambiguous class names
+- ✅ Updated all index files to reflect actual available components
+- ✅ Proper wouter Link usage (to prop instead of href)
+- ✅ Removed console.error statements for better error handling

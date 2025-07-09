@@ -106,26 +106,26 @@ export default function Navigation() {
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 mx-auto">
         {/* Left: Logo + Navigation Links */}
         <div className="flex items-center">
-          <Link href={user ? `/${workspaceSlug}/directory` : "/"} className="mr-6 flex items-center space-x-2">
+          <Link to={user ? `/${workspaceSlug}/directory` : "/"} className="mr-6 flex items-center space-x-2">
             <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
           </Link>
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
               <Link
-                href={`/${workspaceSlug}/matchmaker`}
+                to={`/${workspaceSlug}/matchmaker`}
                 className={location === `/${workspaceSlug}/matchmaker` || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Matchmaker
               </Link>
               <Link
-                href={`/${workspaceSlug}/directory`}
+                to={`/${workspaceSlug}/directory`}
                 className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Directory
               </Link>
               {permissions.canViewLists && (
                 <Link
-                  href={`/${workspaceSlug}/lists`}
+                  to={`/${workspaceSlug}/lists`}
                   className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
                 >
                   Lists
@@ -133,7 +133,7 @@ export default function Navigation() {
               )}
               {permissions.canAccessHiring && (
                 <Link
-                  href={`/${workspaceSlug}/hiring`}
+                  to={`/${workspaceSlug}/hiring`}
                   className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
                 >
                   Hiring
@@ -175,14 +175,14 @@ export default function Navigation() {
                   </div>
                   <div className="border-t"></div>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center w-full">
+                    <Link to="/profile" className="flex items-center w-full">
                       <User className="mr-2 h-4 w-4" />
                       Profile Settings
                     </Link>
                   </DropdownMenuItem>
                   {permissions?.canViewMembersList && (
                     <DropdownMenuItem asChild>
-                      <Link href="/workspaces/members" className="flex items-center w-full">
+                      <Link to="/workspaces/members" className="flex items-center w-full">
                         <Users className="mr-2 h-4 w-4" />
                         Workspace Members
                       </Link>
@@ -190,7 +190,7 @@ export default function Navigation() {
                   )}
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/components" className="flex items-center w-full">
+                      <Link to="/components" className="flex items-center w-full">
                         <Settings className="mr-2 h-4 w-4" />
                         Components
                       </Link>
@@ -198,7 +198,7 @@ export default function Navigation() {
                   )}
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center w-full">
+                      <Link to="/admin" className="flex items-center w-full">
                         <Settings className="mr-2 h-4 w-4" />
                         Database Admin
                       </Link>
@@ -240,7 +240,7 @@ export default function Navigation() {
                       </div>
                       
                       <Link
-                        href={`/${workspaceSlug}/matchmaker`}
+                        to={`/${workspaceSlug}/matchmaker`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === `/${workspaceSlug}/matchmaker` || location === "/"
                             ? "text-gray-900 bg-gray-100 font-bold" 
@@ -251,7 +251,7 @@ export default function Navigation() {
                         Matchmaker
                       </Link>
                       <Link
-                        href={`/${workspaceSlug}/directory`}
+                        to={`/${workspaceSlug}/directory`}
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}`
                             ? "text-gray-900 bg-gray-100 font-bold" 
@@ -263,7 +263,7 @@ export default function Navigation() {
                       </Link>
                       {permissions.canViewLists && (
                         <Link
-                          href={`/${workspaceSlug}/lists`}
+                          to={`/${workspaceSlug}/lists`}
                           className={`text-lg py-2 px-4 rounded transition-colors ${
                             location === `/${workspaceSlug}/lists`
                               ? "text-gray-900 bg-gray-100 font-bold" 
@@ -276,7 +276,7 @@ export default function Navigation() {
                       )}
                       {permissions.canAccessHiring && (
                         <Link
-                          href={`/${workspaceSlug}/hiring`}
+                          to={`/${workspaceSlug}/hiring`}
                           className={`text-lg py-2 px-4 rounded transition-colors ${
                             location === `/${workspaceSlug}/hiring`
                               ? "text-gray-900 bg-gray-100 font-bold" 
@@ -288,7 +288,7 @@ export default function Navigation() {
                         </Link>
                       )}
                       <Link
-                        href="/profile"
+                        to="/profile"
                         className={`text-lg py-2 px-4 rounded transition-colors ${
                           location === "/profile" 
                             ? "text-gray-900 bg-gray-100 font-bold" 
@@ -300,7 +300,7 @@ export default function Navigation() {
                       </Link>
                       {user.isAdmin && (
                         <Link
-                          href="/components"
+                          to="/components"
                           className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
                           onClick={() => setMobileMenuOpen(false)}
                         >
@@ -309,7 +309,7 @@ export default function Navigation() {
                       )}
                       {user.isAdmin && (
                         <Link
-                          href="/admin"
+                          to="/admin"
                           className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
                           onClick={() => setMobileMenuOpen(false)}
                         >

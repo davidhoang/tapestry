@@ -26,7 +26,7 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
       await completeOnboarding();
       setShowOnboarding(false);
     } catch (error) {
-      console.error('Failed to complete onboarding:', error);
+      // Silently handle onboarding completion error
       setShowOnboarding(false);
     }
   };

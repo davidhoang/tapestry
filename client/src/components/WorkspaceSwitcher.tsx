@@ -101,7 +101,7 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
       
       setIsOpen(false);
     } catch (error) {
-      console.error('Failed to switch workspace:', error);
+      // Silently handle workspace switching error
       toast({
         title: 'Error',
         description: 'Failed to switch workspace. Please try again.',

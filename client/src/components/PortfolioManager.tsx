@@ -3,7 +3,7 @@ import { Plus, ExternalLink, Edit2, Trash2, Globe, Lock, Eye, Settings } from "l
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -191,6 +191,9 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Portfolio</DialogTitle>
+              <DialogDescription>
+                Create a new portfolio to showcase your design work and projects.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreatePortfolio} className="space-y-4">
               <div>
@@ -386,6 +389,9 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Portfolio</DialogTitle>
+            <DialogDescription>
+              Update your portfolio settings and information.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdatePortfolio} className="space-y-4">
             <div>

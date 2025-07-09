@@ -3,7 +3,7 @@ import { Plus, Edit2, Trash2, ExternalLink, Image, Calendar, User, Building } fr
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -226,6 +226,9 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
+              <DialogDescription>
+                Add a new project to your portfolio with details and media.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateProject} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -507,6 +510,9 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>
+              Update your project details and settings.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateProject} className="space-y-4">
             {/* Same form fields as create, but for editing */}

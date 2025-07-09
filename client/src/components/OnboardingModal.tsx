@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X, Sparkles, Users, MessageSquare, Search } from "lucide-react";
@@ -115,6 +115,9 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
       <DialogContent className="max-w-2xl p-0 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Onboarding</DialogTitle>
+          <DialogDescription>
+            Welcome to Tapestry - Learn about our key features to get started.
+          </DialogDescription>
         </VisuallyHidden>
         
         {/* Main content */}

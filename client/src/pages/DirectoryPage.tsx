@@ -5,7 +5,7 @@ import {
   useUpdateDesigner,
   useDeleteDesigners,
 } from "@/hooks/use-designer";
-import { useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
+import { useLists, useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
 import { useWorkspacePermissions } from "@/hooks/use-permissions";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1059,9 +1059,13 @@ function AddToListDialog({
   designerIds,
   onSuccess,
 }: AddToListDialogProps) {
+  const { data: lists } = useLists();
   const createList = useCreateList();
   const addDesignersToList = useAddDesignersToList();
   const { toast } = useToast();
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [selectedListId, setSelectedListId] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -1070,7 +1074,55 @@ function AddToListDialog({
     },
   });
 
-  const onSubmit = async (values: { name: string; description: string }) => {
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      setMode(lists && lists.length > 0 ? "existing" : "new");
+      setSelectedListId(null);
+      form.reset();
+    }
+  }, [open, lists, form]);
+
+  const handleAddToExistingList = async () => {
+    if (!selectedListId) {
+      toast({
+        title: "Error",
+        description: "Please select a list",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await Promise.all(
+        designerIds.map((designerId) =>
+          addDesignersToList.mutateAsync({
+            listId: selectedListId,
+            designerId,
+          }),
+        ),
+      );
+
+      toast({
+        title: "Success",
+        description: `Added ${designerIds.length} designer${designerIds.length > 1 ? 's' : ''} to list`,
+      });
+      onOpenChange(false);
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add designers to list",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreateNewList = async (values: { name: string; description: string }) => {
+    setIsProcessing(true);
     try {
       const list = await createList.mutateAsync(values);
 
@@ -1096,56 +1148,143 @@ function AddToListDialog({
         description: error.message || "Failed to create list",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create New List</DialogTitle>
+          <DialogTitle>
+            Add {designerIds.length} designer{designerIds.length > 1 ? 's' : ''} to list
+          </DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>List Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex justify-end space-x-2">
+        
+        {lists && lists.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex gap-2">
               <Button
-                type="submit"
-                disabled={createList.isPending || addDesignersToList.isPending}
+                type="button"
+                variant={mode === "existing" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMode("existing")}
               >
-                {(createList.isPending || addDesignersToList.isPending) && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Create list with selected designers
+                Existing list
+              </Button>
+              <Button
+                type="button"
+                variant={mode === "new" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMode("new")}
+              >
+                New list
               </Button>
             </div>
-          </form>
-        </Form>
+          </div>
+        )}
+
+        {mode === "existing" && lists && lists.length > 0 ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select a list</label>
+              <Select 
+                value={selectedListId?.toString()} 
+                onValueChange={(value) => setSelectedListId(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a list..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {lists.map((list) => (
+                    <SelectItem key={list.id} value={list.id.toString()}>
+                      {list.name}
+                      {list.designerCount > 0 && (
+                        <span className="text-muted-foreground ml-2">
+                          ({list.designerCount} designer{list.designerCount !== 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddToExistingList}
+                disabled={!selectedListId || isProcessing}
+              >
+                {isProcessing && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Add to list
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCreateNewList)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>List Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g., Design Technologists" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Optional description..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (lists && lists.length > 0) {
+                      setMode("existing");
+                    } else {
+                      onOpenChange(false);
+                    }
+                  }}
+                >
+                  {lists && lists.length > 0 ? "Back" : "Cancel"}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isProcessing}
+                >
+                  {isProcessing && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Create list with selected designers
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -147,6 +147,20 @@ export default function DirectoryPage() {
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Add scroll listener to detect when page is scrolled
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 10;
+      setIsScrolled(scrolled);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Check initial scroll position
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const filteredDesigners =
     designers?.filter((designer) => {
@@ -223,7 +237,9 @@ export default function DirectoryPage() {
         </div>
         
         {/* Sticky action bar */}
-        <div className="sticky top-16 z-40 bg-nav-cream border-b border-gray-200">
+        <div className={`sticky top-16 z-40 transition-all duration-300 ${
+          isScrolled ? 'bg-nav-cream border-b border-gray-200 shadow-sm' : ''
+        }`}>
           <div className="container mx-auto px-4 sm:px-6 py-3">
             <div className="flex flex-wrap gap-2 items-center">
               {/* View Toggle */}

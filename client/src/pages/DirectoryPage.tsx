@@ -214,107 +214,127 @@ export default function DirectoryPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 pt-20 pb-8 space-y-6 sm:space-y-8">
-        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+      
+      {/* Main container with adjusted padding for fixed nav */}
+      <div className="pt-16">
+        {/* Title section */}
+        <div className="container mx-auto px-4 sm:px-6 pt-6 pb-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Directory</h1>
-          <div className="flex flex-wrap gap-2">
-            {/* View Toggle */}
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className="rounded-r-none"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="rounded-l-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
+        </div>
+        
+        {/* Sticky action bar */}
+        <div className="sticky top-16 z-40 bg-nav-cream border-b border-gray-200">
+          <div className="container mx-auto px-4 sm:px-6 py-3">
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* View Toggle */}
+              <div className="flex border rounded-lg bg-white">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-r-none"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
 
-            {selectedIds.length > 0 && (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowAddToListDialog(true)}
-                  className="min-h-[44px]"
-                >
-                  <ListPlus className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Add to list</span> (
-                  {selectedIds.length})
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteSelected}
-                  disabled={deleteDesigners.isPending}
-                  className="min-h-[44px]"
-                >
-                  {deleteDesigners.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  <Trash className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Delete selected</span> (
-                  {selectedIds.length})
-                </Button>
-              </>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="gap-2 min-h-[44px]">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add designer</span>
-                  <span className="sm:hidden">Add</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add designer
+              {/* Divider when items are selected */}
+              {selectedIds.length > 0 && (
+                <div className="w-px h-8 bg-gray-300 mx-2" />
+              )}
+
+              {selectedIds.length > 0 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowAddToListDialog(true)}
+                    className="min-h-[36px]"
+                  >
+                    <ListPlus className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Add to list</span> (
+                    {selectedIds.length})
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteSelected}
+                    disabled={deleteDesigners.isPending}
+                    className="min-h-[36px]"
+                  >
+                    {deleteDesigners.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    <Trash className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Delete selected</span> (
+                    {selectedIds.length})
+                  </Button>
+                </>
+              )}
+              
+              {/* Add designer dropdown - pushed to the right */}
+              <div className="ml-auto">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="gap-2 min-h-[36px]">
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden sm:inline">Add designer</span>
+                      <span className="sm:hidden">Add</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add designer
+                        </DropdownMenuItem>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
+                        <DialogHeader className="flex-shrink-0">
+                          <DialogTitle>Add new designer</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex-1 overflow-y-auto pr-2">
+                          <AddDesignerDialog
+                            designer={null}
+                            onClose={() => {}}
+                            permissions={permissions}
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <DropdownMenuItem onClick={() => setShowLinkedInImport(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import LinkedIn
                     </DropdownMenuItem>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
-                    <DialogHeader className="flex-shrink-0">
-                      <DialogTitle>Add new designer</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex-1 overflow-y-auto pr-2">
-                      <AddDesignerDialog
-                        designer={null}
-                        onClose={() => {}}
-                        permissions={permissions}
-                      />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <DropdownMenuItem onClick={() => setShowLinkedInImport(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import LinkedIn
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Input
-              placeholder="Search designers by name, title, company, or skills..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-lg py-3 px-4 bg-white border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg shadow-sm"
-            />
+        {/* Search and content section */}
+        <div className="container mx-auto px-4 sm:px-6 pb-8">
+          <div className="space-y-6 mt-6">
+            <div className="space-y-2">
+              <Input
+                placeholder="Search designers by name, title, company, or skills..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full text-lg py-3 px-4 bg-white border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg shadow-sm"
+              />
+            </div>
           </div>
-        </div>
 
-        {isLoading ? (
+          {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -352,6 +372,7 @@ export default function DirectoryPage() {
             ))}
           </div>
         )}
+        </div>
 
         <Dialog
           open={!!designerToEdit}

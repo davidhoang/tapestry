@@ -69,6 +69,7 @@ export const lists = pgTable("lists", {
   userId: integer("user_id").references(() => users.id),
   workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
   name: text("name").notNull(),
+  slug: text("slug").unique(),
   description: text("description"),
   summary: text("summary"),
   isPublic: boolean("is_public").default(false),

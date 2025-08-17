@@ -315,7 +315,7 @@ function ViewListDialog({
   const updateList = useUpdateList();
   const { toast } = useToast();
   const origin = window.location.origin;
-  const shareUrl = `${origin}/lists/${list.id}`;
+  const shareUrl = `${origin}/lists/${list.slug || list.id}`;
 
   const handlePublicToggle = async (checked: boolean) => {
     try {

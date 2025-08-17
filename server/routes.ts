@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries } from "@db/schema";
-import { eq, desc, and, ne, inArray, asc, isNull } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
 import crypto from "crypto";
@@ -609,12 +609,30 @@ export function registerRoutes(app: Express): Server {
 
       const result = await db.transaction(async (tx) => {
         const { designerIds, ...listData } = req.body;
+        
+        // Import slug utility
+        const { generateSlug, generateUniqueSlug } = await import('./utils/slug');
+        
+        // Generate slug from name
+        let slug = generateSlug(listData.name);
+        
+        // Check if slug already exists
+        const existingList = await tx.query.lists.findFirst({
+          where: eq(lists.slug, slug),
+        });
+        
+        // If slug exists, generate a unique one
+        if (existingList) {
+          slug = generateUniqueSlug(slug);
+        }
+        
         const [list] = await tx
           .insert(lists)
           .values({
             ...listData,
             userId: req.user.id,
             workspaceId: workspaceContext.workspaceId,
+            slug,
           })
           .returning();
 
@@ -754,14 +772,37 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Otherwise, update list details
+      const updateData: any = {
+        ...(description !== undefined && { description }),
+        ...(summary !== undefined && { summary }),
+        ...(isPublic !== undefined && { isPublic }),
+      };
+
+      // If name is being updated, regenerate slug
+      if (name && name !== list.name) {
+        const { generateSlug, generateUniqueSlug } = await import('./utils/slug');
+        let slug = generateSlug(name);
+        
+        // Check if slug already exists for a different list
+        const existingList = await db.query.lists.findFirst({
+          where: and(
+            eq(lists.slug, slug),
+            not(eq(lists.id, listId))
+          ),
+        });
+        
+        // If slug exists, generate a unique one
+        if (existingList) {
+          slug = generateUniqueSlug(slug);
+        }
+        
+        updateData.name = name;
+        updateData.slug = slug;
+      }
+
       const [updatedList] = await db
         .update(lists)
-        .set({
-          ...(name && { name }),
-          ...(description !== undefined && { description }),
-          ...(summary !== undefined && { summary }),
-          ...(isPublic !== undefined && { isPublic }),
-        })
+        .set(updateData)
         .where(eq(lists.id, listId))
         .returning();
 
@@ -912,20 +953,40 @@ export function registerRoutes(app: Express): Server {
   }));
 
   // Public list route
-  app.get("/api/lists/:id/public", async (req, res) => {
+  app.get("/api/lists/:slugOrId/public", async (req, res) => {
     try {
-      const listId = parseInt(req.params.id);
+      const slugOrId = req.params.slugOrId;
+      let list;
 
-      const [list] = await db
-        .select()
-        .from(lists)
-        .where(
-          and(
-            eq(lists.id, listId),
-            eq(lists.isPublic, true)
+      // Check if it's a numeric ID or a slug
+      const isNumericId = /^\d+$/.test(slugOrId);
+
+      if (isNumericId) {
+        // Fetch by ID
+        const listId = parseInt(slugOrId);
+        [list] = await db
+          .select()
+          .from(lists)
+          .where(
+            and(
+              eq(lists.id, listId),
+              eq(lists.isPublic, true)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      } else {
+        // Fetch by slug
+        [list] = await db
+          .select()
+          .from(lists)
+          .where(
+            and(
+              eq(lists.slug, slugOrId),
+              eq(lists.isPublic, true)
+            )
+          )
+          .limit(1);
+      }
 
       if (!list) {
         return res.status(404).send("List not found or is private");
@@ -933,7 +994,7 @@ export function registerRoutes(app: Express): Server {
 
       // Get designers for the list
       const listWithDesigners = await db.query.lists.findFirst({
-        where: eq(lists.id, listId),
+        where: eq(lists.id, list.id),
         with: {
           designers: {
             with: {

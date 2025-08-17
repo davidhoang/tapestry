@@ -8,10 +8,10 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState } from "react";
 import AuthPage from "./AuthPage";
 
-export default function PublicListPage({ params }: { params: { id: string } }) {
+export default function PublicListPage({ params }: { params: { slugOrId: string } }) {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const { data: list, isLoading, error } = useQuery<SelectList>({
-    queryKey: [`/api/lists/${params.id}/public`],
+    queryKey: [`/api/lists/${params.slugOrId}/public`],
   });
 
   if (isLoading) {

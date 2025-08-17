@@ -31,13 +31,13 @@ function App() {
 
   // Handle public routes first
   if (window.location.pathname.startsWith('/lists/')) {
-    const listId = window.location.pathname.split('/')[2];
-    if (listId) {
+    const slugOrId = window.location.pathname.split('/')[2];
+    if (slugOrId) {
       return (
         <QueryClientProvider client={queryClient}>
           <div className="min-h-screen flex flex-col">
             <div className="flex-1">
-              <PublicListPage params={{ id: listId }} />
+              <PublicListPage params={{ slugOrId }} />
             </div>
             <Footer />
           </div>

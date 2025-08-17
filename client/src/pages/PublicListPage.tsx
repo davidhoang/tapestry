@@ -38,11 +38,12 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
   }
 
   return (
-    <div>
-      <header className="border-b">
+    <div className="min-h-screen">
+      {/* Navigation Header */}
+      <header className="absolute top-0 left-0 right-0 z-10 bg-transparent">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
-            <a className="text-xl font-bold">Design Matchmaker</a>
+            <a className="text-xl font-bold text-white drop-shadow-lg">Design Matchmaker</a>
           </Link>
           <Button variant="default" onClick={() => setShowAuthDialog(true)}>
             Sign in
@@ -50,16 +51,37 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
         </div>
       </header>
 
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">{list.name}</h1>
+      {/* Hero Section with Image */}
+      <div className="relative h-64 md:h-80 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/hero-design.png')",
+            filter: "brightness(0.7) contrast(1.1)"
+          }}
+        />
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+        
+        {/* List Title and Description */}
+        <div className="relative z-10 h-full flex items-center justify-center">
+          <div className="container mx-auto px-4 text-center text-white">
+            <h1 className="text-4xl md:text-5xl font-bold mb-3 drop-shadow-lg">{list.name}</h1>
             {list.description && (
-              <p className="mt-2 text-muted-foreground">{list.description}</p>
+              <p className="text-lg md:text-xl text-white/90 drop-shadow-md max-w-2xl mx-auto">
+                {list.description}
+              </p>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="grid gap-4">
+      {/* Designers Grid */}
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {list.designers?.map(({ designer, notes }: { designer: any; notes?: string }) => (
               <a
                 key={designer.id}
@@ -68,21 +90,27 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
                 rel="noopener noreferrer"
                 className={designer.linkedIn ? "cursor-pointer" : "cursor-default"}
               >
-                <Card className="hover:shadow-lg transition-shadow">
+                <Card className="hover:shadow-lg transition-shadow h-full">
                   <CardContent className="flex items-start space-x-4 pt-6">
-                    <Avatar className="w-12 h-12">
+                    <Avatar className="w-14 h-14 flex-shrink-0">
                       <AvatarImage src={designer.photoUrl || ''} />
                       <AvatarFallback>
                         {designer.name.split(' ').map((n: string) => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-medium">{designer.name}</h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg">{designer.name}</h3>
                       <p className="text-sm text-muted-foreground">{designer.title}</p>
+                      {designer.company && (
+                        <p className="text-sm text-muted-foreground mt-1">{designer.company}</p>
+                      )}
+                      {designer.location && (
+                        <p className="text-sm text-muted-foreground">{designer.location}</p>
+                      )}
                       {notes && (
-                        <div className="mt-2 text-sm">
-                          <p className="font-medium">Notes:</p>
-                          <p className="text-muted-foreground">{notes}</p>
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notes</p>
+                          <p className="text-sm mt-1">{notes}</p>
                         </div>
                       )}
                     </div>
@@ -91,6 +119,13 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
               </a>
             ))}
           </div>
+          
+          {/* Empty state if no designers */}
+          {(!list.designers || list.designers.length === 0) && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No designers in this list yet.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -99,15 +134,6 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
           <AuthPage />
         </DialogContent>
       </Dialog>
-
-      <a 
-        href="http://www.proofofconcept.pub" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-md text-sm hover:bg-black/90 transition-colors"
-      >
-        A Proof of Concept experiment
-      </a>
     </div>
   );
 }

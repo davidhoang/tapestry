@@ -4170,7 +4170,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
       .from(recruitingCards)
       .where(and(
         eq(recruitingCards.workspaceId, context.workspaceId),
-        sql`${recruitingCards.designerId} = ANY(${idsToAdd})`
+        inArray(recruitingCards.designerId, idsToAdd)
       ));
     
     const existingDesignerIds = new Set(existingCards.map(card => card.designerId));

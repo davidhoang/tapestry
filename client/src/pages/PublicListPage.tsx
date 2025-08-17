@@ -2,14 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { SelectList } from "@db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useState } from "react";
-import AuthPage from "./AuthPage";
 
 export default function PublicListPage({ params }: { params: { slugOrId: string } }) {
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const { data: list, isLoading, error } = useQuery<SelectList>({
     queryKey: [`/api/lists/${params.slugOrId}/public`],
   });
@@ -39,15 +33,10 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
 
   return (
     <div className="min-h-screen">
-      {/* Navigation Header */}
+      {/* Navigation Header - Empty for clean look */}
       <header className="absolute top-0 left-0 right-0 z-10 bg-transparent">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
-            <a className="text-xl font-bold text-white drop-shadow-lg">Design Matchmaker</a>
-          </Link>
-          <Button variant="default" onClick={() => setShowAuthDialog(true)}>
-            Sign in
-          </Button>
+          {/* Removed Design Matchmaker label and Sign in button for cleaner look */}
         </div>
       </header>
 
@@ -128,12 +117,6 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
           )}
         </div>
       </div>
-
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="max-w-sm p-0 h-auto overflow-visible">
-          <AuthPage />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

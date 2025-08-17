@@ -289,8 +289,7 @@ export default function DirectoryPage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     <Trash className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Delete selected</span> (
-                    {selectedIds.length})
+                    ({selectedIds.length})
                   </Button>
                 </>
               )}
@@ -378,6 +377,7 @@ export default function DirectoryPage() {
               <DesignerListItem
                 key={designer.id}
                 designer={designer}
+                workspaceSlug={workspaceSlug}
                 onEdit={setDesignerToEdit}
                 onEnrich={(designer) => {
                   setEnrichmentDesigner(designer);
@@ -1279,12 +1279,14 @@ function AddToListDialog({
 // List view component for designers
 function DesignerListItem({
   designer,
+  workspaceSlug,
   onEdit,
   onEnrich,
   isSelected,
   onToggleSelect,
 }: {
   designer: SelectDesigner;
+  workspaceSlug: string;
   onEdit: (designer: SelectDesigner) => void;
   onEnrich: (designer: SelectDesigner) => void;
   isSelected: boolean;

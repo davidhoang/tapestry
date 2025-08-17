@@ -13,6 +13,7 @@ import {
   DragOverEvent,
   DragEndEvent,
   UniqueIdentifier,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -83,7 +84,13 @@ function KanbanCard({ card, isDragging }: { card: RecruitingCard; isDragging?: b
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: card.id });
+  } = useSortable({ 
+    id: card.id,
+    data: {
+      type: "Card",
+      card,
+    },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -148,13 +155,18 @@ function KanbanColumn({
   onAddClick: () => void;
   onDeleteColumn: () => void;
 }) {
-  const { setNodeRef } = useSortable({
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `column-${column.id}`,
-    data: { type: 'column', column },
+    data: { type: 'Column', column },
   });
 
   return (
-    <div className="flex flex-col bg-gray-50 rounded-lg p-4 w-80 min-h-[500px]">
+    <div 
+      ref={setDroppableRef}
+      className={`flex flex-col rounded-lg p-4 w-80 min-h-[500px] transition-colors ${
+        isOver ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'
+      }`}
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {column.color && (
@@ -187,7 +199,7 @@ function KanbanColumn({
         </DropdownMenu>
       </div>
       
-      <div ref={setNodeRef} className="flex-1 space-y-2 overflow-y-auto">
+      <div className="flex-1 space-y-2 overflow-y-auto">
         <SortableContext
           items={cards.map(c => c.id)}
           strategy={verticalListSortingStrategy}
@@ -467,50 +479,46 @@ export default function RecruitingPage() {
     setActiveId(event.active.id);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    
-    if (!over) return;
-    
-    const activeCard = cards.find((c: RecruitingCard) => c.id === active.id);
-    const overCard = cards.find((c: RecruitingCard) => c.id === over.id);
-    
-    if (activeCard && overCard && activeCard.columnId !== overCard.columnId) {
-      // Moving to a different column
-      moveCardMutation.mutate({
-        cardId: Number(active.id),
-        columnId: overCard.columnId,
-        position: overCard.position,
-      });
-    }
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over) {
-      setActiveId(null);
-      return;
-    }
-    
-    const activeCard = cards.find((c: RecruitingCard) => c.id === active.id);
-    const overCard = cards.find((c: RecruitingCard) => c.id === over.id);
-    
-    if (activeCard && overCard && activeCard.id !== overCard.id) {
-      const activeIndex = cards.findIndex((c: RecruitingCard) => c.id === active.id);
-      const overIndex = cards.findIndex((c: RecruitingCard) => c.id === over.id);
-      
-      const newCards = arrayMove(cards, activeIndex, overIndex);
-      
-      // Update positions
-      moveCardMutation.mutate({
-        cardId: Number(active.id),
-        columnId: overCard.columnId,
-        position: overIndex,
-      });
-    }
-    
     setActiveId(null);
+    
+    if (!over || !active) return;
+    
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    
+    if (activeData?.type === "Card") {
+      const activeCard = activeData.card as RecruitingCard;
+      
+      if (overData?.type === "Card") {
+        const overCard = overData.card as RecruitingCard;
+        
+        if (activeCard.id !== overCard.id) {
+          // Reorder within same column or move to different column
+          moveCardMutation.mutate({
+            cardId: activeCard.id,
+            columnId: overCard.columnId,
+            position: overCard.position,
+          });
+        }
+      } else if (overData?.type === "Column") {
+        const overColumn = overData.column as RecruitingColumn;
+        
+        if (activeCard.columnId !== overColumn.id) {
+          // Moving to different column - place at end
+          const columnCards = cards.filter(c => c.columnId === overColumn.id);
+          const newPosition = Math.max(...columnCards.map(c => c.position), 0) + 1;
+          
+          moveCardMutation.mutate({
+            cardId: activeCard.id,
+            columnId: overColumn.id,
+            position: newPosition,
+          });
+        }
+      }
+    }
   };
 
   const activeCard = activeId ? cards.find((c: RecruitingCard) => c.id === activeId) : null;
@@ -566,7 +574,6 @@ export default function RecruitingPage() {
               sensors={sensors}
               collisionDetection={closestCorners}
               onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
             >
               <div className="flex gap-4 min-w-max">

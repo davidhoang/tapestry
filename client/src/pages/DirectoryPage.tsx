@@ -47,6 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { useForm } from "react-hook-form";
 import {
@@ -1063,7 +1064,6 @@ function AddToListDialog({
   const createList = useCreateList();
   const addDesignersToList = useAddDesignersToList();
   const { toast } = useToast();
-  const [mode, setMode] = useState<"existing" | "new">("existing");
   const [selectedListId, setSelectedListId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -1077,11 +1077,10 @@ function AddToListDialog({
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setMode(lists && lists.length > 0 ? "existing" : "new");
       setSelectedListId(null);
       form.reset();
     }
-  }, [open, lists, form]);
+  }, [open, form]);
 
   const handleAddToExistingList = async () => {
     if (!selectedListId) {
@@ -1153,6 +1152,8 @@ function AddToListDialog({
     }
   };
 
+  const defaultTab = lists && lists.length > 0 ? "existing" : "new";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -1162,129 +1163,114 @@ function AddToListDialog({
           </DialogTitle>
         </DialogHeader>
         
-        {lists && lists.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={mode === "existing" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setMode("existing")}
-              >
-                Existing list
-              </Button>
-              <Button
-                type="button"
-                variant={mode === "new" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setMode("new")}
-              >
-                New list
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {mode === "existing" && lists && lists.length > 0 ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select a list</label>
-              <Select 
-                value={selectedListId?.toString()} 
-                onValueChange={(value) => setSelectedListId(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a list..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {lists.map((list) => (
-                    <SelectItem key={list.id} value={list.id.toString()}>
-                      {list.name}
-                      {list.designerCount > 0 && (
-                        <span className="text-muted-foreground ml-2">
-                          ({list.designerCount} designer{list.designerCount !== 1 ? 's' : ''})
-                        </span>
-                      )}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddToExistingList}
-                disabled={!selectedListId || isProcessing}
-              >
-                {isProcessing && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Add to list
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreateNewList)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>List Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., Design Technologists" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} placeholder="Optional description..." />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <Tabs defaultValue={defaultTab} className="w-full">
+          {lists && lists.length > 0 && (
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="existing">Existing list</TabsTrigger>
+              <TabsTrigger value="new">New list</TabsTrigger>
+            </TabsList>
+          )}
+          
+          {lists && lists.length > 0 && (
+            <TabsContent value="existing" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select a list</label>
+                <Select 
+                  value={selectedListId?.toString()} 
+                  onValueChange={(value) => setSelectedListId(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a list..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lists.map((list) => (
+                      <SelectItem key={list.id} value={list.id.toString()}>
+                        <div className="flex items-center">
+                          <span>{list.name}</span>
+                          {list.designerCount > 0 && (
+                            <span className="text-muted-foreground ml-2">
+                              ({list.designerCount} designer{list.designerCount !== 1 ? 's' : ''})
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    if (lists && lists.length > 0) {
-                      setMode("existing");
-                    } else {
-                      onOpenChange(false);
-                    }
-                  }}
+                  onClick={() => onOpenChange(false)}
                 >
-                  {lists && lists.length > 0 ? "Back" : "Cancel"}
+                  Cancel
                 </Button>
                 <Button
-                  type="submit"
-                  disabled={isProcessing}
+                  onClick={handleAddToExistingList}
+                  disabled={!selectedListId || isProcessing}
                 >
                   {isProcessing && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Create list with selected designers
+                  Add to list
                 </Button>
               </div>
-            </form>
-          </Form>
-        )}
+            </TabsContent>
+          )}
+          
+          <TabsContent value="new" className={lists && lists.length > 0 ? "mt-4" : ""}>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleCreateNewList)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  rules={{ required: "List name is required" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>List name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., Design Technologists" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Add a description..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Create list
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

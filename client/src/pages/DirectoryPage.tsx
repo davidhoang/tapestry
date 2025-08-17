@@ -294,8 +294,18 @@ export default function DirectoryPage() {
                 </>
               )}
               
+              {/* Search bar */}
+              <div className="flex-1 mx-4">
+                <Input
+                  placeholder="Search designers by name, title, company, or skills..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20"
+                />
+              </div>
+              
               {/* Add designer dropdown - pushed to the right */}
-              <div className="ml-auto">
+              <div className="flex-shrink-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button className="gap-2 min-h-[36px]">
@@ -337,19 +347,8 @@ export default function DirectoryPage() {
           </div>
         </div>
 
-        {/* Search and content section */}
-        <div className="container mx-auto px-4 sm:px-6 pb-8">
-          <div className="space-y-6 mt-6">
-            <div className="space-y-2">
-              <Input
-                placeholder="Search designers by name, title, company, or skills..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-lg py-3 px-4 bg-white border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg shadow-sm"
-              />
-            </div>
-          </div>
-
+        {/* Content section */}
+        <div className="container mx-auto px-4 sm:px-6 pb-8 mt-6">
           {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />

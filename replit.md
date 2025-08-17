@@ -38,6 +38,7 @@ Button styling: All buttons should use sentence case instead of all capitals.
 - **Workspace System**: Multi-tenant architecture with isolation, comprehensive role-based permissions (Admin, Owner, Editor, Member), granular permissions (25+), server-side enforcement, audit logging, invitation system, slug-based routing. The system has robust workspace switching and management features.
 - **List Management**: Curated designer lists, sharing capabilities (public/private), email sharing (SendGrid), collaborative building.
 - **Hiring Feature**: Job posting, AI-powered designer matching, job management, status tracking.
+- **Recruiting Board**: Visual kanban board for tracking designers through recruitment pipeline. Features drag-and-drop functionality, customizable columns (default: Backlog, Outreach, Interviewing, Offer, Hired), bulk designer import from lists or directory, notes tracking. Built with @dnd-kit for smooth drag-and-drop experience.
 - **Modal Positioning System**: Uses Radix UI Dialog with custom CSS for consistent, reliable centering across devices. This system is stable and should not be rewritten.
 
 ## External Dependencies

@@ -130,6 +130,12 @@ export default function Navigation() {
               >
                 Lists
               </Link>
+              <Link
+                to={`/${workspaceSlug}/recruiting`}
+                className={location === `/${workspaceSlug}/recruiting` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Recruiting
+              </Link>
               {permissions.canAccessHiring && (
                 <Link
                   to={`/${workspaceSlug}/hiring`}
@@ -273,6 +279,17 @@ export default function Navigation() {
                           Lists
                         </Link>
                       )}
+                      <Link
+                        to={`/${workspaceSlug}/recruiting`}
+                        className={`text-lg py-2 px-4 rounded transition-colors ${
+                          location === `/${workspaceSlug}/recruiting`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Recruiting
+                      </Link>
                       {permissions.canAccessHiring && (
                         <Link
                           to={`/${workspaceSlug}/hiring`}

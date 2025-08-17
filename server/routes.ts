@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, recruitingColumns, recruitingCards } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -3984,6 +3984,333 @@ Analyze this role and recommend matching designers, considering feedback pattern
       .returning();
 
     res.json({ success: true, inquiryId: inquiry.id });
+  }));
+
+  // Recruiting Board Endpoints
+  app.get("/api/recruiting/columns", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    
+    const columns = await db.select()
+      .from(recruitingColumns)
+      .where(eq(recruitingColumns.workspaceId, context.workspaceId))
+      .orderBy(asc(recruitingColumns.position));
+    
+    res.json(columns);
+  }));
+
+  app.post("/api/recruiting/columns", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { name, color } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: "Column name is required" });
+    }
+    
+    // Get the highest position
+    const maxPosition = await db.select({ maxPos: sql<number>`COALESCE(MAX(position), 0)` })
+      .from(recruitingColumns)
+      .where(eq(recruitingColumns.workspaceId, context.workspaceId));
+    
+    const newPosition = (maxPosition[0]?.maxPos || 0) + 1;
+    
+    const [newColumn] = await db.insert(recruitingColumns)
+      .values({
+        workspaceId: context.workspaceId,
+        name,
+        color,
+        position: newPosition
+      })
+      .returning();
+    
+    res.json(newColumn);
+  }));
+
+  app.put("/api/recruiting/columns/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const columnId = parseInt(req.params.id);
+    const { name, color, position } = req.body;
+    
+    const updates: any = { updatedAt: new Date() };
+    if (name !== undefined) updates.name = name;
+    if (color !== undefined) updates.color = color;
+    if (position !== undefined) updates.position = position;
+    
+    const [updatedColumn] = await db.update(recruitingColumns)
+      .set(updates)
+      .where(and(
+        eq(recruitingColumns.id, columnId),
+        eq(recruitingColumns.workspaceId, context.workspaceId)
+      ))
+      .returning();
+    
+    if (!updatedColumn) {
+      return res.status(404).json({ error: "Column not found" });
+    }
+    
+    res.json(updatedColumn);
+  }));
+
+  app.delete("/api/recruiting/columns/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const columnId = parseInt(req.params.id);
+    
+    // Delete the column (cards will be cascade deleted)
+    const [deletedColumn] = await db.delete(recruitingColumns)
+      .where(and(
+        eq(recruitingColumns.id, columnId),
+        eq(recruitingColumns.workspaceId, context.workspaceId)
+      ))
+      .returning();
+    
+    if (!deletedColumn) {
+      return res.status(404).json({ error: "Column not found" });
+    }
+    
+    res.json({ success: true });
+  }));
+
+  app.get("/api/recruiting/cards", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    
+    const cards = await db.select({
+      id: recruitingCards.id,
+      workspaceId: recruitingCards.workspaceId,
+      columnId: recruitingCards.columnId,
+      designerId: recruitingCards.designerId,
+      position: recruitingCards.position,
+      notes: recruitingCards.notes,
+      addedBy: recruitingCards.addedBy,
+      movedAt: recruitingCards.movedAt,
+      createdAt: recruitingCards.createdAt,
+      designer: designers
+    })
+      .from(recruitingCards)
+      .innerJoin(designers, eq(recruitingCards.designerId, designers.id))
+      .where(eq(recruitingCards.workspaceId, context.workspaceId))
+      .orderBy(asc(recruitingCards.position));
+    
+    res.json(cards);
+  }));
+
+  app.post("/api/recruiting/cards", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { columnId, designerId, notes } = req.body;
+    
+    if (!columnId || !designerId) {
+      return res.status(400).json({ error: "Column ID and Designer ID are required" });
+    }
+    
+    // Check if designer already exists in recruiting board
+    const existingCard = await db.select()
+      .from(recruitingCards)
+      .where(and(
+        eq(recruitingCards.workspaceId, context.workspaceId),
+        eq(recruitingCards.designerId, designerId)
+      ))
+      .limit(1);
+    
+    if (existingCard.length > 0) {
+      return res.status(409).json({ error: "Designer is already on the recruiting board" });
+    }
+    
+    // Get the highest position in the column
+    const maxPosition = await db.select({ maxPos: sql<number>`COALESCE(MAX(position), 0)` })
+      .from(recruitingCards)
+      .where(and(
+        eq(recruitingCards.columnId, columnId),
+        eq(recruitingCards.workspaceId, context.workspaceId)
+      ));
+    
+    const newPosition = (maxPosition[0]?.maxPos || 0) + 1;
+    
+    const [newCard] = await db.insert(recruitingCards)
+      .values({
+        workspaceId: context.workspaceId,
+        columnId,
+        designerId,
+        position: newPosition,
+        notes,
+        addedBy: context.userId
+      })
+      .returning();
+    
+    // Get the designer data
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId)
+    });
+    
+    res.json({ ...newCard, designer });
+  }));
+
+  app.post("/api/recruiting/cards/bulk", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { columnId, designerIds, listId } = req.body;
+    
+    if (!columnId || (!designerIds && !listId)) {
+      return res.status(400).json({ error: "Column ID and either Designer IDs or List ID are required" });
+    }
+    
+    let idsToAdd = designerIds || [];
+    
+    // If listId is provided, get all designers from that list
+    if (listId) {
+      const listDesignerEntries = await db.select({ designerId: listDesigners.designerId })
+        .from(listDesigners)
+        .where(eq(listDesigners.listId, listId));
+      
+      idsToAdd = listDesignerEntries.map(entry => entry.designerId);
+    }
+    
+    if (idsToAdd.length === 0) {
+      return res.status(400).json({ error: "No designers to add" });
+    }
+    
+    // Filter out designers already on the board
+    const existingCards = await db.select({ designerId: recruitingCards.designerId })
+      .from(recruitingCards)
+      .where(and(
+        eq(recruitingCards.workspaceId, context.workspaceId),
+        sql`${recruitingCards.designerId} = ANY(${idsToAdd})`
+      ));
+    
+    const existingDesignerIds = new Set(existingCards.map(card => card.designerId));
+    const newDesignerIds = idsToAdd.filter((id: number) => !existingDesignerIds.has(id));
+    
+    if (newDesignerIds.length === 0) {
+      return res.status(409).json({ error: "All designers are already on the recruiting board" });
+    }
+    
+    // Get the highest position in the column
+    const maxPosition = await db.select({ maxPos: sql<number>`COALESCE(MAX(position), 0)` })
+      .from(recruitingCards)
+      .where(and(
+        eq(recruitingCards.columnId, columnId),
+        eq(recruitingCards.workspaceId, context.workspaceId)
+      ));
+    
+    let currentPosition = (maxPosition[0]?.maxPos || 0);
+    
+    // Add all new designers
+    const newCards = await Promise.all(
+      newDesignerIds.map(async (designerId: number) => {
+        currentPosition += 1;
+        const [card] = await db.insert(recruitingCards)
+          .values({
+            workspaceId: context.workspaceId,
+            columnId,
+            designerId,
+            position: currentPosition,
+            addedBy: context.userId
+          })
+          .returning();
+        return card;
+      })
+    );
+    
+    res.json({ 
+      success: true, 
+      added: newCards.length,
+      skipped: existingDesignerIds.size
+    });
+  }));
+
+  app.put("/api/recruiting/cards/:id/move", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const cardId = parseInt(req.params.id);
+    const { columnId, position } = req.body;
+    
+    if (!columnId || position === undefined) {
+      return res.status(400).json({ error: "Column ID and position are required" });
+    }
+    
+    const [updatedCard] = await db.update(recruitingCards)
+      .set({
+        columnId,
+        position,
+        movedAt: new Date()
+      })
+      .where(and(
+        eq(recruitingCards.id, cardId),
+        eq(recruitingCards.workspaceId, context.workspaceId)
+      ))
+      .returning();
+    
+    if (!updatedCard) {
+      return res.status(404).json({ error: "Card not found" });
+    }
+    
+    res.json(updatedCard);
+  }));
+
+  app.put("/api/recruiting/cards/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const cardId = parseInt(req.params.id);
+    const { notes } = req.body;
+    
+    const [updatedCard] = await db.update(recruitingCards)
+      .set({ notes })
+      .where(and(
+        eq(recruitingCards.id, cardId),
+        eq(recruitingCards.workspaceId, context.workspaceId)
+      ))
+      .returning();
+    
+    if (!updatedCard) {
+      return res.status(404).json({ error: "Card not found" });
+    }
+    
+    res.json(updatedCard);
+  }));
+
+  app.delete("/api/recruiting/cards/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const cardId = parseInt(req.params.id);
+    
+    const [deletedCard] = await db.delete(recruitingCards)
+      .where(and(
+        eq(recruitingCards.id, cardId),
+        eq(recruitingCards.workspaceId, context.workspaceId)
+      ))
+      .returning();
+    
+    if (!deletedCard) {
+      return res.status(404).json({ error: "Card not found" });
+    }
+    
+    res.json({ success: true });
+  }));
+
+  // Initialize default columns for workspace if none exist
+  app.post("/api/recruiting/initialize", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    
+    // Check if columns already exist
+    const existingColumns = await db.select()
+      .from(recruitingColumns)
+      .where(eq(recruitingColumns.workspaceId, context.workspaceId))
+      .limit(1);
+    
+    if (existingColumns.length > 0) {
+      return res.status(409).json({ error: "Recruiting board already initialized" });
+    }
+    
+    // Create default columns
+    const defaultColumns = [
+      { name: "Backlog", color: "#6B7280", position: 1 },
+      { name: "Outreach", color: "#F59E0B", position: 2 },
+      { name: "Interviewing", color: "#3B82F6", position: 3 },
+      { name: "Offer", color: "#8B5CF6", position: 4 },
+      { name: "Hired", color: "#10B981", position: 5 }
+    ];
+    
+    const createdColumns = await db.insert(recruitingColumns)
+      .values(defaultColumns.map(col => ({
+        ...col,
+        workspaceId: context.workspaceId
+      })))
+      .returning();
+    
+    res.json(createdColumns);
   }));
 
   const httpServer = createServer(app);

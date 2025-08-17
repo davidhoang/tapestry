@@ -271,6 +271,29 @@ export const portfolioInquiries = pgTable("portfolio_inquiries", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Recruiting feature tables
+export const recruitingColumns = pgTable("recruiting_columns", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  name: text("name").notNull(),
+  position: integer("position").notNull(),
+  color: text("color"), // Optional color for the column header
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const recruitingCards = pgTable("recruiting_cards", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  columnId: integer("column_id").references(() => recruitingColumns.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  position: integer("position").notNull(), // Position within the column
+  notes: text("notes"), // Optional notes for this specific recruiting process
+  addedBy: integer("added_by").references(() => users.id),
+  movedAt: timestamp("moved_at").defaultNow().notNull(), // Track when last moved
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],

@@ -215,9 +215,9 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
           Upload a PDF export from LinkedIn connections or search results. The system will automatically extract contact information including names, titles, companies, and LinkedIn profiles.
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label htmlFor="pdf-file">Upload PDF File</Label>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-3">
             <Input
               id="pdf-file"
               type="file"
@@ -226,17 +226,19 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
               onChange={handleFileUpload}
               ref={fileInputRef}
               disabled={isProcessing}
-              className="flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+              className="flex-1 border-0 bg-transparent p-0 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border file:border-input file:bg-background file:text-sm file:font-medium hover:file:bg-accent"
             />
             {batchResults.length > 0 && (
-              <Button variant="outline" onClick={clearData} disabled={isProcessing}>
-                <Trash2 className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="sm" onClick={clearData} disabled={isProcessing}>
+                <Trash2 className="h-4 w-4 mr-1" />
                 Clear
               </Button>
             )}
           </div>
-          {selectedFiles && selectedFiles.length === 0 && (
-            <p className="text-sm text-muted-foreground">No files chosen</p>
+          {selectedFiles && selectedFiles.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected
+            </p>
           )}
         </div>
 
@@ -258,7 +260,7 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
             Processing Results
           </h3>
           {batchResults.map((batchResult, index) => (
-              <div key={index} className="border rounded-lg p-4 space-y-3">
+              <div key={index} className="bg-muted/30 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium flex items-center gap-2">
                     {batchResult.result.success ? (
@@ -284,23 +286,23 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
                 {batchResult.result.contacts.length > 0 && (
                   <div className="space-y-2">
                     <h5 className="text-sm font-medium">Extracted Contacts:</h5>
-                    <div className="grid gap-2 max-h-48 overflow-y-auto">
+                    <div className="grid gap-3 max-h-48 overflow-y-auto">
                       {batchResult.result.contacts.map((contact, contactIndex) => (
-                        <div key={contactIndex} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
-                          <div>
-                            <div className="font-medium">{contact.name}</div>
+                        <div key={contactIndex} className="flex items-center justify-between py-3 px-3 bg-background rounded-md text-sm">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{contact.name}</div>
                             {contact.title && contact.company && (
-                              <div className="text-muted-foreground">
+                              <div className="text-muted-foreground text-xs truncate">
                                 {contact.title} at {contact.company}
                               </div>
                             )}
                             {contact.location && (
-                              <div className="text-muted-foreground">{contact.location}</div>
+                              <div className="text-muted-foreground text-xs truncate">{contact.location}</div>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 ml-3">
                             <div className={`w-2 h-2 rounded-full ${getConfidenceColor(contact.confidence)}`} />
-                            <span className="text-xs">{getConfidenceText(contact.confidence)}</span>
+                            <span className="text-xs whitespace-nowrap">{getConfidenceText(contact.confidence)}</span>
                           </div>
                         </div>
                       ))}

@@ -218,16 +218,18 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
         <div className="space-y-3">
           <Label htmlFor="pdf-file">Upload PDF File</Label>
           <div className="flex items-center gap-3">
-            <Input
-              id="pdf-file"
-              type="file"
-              accept=".pdf"
-              multiple
-              onChange={handleFileUpload}
-              ref={fileInputRef}
-              disabled={isProcessing}
-              className="flex-1 border-0 bg-transparent p-0 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border file:border-input file:bg-background file:text-sm file:font-medium hover:file:bg-accent"
-            />
+            <div className="flex-1">
+              <Input
+                id="pdf-file"
+                type="file"
+                accept=".pdf"
+                multiple
+                onChange={handleFileUpload}
+                ref={fileInputRef}
+                disabled={isProcessing}
+                className="w-full border-0 bg-transparent p-0 shadow-none ring-0 focus:ring-0 focus-visible:ring-0 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border file:border-input file:bg-background file:text-sm file:font-medium hover:file:bg-accent"
+              />
+            </div>
             {batchResults.length > 0 && (
               <Button variant="outline" size="sm" onClick={clearData} disabled={isProcessing}>
                 <Trash2 className="h-4 w-4 mr-1" />

@@ -723,7 +723,7 @@ function AddToListDialog({
 
     setIsProcessing(true);
     try {
-      await Promise.all(
+      const results = await Promise.allSettled(
         selectedListIds.map((listId) =>
           addDesignersToList.mutateAsync({
             listId,
@@ -732,12 +732,29 @@ function AddToListDialog({
         ),
       );
 
-      toast({
-        title: "Success",
-        description: `Added designer to ${selectedListIds.length} list${selectedListIds.length > 1 ? 's' : ''}`,
-      });
-      onOpenChange(false);
-      onSuccess();
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const alreadyInList = results.filter(result => 
+        result.status === 'rejected' && 
+        result.reason?.message?.includes('already in list')
+      ).length;
+
+      if (successful > 0 || alreadyInList > 0) {
+        toast({
+          title: "Success",
+          description: successful > 0 
+            ? `Added designer to ${successful} list${successful > 1 ? 's' : ''}${alreadyInList > 0 ? ` (already in ${alreadyInList})` : ''}`
+            : `Designer already in all selected lists`,
+        });
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        // Only show error if there were actual failures (not "already in list")
+        toast({
+          title: "Error",
+          description: "Failed to add designer to lists",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",

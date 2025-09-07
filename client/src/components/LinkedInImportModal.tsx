@@ -325,7 +325,7 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
               {importContactsMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Import All Contacts
+              Import contacts
             </Button>
           </div>
         </div>
@@ -341,26 +341,26 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
             )}
             Import Results
           </h3>
-          <Alert variant={importResult.success ? "default" : "destructive"}>
-            <AlertDescription>
+          <div className="bg-muted/30 rounded-lg p-4">
+            <div className="text-sm">
                 {importResult.success 
                   ? `Successfully imported ${importResult.imported} contacts.`
                   : `Import completed with errors. ${importResult.imported} contacts imported.`
                 }
                 {importResult.skipped > 0 && ` ${importResult.skipped} contacts were skipped.`}
-            </AlertDescription>
-          </Alert>
+            </div>
+          </div>
 
           {importResult.errors && importResult.errors.length > 0 && (
             <div className="space-y-2">
               <h4 className="font-medium">Errors:</h4>
               <div className="space-y-1 max-h-48 overflow-y-auto">
                 {importResult.errors.map((error, index) => (
-                  <Alert key={index} variant="destructive">
-                    <AlertDescription>
+                  <div key={index} className="bg-muted/30 rounded-lg p-3">
+                    <div className="text-sm text-red-600">
                       {error.contact}: {error.error}
-                    </AlertDescription>
-                  </Alert>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -371,7 +371,7 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
               Close
             </Button>
             <Button variant="outline" onClick={clearData}>
-              Import More
+              Add more
             </Button>
           </div>
         </div>

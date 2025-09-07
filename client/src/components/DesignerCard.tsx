@@ -108,7 +108,7 @@ export default function DesignerCard({
         
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4">
-            <Avatar className="h-16 w-16 overflow-hidden">
+            <Avatar className="h-16 w-16 overflow-hidden rounded-none">
               <AvatarImage 
                 src={profileImageUrl} 
                 alt={designer.name}

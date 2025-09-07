@@ -522,46 +522,49 @@ export default function DesignerDetailsPage() {
           ) : (
             /* View Mode */
             <>
-              {/* Profile Photo */}
-              <div className="flex justify-start">
-                {designer.photoUrl ? (
-                  <img
-                    src={designer.photoUrl}
-                    alt={designer.name}
-                    className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
-                  />
-                ) : (
-                  <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
-                    <span className="text-4xl font-bold text-muted-foreground">
-                      {designer.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Profile Photo, Name and Title with Buttons */}
+              <div className="flex items-start gap-6">
+                {/* Profile Photo */}
+                <div className="flex-shrink-0">
+                  {designer.photoUrl ? (
+                    <img
+                      src={designer.photoUrl}
+                      alt={designer.name}
+                      className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+                    />
+                  ) : (
+                    <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                      <span className="text-4xl font-bold text-muted-foreground">
+                        {designer.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Name and Title with Edit Button */}
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-5xl font-bold leading-tight tracking-tight">{designer.name}</h1>
-                    <p className="text-2xl text-muted-foreground font-light mt-2">
-                      {designer.level} {designer.title} at {designer.company}
-                    </p>
-                    <p className="text-lg text-muted-foreground designer-meta mt-1">
-                      {designer.location}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <AddToListPopover designerId={designer.id} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEdit}
-                      className="flex items-center gap-2"
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
+                {/* Name, Title, and Buttons */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-5xl font-bold leading-tight tracking-tight">{designer.name}</h1>
+                      <p className="text-2xl text-muted-foreground font-light mt-2">
+                        {designer.level} {designer.title} at {designer.company}
+                      </p>
+                      <p className="text-lg text-muted-foreground designer-meta mt-1">
+                        {designer.location}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <AddToListPopover designerId={designer.id} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEdit}
+                        className="flex items-center gap-2"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

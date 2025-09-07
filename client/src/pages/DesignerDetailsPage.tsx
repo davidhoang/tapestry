@@ -530,10 +530,10 @@ export default function DesignerDetailsPage() {
                     <img
                       src={designer.photoUrl}
                       alt={designer.name}
-                      className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+                      className="h-32 w-32 object-cover bg-background border-4 border-background"
                     />
                   ) : (
-                    <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                    <div className="h-32 w-32 bg-background border-4 border-background flex items-center justify-center">
                       <span className="text-4xl font-bold text-muted-foreground">
                         {designer.name.charAt(0)}
                       </span>

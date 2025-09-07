@@ -31,7 +31,7 @@ export function DesignerAvatar({ imageUrl, name, size = "md", className = "" }: 
           className="object-cover"
         />
       ) : (
-        <AvatarFallback className={`${fallbackSizeClasses[size]} font-bold text-muted-foreground bg-muted`}>
+        <AvatarFallback className={`${fallbackSizeClasses[size]} font-bold text-muted-foreground bg-muted rounded-none`}>
           {initials}
         </AvatarFallback>
       )}

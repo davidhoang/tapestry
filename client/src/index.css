@@ -76,20 +76,41 @@
     @apply font-serif;
   }
 
-  /* Larger headings get more refined spacing */
+  /* Larger headings get more refined spacing and explicit font sizes */
   h1 {
+    font-size: 2.25rem; /* 36px - equivalent to text-4xl */
     letter-spacing: -0.04em;
     line-height: 1.1;
   }
 
   h2 {
+    font-size: 1.875rem; /* 30px - equivalent to text-3xl */
     letter-spacing: -0.03em;
     line-height: 1.2;
   }
 
   h3 {
+    font-size: 1.5rem; /* 24px - equivalent to text-2xl */
     letter-spacing: -0.02em;
     line-height: 1.3;
+  }
+
+  h4 {
+    font-size: 1.25rem; /* 20px - equivalent to text-xl */
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+  }
+
+  h5 {
+    font-size: 1.125rem; /* 18px - equivalent to text-lg */
+    letter-spacing: -0.01em;
+    line-height: 1.5;
+  }
+
+  h6 {
+    font-size: 1rem; /* 16px - equivalent to text-base */
+    letter-spacing: -0.01em;
+    line-height: 1.6;
   }
 
   /* Designer card names should be serif too */

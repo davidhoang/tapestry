@@ -614,18 +614,30 @@ export default function DesignerDetailsPage() {
               <div className="space-y-6">
                 <h2 className="text-3xl font-bold">Skills & Expertise</h2>
                 <div className="flex flex-wrap gap-3">
-                  {(designer.skills && typeof designer.skills === 'string' 
-                    ? designer.skills.split(',').map(s => s.trim()).filter(s => s)
-                    : []
-                  ).map((skill, i) => (
-                    <Badge 
-                      key={i} 
-                      variant="secondary"
-                      className="text-sm px-3 py-1"
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
+                  {(() => {
+                    let skillsArray = [];
+                    if (designer.skills) {
+                      if (typeof designer.skills === 'string') {
+                        skillsArray = designer.skills.split(',').map(s => s.trim()).filter(s => s);
+                      } else if (Array.isArray(designer.skills)) {
+                        skillsArray = designer.skills.filter(s => s);
+                      }
+                    }
+                    
+                    if (skillsArray.length === 0) {
+                      return <p className="text-muted-foreground text-sm">No skills listed</p>;
+                    }
+                    
+                    return skillsArray.map((skill, i) => (
+                      <Badge 
+                        key={i} 
+                        variant="secondary"
+                        className="text-sm px-3 py-1"
+                      >
+                        {skill}
+                      </Badge>
+                    ));
+                  })()}
                 </div>
               </div>
 

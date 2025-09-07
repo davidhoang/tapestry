@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X } from "lucide-react";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2 } from "lucide-react";
 import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { useDesignerBySlug } from "@/hooks/use-designer";
 import { useState, useRef } from "react";
@@ -29,10 +29,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SkillsInput from "@/components/SkillsInput";
 import { useToast } from "@/hooks/use-toast";
 import { getDesignerCoverImage } from "@/utils/coverImages";
 import PortfolioManager from "@/components/PortfolioManager";
+import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-lists";
 
 const EXPERIENCE_LEVELS = [
   "Mid-level",
@@ -55,6 +65,7 @@ export default function DesignerDetailsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [showAddToListDialog, setShowAddToListDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   

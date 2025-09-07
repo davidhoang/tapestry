@@ -552,6 +552,37 @@ export default function DesignerDetailsPage() {
                       <p className="text-lg text-muted-foreground designer-meta mt-1">
                         {designer.location}
                       </p>
+                      {/* Contact Icons */}
+                      <div className="flex items-center gap-2 mt-3">
+                        {designer.website && (
+                          <a 
+                            href={designer.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                          >
+                            <Globe className="h-4 w-4" />
+                          </a>
+                        )}
+                        {designer.linkedIn && (
+                          <a 
+                            href={designer.linkedIn} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                          >
+                            <Linkedin className="h-4 w-4" />
+                          </a>
+                        )}
+                        {designer.email && (
+                          <a 
+                            href={`mailto:${designer.email}`}
+                            className="p-2 border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                       <AddToListPopover designerId={designer.id} />
@@ -587,50 +618,17 @@ export default function DesignerDetailsPage() {
                     ? designer.skills.split(',').map(s => s.trim()).filter(s => s)
                     : []
                   ).map((skill, i) => (
-                    <span 
+                    <Badge 
                       key={i} 
-                      className="text-base hover:text-foreground transition-colors cursor-default designer-skills-text"
+                      variant="secondary"
+                      className="text-sm px-3 py-1"
                     >
-                      #{skill}
-                    </span>
+                      {skill}
+                    </Badge>
                   ))}
                 </div>
               </div>
 
-              {/* Contact Section */}
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold">Get in Touch</h2>
-                <div className="flex flex-wrap gap-4">
-                  {designer.website && (
-                    <a 
-                      href={designer.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
-                    >
-                      <Globe className="h-5 w-5" />
-                    </a>
-                  )}
-                  {designer.linkedIn && (
-                    <a 
-                      href={designer.linkedIn} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
-                    >
-                      <Linkedin className="h-5 w-5" />
-                    </a>
-                  )}
-                  {designer.email && (
-                    <a 
-                      href={`mailto:${designer.email}`}
-                      className="p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
-                    >
-                      <Mail className="h-5 w-5" />
-                    </a>
-                  )}
-                </div>
-              </div>
 
               {/* Portfolio Management Section */}
               <div className="border-t pt-12">

@@ -546,7 +546,7 @@ export default function DesignerDetailsPage() {
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <h1 className="text-3xl font-bold leading-tight tracking-tight">{designer.name}</h1>
-                      <p className="text-2xl text-muted-foreground font-light mt-2">
+                      <p className="text-xl text-muted-foreground font-light mt-2">
                         {designer.level} {designer.title} at {designer.company}
                       </p>
                       <p className="text-lg text-muted-foreground designer-meta mt-1">

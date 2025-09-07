@@ -559,7 +559,7 @@ export default function DesignerDetailsPage() {
                             href={designer.website} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="p-2 border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                            className="p-2 hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
                           >
                             <Globe className="h-4 w-4" />
                           </a>
@@ -569,7 +569,7 @@ export default function DesignerDetailsPage() {
                             href={designer.linkedIn} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="p-2 border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                            className="p-2 hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
                           >
                             <Linkedin className="h-4 w-4" />
                           </a>
@@ -577,7 +577,7 @@ export default function DesignerDetailsPage() {
                         {designer.email && (
                           <a 
                             href={`mailto:${designer.email}`}
-                            className="p-2 border border-border hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                            className="p-2 hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
                           >
                             <Mail className="h-4 w-4" />
                           </a>

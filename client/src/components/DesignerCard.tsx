@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DesignerAvatar } from "./DesignerAvatar";
 import { SelectDesigner } from "@db/schema";
 import { Pencil, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation, useParams } from "wouter";
@@ -108,17 +108,12 @@ export default function DesignerCard({
         
         <CardHeader className="space-y-1 pb-4">
           <div className="flex items-start gap-4 pt-4">
-            <Avatar className="h-16 w-16 overflow-hidden rounded-none">
-              <AvatarImage 
-                src={profileImageUrl} 
-                alt={designer.name}
-                className="transition-transform duration-[3000ms] ease-out group-hover:scale-110"
-                style={{ transitionDuration: '3s' }}
-              />
-              <AvatarFallback className="text-lg font-medium">
-                {designer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <DesignerAvatar 
+              imageUrl={profileImageUrl}
+              name={designer.name}
+              size="md"
+              className="transition-transform duration-[3000ms] ease-out group-hover:scale-110"
+            />
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0">

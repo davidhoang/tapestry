@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getDesignerCoverImage } from "@/utils/coverImages";
 import PortfolioManager from "@/components/PortfolioManager";
 import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-lists";
+import { DesignerAvatar } from "@/components/DesignerAvatar";
 
 const EXPERIENCE_LEVELS = [
   "Mid-level",
@@ -526,19 +527,11 @@ export default function DesignerDetailsPage() {
               <div className="flex items-start gap-6">
                 {/* Profile Photo */}
                 <div className="flex-shrink-0">
-                  {designer.photoUrl ? (
-                    <img
-                      src={designer.photoUrl}
-                      alt={designer.name}
-                      className="h-32 w-32 object-cover bg-background border-4 border-background"
-                    />
-                  ) : (
-                    <div className="h-32 w-32 bg-background border-4 border-background flex items-center justify-center">
-                      <span className="text-4xl font-bold text-muted-foreground">
-                        {designer.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
+                  <DesignerAvatar 
+                    imageUrl={designer.photoUrl}
+                    name={designer.name}
+                    size="lg"
+                  />
                 </div>
 
                 {/* Name, Title, and Buttons */}

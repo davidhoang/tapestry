@@ -479,14 +479,12 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
     defaultValues: {
       name: list.name,
       description: list.description || "",
-      summary: list.summary || "",
     },
   });
 
   const onSubmit = async (values: {
     name: string;
     description: string;
-    summary: string;
   }) => {
     try {
       // Update list details
@@ -613,22 +611,6 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="summary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Summary</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          placeholder="Add a summary for the public share page and email..."
-                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

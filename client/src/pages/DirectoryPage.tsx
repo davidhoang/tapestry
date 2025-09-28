@@ -58,6 +58,7 @@ import {
   Sparkles,
   Grid3X3,
   List,
+  Table,
   Edit,
   ChevronDown,
   Upload,
@@ -144,7 +145,7 @@ export default function DirectoryPage() {
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [enrichmentDesigner, setEnrichmentDesigner] =
     useState<SelectDesigner | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
@@ -257,9 +258,17 @@ export default function DirectoryPage() {
                   variant={viewMode === "list" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="rounded-l-none"
+                  className="rounded-none"
                 >
                   <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                  className="rounded-l-none"
+                >
+                  <Table className="h-4 w-4" />
                 </Button>
               </div>
 
@@ -370,7 +379,7 @@ export default function DirectoryPage() {
               />
             ))}
           </div>
-        ) : (
+        ) : viewMode === "list" ? (
           <div className="space-y-4">
             {filteredDesigners.map((designer) => (
               <DesignerListItem
@@ -387,6 +396,18 @@ export default function DirectoryPage() {
               />
             ))}
           </div>
+        ) : (
+          <DesignerTable
+            designers={filteredDesigners}
+            workspaceSlug={workspaceSlug}
+            onEdit={setDesignerToEdit}
+            onEnrich={(designer) => {
+              setEnrichmentDesigner(designer);
+              setShowEnrichment(true);
+            }}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleDesignerSelection}
+          />
         )}
         </div>
 
@@ -1414,6 +1435,199 @@ function DesignerListItem({
             </Badge>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface DesignerTableProps {
+  designers: SelectDesigner[];
+  workspaceSlug: string;
+  onEdit: (designer: SelectDesigner) => void;
+  onEnrich: (designer: SelectDesigner) => void;
+  selectedIds: number[];
+  onToggleSelect: (id: number) => void;
+}
+
+function DesignerTable({
+  designers,
+  workspaceSlug,
+  onEdit,
+  onEnrich,
+  selectedIds,
+  onToggleSelect,
+}: DesignerTableProps) {
+  return (
+    <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="text-left py-3 px-4 font-medium text-gray-900 w-12">
+                <Checkbox
+                  checked={designers.length > 0 && selectedIds.length === designers.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      designers.forEach(designer => {
+                        if (!selectedIds.includes(designer.id)) {
+                          onToggleSelect(designer.id);
+                        }
+                      });
+                    } else {
+                      selectedIds.forEach(id => onToggleSelect(id));
+                    }
+                  }}
+                />
+              </th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Name</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Title</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Company</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Location</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Level</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Skills</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-900 w-16">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {designers.map((designer, index) => {
+              const skills = (() => {
+                if (Array.isArray(designer.skills)) {
+                  return designer.skills;
+                }
+                if (typeof designer.skills === "string" && designer.skills.trim()) {
+                  try {
+                    return JSON.parse(designer.skills);
+                  } catch {
+                    return designer.skills
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s);
+                  }
+                }
+                return [];
+              })();
+
+              return (
+                <tr
+                  key={designer.id}
+                  className={`hover:bg-gray-50 cursor-pointer ${
+                    selectedIds.includes(designer.id) ? "bg-primary/5" : ""
+                  }`}
+                  onClick={(e) => {
+                    // Don't navigate if clicking on checkbox or actions
+                    if (
+                      (e.target as HTMLElement).closest('input[type="checkbox"]') ||
+                      (e.target as HTMLElement).closest("button") ||
+                      (e.target as HTMLElement).closest("[data-action]")
+                    ) {
+                      return;
+                    }
+                    window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
+                  }}
+                >
+                  <td className="py-3 px-4">
+                    <Checkbox
+                      checked={selectedIds.includes(designer.id)}
+                      onCheckedChange={() => onToggleSelect(designer.id)}
+                    />
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        {designer.photoUrl ? (
+                          <img
+                            src={designer.photoUrl}
+                            alt={designer.name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            {designer.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="font-medium text-gray-900 truncate max-w-[200px]">
+                        {designer.name}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-gray-700 max-w-[200px] truncate">
+                    {designer.title}
+                  </td>
+                  <td className="py-3 px-4 text-gray-700 max-w-[150px] truncate">
+                    {designer.company}
+                  </td>
+                  <td className="py-3 px-4 text-gray-500 max-w-[150px] truncate">
+                    {designer.location}
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge variant="secondary" className="text-xs">
+                      {designer.level}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-4 max-w-[300px]">
+                    {skills && skills.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {skills.slice(0, 3).map((skill: string, skillIndex: number) => (
+                          <Badge key={skillIndex} variant="outline" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                        {skills.length > 3 && (
+                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                            +{skills.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No skills</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {designer.available && (
+                      <Badge variant="default" className="text-xs">
+                        Available
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center justify-end space-x-2" data-action>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(designer);
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEnrich(designer);
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        
+        {designers.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No designers found matching your search criteria.
+          </div>
+        )}
       </div>
     </div>
   );

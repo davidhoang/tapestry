@@ -1871,15 +1871,22 @@ function DesignerTable({
                     selectedIds.includes(designer.id) ? "bg-blue-50" : ""
                   }`}
                   onClick={(e) => {
-                    // Don't navigate if clicking on checkbox or actions
+                    // Don't navigate if editing a cell, clicking on checkbox, buttons, or editable cells
                     if (
+                      editingCell ||
                       (e.target as HTMLElement).closest('input[type="checkbox"]') ||
                       (e.target as HTMLElement).closest("button") ||
-                      (e.target as HTMLElement).closest("[data-action]")
+                      (e.target as HTMLElement).closest("input") ||
+                      (e.target as HTMLElement).closest("[data-action]") ||
+                      (e.target as HTMLElement).closest("[data-editable]")
                     ) {
                       return;
                     }
-                    window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
+                    // Only navigate when clicking on the name column
+                    const nameCell = (e.target as HTMLElement).closest('td[data-name-cell]');
+                    if (nameCell) {
+                      window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
+                    }
                   }}
                 >
                   <td 
@@ -1892,11 +1899,12 @@ function DesignerTable({
                     />
                   </td>
                   <td 
-                    className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100"
+                    className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100 cursor-pointer"
                     style={{ 
                       width: columnWidths.name,
                       left: columnWidths.checkbox 
                     }}
+                    data-name-cell
                   >
                     <div className="font-medium text-gray-900 truncate">
                       {designer.name}

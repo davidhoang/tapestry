@@ -186,21 +186,41 @@ export default function DirectoryPage() {
 
   const saveEdit = useCallback(async (id: number, field: string, newValue: any) => {
     try {
-      const designer = filteredDesigners?.find(d => d.id === id);
+      const designer = designers?.find(d => d.id === id);
       if (!designer) return;
 
-      // Prepare update data
-      const updateData = { 
-        ...designer, 
-        [field]: newValue 
-      };
+      // Create form data for the mutation
+      const formData = new FormData();
+      formData.append('name', designer.name);
+      formData.append('title', designer.title);
+      formData.append('email', designer.email || '');
+      formData.append('location', designer.location || '');
+      formData.append('company', designer.company || '');
+      formData.append('level', designer.level);
+      formData.append('website', designer.website || '');
+      formData.append('linkedIn', designer.linkedIn || '');
+      formData.append('notes', designer.notes || '');
+      formData.append('available', designer.available ? 'true' : 'false');
 
-      // Process skills array properly if editing tags
-      if (field === 'skills' && Array.isArray(newValue)) {
-        updateData.skills = newValue;
+      // Handle skills array properly
+      let skillsValue = designer.skills;
+      if (field === 'skills') {
+        skillsValue = Array.isArray(newValue) ? newValue : [];
+      }
+      
+      // Convert skills array to JSON string for form data
+      if (Array.isArray(skillsValue)) {
+        formData.append('skills', JSON.stringify(skillsValue));
+      } else {
+        formData.append('skills', skillsValue || '[]');
       }
 
-      await updateDesigner.mutateAsync(updateData);
+      // Update the specific field being edited
+      if (field !== 'skills') {
+        formData.set(field, newValue || '');
+      }
+
+      await updateDesigner.mutateAsync({ id, formData });
       
       setEditingCell(null);
       setEditingValues({});
@@ -216,7 +236,7 @@ export default function DirectoryPage() {
         variant: "destructive",
       });
     }
-  }, [filteredDesigners, updateDesigner, toast]);
+  }, [designers, updateDesigner, toast]);
 
   // Column resizing handlers
   const handleResizeStart = useCallback((column: string, e: React.MouseEvent) => {

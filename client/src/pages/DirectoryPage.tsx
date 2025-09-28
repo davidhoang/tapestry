@@ -145,7 +145,7 @@ export default function DirectoryPage() {
   const [showEnrichment, setShowEnrichment] = useState(false);
   const [enrichmentDesigner, setEnrichmentDesigner] =
     useState<SelectDesigner | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
@@ -258,17 +258,9 @@ export default function DirectoryPage() {
                   variant={viewMode === "list" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="rounded-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "table" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
                   className="rounded-l-none"
                 >
-                  <Table className="h-4 w-4" />
+                  <List className="h-4 w-4" />
                 </Button>
               </div>
 
@@ -374,23 +366,6 @@ export default function DirectoryPage() {
                   setShowEnrichment(true);
                 }}
                 showCheckbox={true}
-                isSelected={selectedIds.includes(designer.id)}
-                onToggleSelect={toggleDesignerSelection}
-              />
-            ))}
-          </div>
-        ) : viewMode === "list" ? (
-          <div className="space-y-4">
-            {filteredDesigners.map((designer) => (
-              <DesignerListItem
-                key={designer.id}
-                designer={designer}
-                workspaceSlug={workspaceSlug}
-                onEdit={setDesignerToEdit}
-                onEnrich={(designer) => {
-                  setEnrichmentDesigner(designer);
-                  setShowEnrichment(true);
-                }}
                 isSelected={selectedIds.includes(designer.id)}
                 onToggleSelect={toggleDesignerSelection}
               />
@@ -1458,12 +1433,12 @@ function DesignerTable({
   onToggleSelect,
 }: DesignerTableProps) {
   return (
-    <div className="bg-white rounded-lg border overflow-hidden">
+    <div className="bg-white border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 w-12">
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm w-10">
                 <Checkbox
                   checked={designers.length > 0 && selectedIds.length === designers.length}
                   onCheckedChange={(checked) => {
@@ -1479,17 +1454,14 @@ function DesignerTable({
                   }}
                 />
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Name</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Title</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Company</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Location</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Level</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Skills</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-900 w-16">Actions</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Name</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Email</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Website</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">LinkedIn</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Tags</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {designers.map((designer, index) => {
               const skills = (() => {
                 if (Array.isArray(designer.skills)) {
@@ -1501,8 +1473,8 @@ function DesignerTable({
                   } catch {
                     return designer.skills
                       .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s);
+                      .map((s: string) => s.trim())
+                      .filter((s: string) => s);
                   }
                 }
                 return [];
@@ -1511,8 +1483,8 @@ function DesignerTable({
               return (
                 <tr
                   key={designer.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${
-                    selectedIds.includes(designer.id) ? "bg-primary/5" : ""
+                  className={`hover:bg-gray-50 cursor-pointer text-sm ${
+                    selectedIds.includes(designer.id) ? "bg-blue-50" : ""
                   }`}
                   onClick={(e) => {
                     // Don't navigate if clicking on checkbox or actions
@@ -1526,96 +1498,77 @@ function DesignerTable({
                     window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
                   }}
                 >
-                  <td className="py-3 px-4">
+                  <td className="py-2 px-3">
                     <Checkbox
                       checked={selectedIds.includes(designer.id)}
                       onCheckedChange={() => onToggleSelect(designer.id)}
                     />
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        {designer.photoUrl ? (
-                          <img
-                            src={designer.photoUrl}
-                            alt={designer.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {designer.name.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="font-medium text-gray-900 truncate max-w-[200px]">
+                  <td className="py-2 px-3">
+                    <div className="flex flex-col">
+                      <div className="font-medium text-gray-900">
                         {designer.name}
+                      </div>
+                      <div className="text-gray-600 text-xs">
+                        {designer.title}{designer.company && ` at ${designer.company}`}
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-gray-700 max-w-[200px] truncate">
-                    {designer.title}
+                  <td className="py-2 px-3">
+                    {designer.email && (
+                      <a 
+                        href={`mailto:${designer.email}`} 
+                        className="text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {designer.email}
+                      </a>
+                    )}
                   </td>
-                  <td className="py-3 px-4 text-gray-700 max-w-[150px] truncate">
-                    {designer.company}
+                  <td className="py-2 px-3">
+                    {designer.website && (
+                      <a 
+                        href={designer.website}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {designer.website}
+                      </a>
+                    )}
                   </td>
-                  <td className="py-3 px-4 text-gray-500 max-w-[150px] truncate">
-                    {designer.location}
+                  <td className="py-2 px-3">
+                    {designer.linkedIn && (
+                      <a 
+                        href={designer.linkedIn}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        linkedin.com/in/{designer.linkedIn.split('/').pop()}
+                      </a>
+                    )}
                   </td>
-                  <td className="py-3 px-4">
-                    <Badge variant="secondary" className="text-xs">
-                      {designer.level}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-4 max-w-[300px]">
+                  <td className="py-2 px-3">
                     {skills && skills.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {skills.slice(0, 3).map((skill: string, skillIndex: number) => (
-                          <Badge key={skillIndex} variant="outline" className="text-xs">
+                        {skills.slice(0, 4).map((skill: string, skillIndex: number) => (
+                          <span 
+                            key={skillIndex} 
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700"
+                          >
                             {skill}
-                          </Badge>
+                          </span>
                         ))}
-                        {skills.length > 3 && (
-                          <span className="text-xs text-gray-500 whitespace-nowrap">
-                            +{skills.length - 3} more
+                        {skills.length > 4 && (
+                          <span className="text-xs text-gray-500">
+                            +{skills.length - 4}
                           </span>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-gray-400 text-sm">No skills</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    {designer.available && (
-                      <Badge variant="default" className="text-xs">
-                        Available
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center justify-end space-x-2" data-action>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(designer);
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEnrich(designer);
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    ) : null}
                   </td>
                 </tr>
               );

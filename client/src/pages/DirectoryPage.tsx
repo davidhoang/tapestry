@@ -1762,7 +1762,7 @@ function DesignerTable({
     <div className="bg-white border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px]">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
             <tr>
               {/* Checkbox column */}
               <th 

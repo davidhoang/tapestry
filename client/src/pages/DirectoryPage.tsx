@@ -189,36 +189,30 @@ export default function DirectoryPage() {
       const designer = designers?.find(d => d.id === id);
       if (!designer) return;
 
-      // Create form data for the mutation
-      const formData = new FormData();
-      formData.append('name', designer.name);
-      formData.append('title', designer.title);
-      formData.append('email', designer.email || '');
-      formData.append('location', designer.location || '');
-      formData.append('company', designer.company || '');
-      formData.append('level', designer.level);
-      formData.append('website', designer.website || '');
-      formData.append('linkedIn', designer.linkedIn || '');
-      formData.append('notes', designer.notes || '');
-      formData.append('available', designer.available ? 'true' : 'false');
+      // Create the updated designer data
+      const updatedDesigner = {
+        name: designer.name,
+        title: designer.title,
+        email: designer.email || '',
+        location: designer.location || '',
+        company: designer.company || '',
+        level: designer.level,
+        website: designer.website || '',
+        linkedIn: designer.linkedIn || '',
+        notes: designer.notes || '',
+        available: designer.available,
+        skills: designer.skills,
+        [field]: newValue // Update the specific field
+      };
 
-      // Handle skills array properly
-      let skillsValue = designer.skills;
+      // For skills, ensure it's an array
       if (field === 'skills') {
-        skillsValue = Array.isArray(newValue) ? newValue : [];
-      }
-      
-      // Convert skills array to JSON string for form data
-      if (Array.isArray(skillsValue)) {
-        formData.append('skills', JSON.stringify(skillsValue));
-      } else {
-        formData.append('skills', skillsValue || '[]');
+        updatedDesigner.skills = Array.isArray(newValue) ? newValue : [];
       }
 
-      // Update the specific field being edited
-      if (field !== 'skills') {
-        formData.set(field, newValue || '');
-      }
+      // Create FormData with data as JSON string as the API expects
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(updatedDesigner));
 
       await updateDesigner.mutateAsync({ id, formData });
       

@@ -1435,10 +1435,10 @@ function DesignerTable({
   return (
     <div className="bg-white border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[800px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm w-10">
+              <th className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm w-8">
                 <Checkbox
                   checked={designers.length > 0 && selectedIds.length === designers.length}
                   onCheckedChange={(checked) => {
@@ -1454,11 +1454,11 @@ function DesignerTable({
                   }}
                 />
               </th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Name</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Email</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Website</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">LinkedIn</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm">Tags</th>
+              <th className="sticky left-8 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[250px]">Name</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[200px]">Email</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[200px]">Website</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[200px]">LinkedIn</th>
+              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[300px]">Tags</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1498,53 +1498,51 @@ function DesignerTable({
                     window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
                   }}
                 >
-                  <td className="py-2 px-3">
+                  <td className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100">
                     <Checkbox
                       checked={selectedIds.includes(designer.id)}
                       onCheckedChange={() => onToggleSelect(designer.id)}
                     />
                   </td>
-                  <td className="py-2 px-3">
-                    <div className="flex flex-col">
-                      <div className="font-medium text-gray-900">
-                        {designer.name}
-                      </div>
-                      <div className="text-gray-600 text-xs">
-                        {designer.title}{designer.company && ` at ${designer.company}`}
-                      </div>
+                  <td className="sticky left-8 z-10 bg-white py-2 px-3 border-r border-gray-100">
+                    <div className="font-medium text-gray-900 truncate">
+                      {designer.name}
+                    </div>
+                    <div className="text-gray-500 text-xs truncate">
+                      {designer.title}{designer.company && ` at ${designer.company}`}
                     </div>
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="py-2 px-3 truncate">
                     {designer.email && (
                       <a 
                         href={`mailto:${designer.email}`} 
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline truncate block"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {designer.email}
                       </a>
                     )}
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="py-2 px-3 truncate">
                     {designer.website && (
                       <a 
                         href={designer.website}
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline truncate block"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {designer.website}
                       </a>
                     )}
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="py-2 px-3 truncate">
                     {designer.linkedIn && (
                       <a 
                         href={designer.linkedIn}
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline truncate block"
                         onClick={(e) => e.stopPropagation()}
                       >
                         linkedin.com/in/{designer.linkedIn.split('/').pop()}
@@ -1553,18 +1551,18 @@ function DesignerTable({
                   </td>
                   <td className="py-2 px-3">
                     {skills && skills.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {skills.slice(0, 4).map((skill: string, skillIndex: number) => (
+                      <div className="flex gap-1 overflow-hidden">
+                        {skills.slice(0, 6).map((skill: string, skillIndex: number) => (
                           <span 
                             key={skillIndex} 
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700"
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 flex-shrink-0 whitespace-nowrap"
                           >
                             {skill}
                           </span>
                         ))}
-                        {skills.length > 4 && (
-                          <span className="text-xs text-gray-500">
-                            +{skills.length - 4}
+                        {skills.length > 6 && (
+                          <span className="text-xs text-gray-500 flex-shrink-0 self-center">
+                            +{skills.length - 6}
                           </span>
                         )}
                       </div>

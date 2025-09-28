@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   useDesigners,
   useCreateDesigner,
@@ -150,6 +150,89 @@ export default function DirectoryPage() {
   const { toast } = useToast();
   const scrollPositionRef = useRef<number>(0);
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  // Column widths for resizable table
+  const [columnWidths, setColumnWidths] = useState({
+    checkbox: 40,
+    name: 250,
+    email: 200,
+    website: 200,
+    linkedin: 200,
+    tags: 300,
+  });
+  
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null);
+
+  // Column resizing handlers
+  const handleResizeStart = useCallback((column: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartRef.current = {
+      column,
+      startX: e.clientX,
+      startWidth: columnWidths[column as keyof typeof columnWidths],
+    };
+  }, [columnWidths]);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !resizeStartRef.current) return;
+    
+    e.preventDefault();
+    const { column, startX, startWidth } = resizeStartRef.current;
+    const deltaX = e.clientX - startX;
+    const newWidth = Math.max(50, startWidth + deltaX);
+    
+    setColumnWidths(prev => ({
+      ...prev,
+      [column]: newWidth,
+    }));
+  }, [isResizing]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+    resizeStartRef.current = null;
+  }, []);
+
+  // Double-click auto-fit handler
+  const handleDoubleClickResize = useCallback((column: string) => {
+    // Simple auto-fit logic - could be enhanced to measure actual content
+    const autoSizes = {
+      checkbox: 40,
+      name: 250,
+      email: 220,
+      website: 180,
+      linkedin: 200,
+      tags: 300,
+    };
+    
+    setColumnWidths(prev => ({
+      ...prev,
+      [column]: autoSizes[column as keyof typeof autoSizes] || 200,
+    }));
+  }, []);
+
+  // Add mouse event listeners for resizing
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
 
   // Add scroll listener to detect when page is scrolled
   useEffect(() => {
@@ -382,6 +465,9 @@ export default function DirectoryPage() {
             }}
             selectedIds={selectedIds}
             onToggleSelect={toggleDesignerSelection}
+            columnWidths={columnWidths}
+            onResizeStart={handleResizeStart}
+            onDoubleClickResize={handleDoubleClickResize}
           />
         )}
         </div>
@@ -1422,6 +1508,9 @@ interface DesignerTableProps {
   onEnrich: (designer: SelectDesigner) => void;
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
+  columnWidths: { [key: string]: number };
+  onResizeStart: (column: string, e: React.MouseEvent) => void;
+  onDoubleClickResize: (column: string) => void;
 }
 
 function DesignerTable({
@@ -1431,6 +1520,9 @@ function DesignerTable({
   onEnrich,
   selectedIds,
   onToggleSelect,
+  columnWidths,
+  onResizeStart,
+  onDoubleClickResize,
 }: DesignerTableProps) {
   return (
     <div className="bg-white border border-gray-200 overflow-hidden">
@@ -1438,7 +1530,11 @@ function DesignerTable({
         <table className="w-full min-w-[800px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm w-8">
+              {/* Checkbox column */}
+              <th 
+                className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ width: columnWidths.checkbox }}
+              >
                 <Checkbox
                   checked={designers.length > 0 && selectedIds.length === designers.length}
                   onCheckedChange={(checked) => {
@@ -1453,12 +1549,80 @@ function DesignerTable({
                     }
                   }}
                 />
+                <div 
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={(e) => onResizeStart('checkbox', e)}
+                  onDoubleClick={() => onDoubleClickResize('checkbox')}
+                />
               </th>
-              <th className="sticky left-8 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[250px]">Name</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[200px]">Email</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[200px]">Website</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[200px]">LinkedIn</th>
-              <th className="text-left py-2 px-3 font-medium text-gray-700 text-sm min-w-[300px]">Tags</th>
+
+              {/* Name column */}
+              <th 
+                className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ 
+                  width: columnWidths.name, 
+                  left: columnWidths.checkbox 
+                }}
+              >
+                Name
+                <div 
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={(e) => onResizeStart('name', e)}
+                  onDoubleClick={() => onDoubleClickResize('name')}
+                />
+              </th>
+
+              {/* Email column */}
+              <th 
+                className="text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ width: columnWidths.email }}
+              >
+                Email
+                <div 
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={(e) => onResizeStart('email', e)}
+                  onDoubleClick={() => onDoubleClickResize('email')}
+                />
+              </th>
+
+              {/* Website column */}
+              <th 
+                className="text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ width: columnWidths.website }}
+              >
+                Website
+                <div 
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={(e) => onResizeStart('website', e)}
+                  onDoubleClick={() => onDoubleClickResize('website')}
+                />
+              </th>
+
+              {/* LinkedIn column */}
+              <th 
+                className="text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ width: columnWidths.linkedin }}
+              >
+                LinkedIn
+                <div 
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={(e) => onResizeStart('linkedin', e)}
+                  onDoubleClick={() => onDoubleClickResize('linkedin')}
+                />
+              </th>
+
+              {/* Tags column */}
+              <th 
+                className="text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ width: columnWidths.tags }}
+              >
+                Tags
+                <div 
+                  className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={(e) => onResizeStart('tags', e)}
+                  onDoubleClick={() => onDoubleClickResize('tags')}
+                />
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1498,13 +1662,22 @@ function DesignerTable({
                     window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
                   }}
                 >
-                  <td className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100">
+                  <td 
+                    className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100"
+                    style={{ width: columnWidths.checkbox }}
+                  >
                     <Checkbox
                       checked={selectedIds.includes(designer.id)}
                       onCheckedChange={() => onToggleSelect(designer.id)}
                     />
                   </td>
-                  <td className="sticky left-8 z-10 bg-white py-2 px-3 border-r border-gray-100">
+                  <td 
+                    className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100"
+                    style={{ 
+                      width: columnWidths.name,
+                      left: columnWidths.checkbox 
+                    }}
+                  >
                     <div className="font-medium text-gray-900 truncate">
                       {designer.name}
                     </div>
@@ -1512,7 +1685,10 @@ function DesignerTable({
                       {designer.title}{designer.company && ` at ${designer.company}`}
                     </div>
                   </td>
-                  <td className="py-2 px-3 truncate">
+                  <td 
+                    className="py-2 px-3 truncate"
+                    style={{ width: columnWidths.email }}
+                  >
                     {designer.email && (
                       <a 
                         href={`mailto:${designer.email}`} 
@@ -1523,7 +1699,10 @@ function DesignerTable({
                       </a>
                     )}
                   </td>
-                  <td className="py-2 px-3 truncate">
+                  <td 
+                    className="py-2 px-3 truncate"
+                    style={{ width: columnWidths.website }}
+                  >
                     {designer.website && (
                       <a 
                         href={designer.website}
@@ -1536,7 +1715,10 @@ function DesignerTable({
                       </a>
                     )}
                   </td>
-                  <td className="py-2 px-3 truncate">
+                  <td 
+                    className="py-2 px-3 truncate"
+                    style={{ width: columnWidths.linkedin }}
+                  >
                     {designer.linkedIn && (
                       <a 
                         href={designer.linkedIn}
@@ -1549,7 +1731,10 @@ function DesignerTable({
                       </a>
                     )}
                   </td>
-                  <td className="py-2 px-3">
+                  <td 
+                    className="py-2 px-3"
+                    style={{ width: columnWidths.tags }}
+                  >
                     {skills && skills.length > 0 ? (
                       <div className="flex gap-1 overflow-hidden">
                         {skills.slice(0, 6).map((skill: string, skillIndex: number) => (

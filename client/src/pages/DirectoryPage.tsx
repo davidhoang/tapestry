@@ -134,6 +134,7 @@ const designerSchema = z.object({
 export default function DirectoryPage() {
   const { workspaceSlug } = useParams();
   const { data: designers, isLoading } = useDesigners();
+  const updateDesigner = useUpdateDesigner();
   const deleteDesigners = useDeleteDesigners();
   const permissions = useWorkspacePermissions(workspaceSlug);
   const [searchTerm, setSearchTerm] = useState("");
@@ -172,6 +173,10 @@ export default function DirectoryPage() {
   const startEditing = useCallback((id: number, field: string, currentValue: any) => {
     setEditingCell({ id, field });
     setEditingValues({ [`${id}-${field}`]: currentValue || '' });
+  }, []);
+
+  const updateEditingValue = useCallback((key: string, value: any) => {
+    setEditingValues(prev => ({ ...prev, [key]: value }));
   }, []);
 
   const cancelEditing = useCallback(() => {
@@ -517,6 +522,12 @@ export default function DirectoryPage() {
             columnWidths={columnWidths}
             onResizeStart={handleResizeStart}
             onDoubleClickResize={handleDoubleClickResize}
+            editingCell={editingCell}
+            onStartEdit={startEditing}
+            onSaveEdit={saveEdit}
+            onCancelEdit={cancelEditing}
+            editingValues={editingValues}
+            onEditingValueChange={updateEditingValue}
           />
         )}
         </div>
@@ -1550,6 +1561,154 @@ function DesignerListItem({
   );
 }
 
+// EditableCell component for inline editing
+interface EditableCellProps {
+  value: any;
+  field: string;
+  designerId: number;
+  isEditing: boolean;
+  onStartEdit: (id: number, field: string, value: any) => void;
+  onSave: (id: number, field: string, value: any) => void;
+  onCancel: () => void;
+  editingValue: any;
+  onEditingValueChange: (value: any) => void;
+  type?: 'text' | 'email' | 'url' | 'tags';
+  className?: string;
+}
+
+function EditableCell({ 
+  value, 
+  field, 
+  designerId, 
+  isEditing, 
+  onStartEdit, 
+  onSave, 
+  onCancel,
+  editingValue,
+  onEditingValueChange,
+  type = 'text',
+  className = ''
+}: EditableCellProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave(designerId, field, editingValue);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  };
+
+  const handleBlur = () => {
+    onSave(designerId, field, editingValue);
+  };
+
+  if (isEditing) {
+    if (type === 'tags') {
+      return (
+        <div className={`py-2 px-3 ${className}`}>
+          <Input
+            ref={inputRef}
+            value={Array.isArray(editingValue) ? editingValue.join(', ') : ''}
+            onChange={(e) => {
+              const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+              onEditingValueChange(tags);
+            }}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+            placeholder="Enter tags separated by commas"
+            className="text-xs border-blue-300 focus:border-blue-500"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`py-2 px-3 ${className}`}>
+        <Input
+          ref={inputRef}
+          value={editingValue}
+          onChange={(e) => onEditingValueChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          type={type === 'email' ? 'email' : type === 'url' ? 'url' : 'text'}
+          placeholder={`Enter ${field}`}
+          className="text-sm border-blue-300 focus:border-blue-500"
+        />
+      </div>
+    );
+  }
+
+  // Display mode
+  if (type === 'tags' && Array.isArray(value)) {
+    return (
+      <div 
+        className={`py-2 px-3 cursor-text hover:bg-gray-50 ${className}`}
+        onClick={() => onStartEdit(designerId, field, value)}
+      >
+        {value.length > 0 ? (
+          <div className="flex gap-1 overflow-hidden">
+            {value.slice(0, 6).map((skill: string, skillIndex: number) => (
+              <span 
+                key={skillIndex} 
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 flex-shrink-0 whitespace-nowrap"
+              >
+                {skill}
+              </span>
+            ))}
+            {value.length > 6 && (
+              <span className="text-xs text-gray-500 flex-shrink-0 self-center">
+                +{value.length - 6}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-gray-400 text-sm">No tags</span>
+        )}
+      </div>
+    );
+  }
+
+  if ((type === 'email' || type === 'url') && value) {
+    const href = type === 'email' ? `mailto:${value}` : value;
+    const isExternal = type === 'url';
+    
+    return (
+      <div 
+        className={`py-2 px-3 cursor-text hover:bg-gray-50 ${className}`}
+        onClick={() => onStartEdit(designerId, field, value)}
+      >
+        <a 
+          href={href}
+          target={isExternal ? "_blank" : undefined}
+          rel={isExternal ? "noopener noreferrer" : undefined}
+          className="text-blue-600 hover:underline truncate block"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {value}
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className={`py-2 px-3 cursor-text hover:bg-gray-50 ${className}`}
+      onClick={() => onStartEdit(designerId, field, value)}
+    >
+      {value || <span className="text-gray-400 text-sm">Click to add</span>}
+    </div>
+  );
+}
+
 interface DesignerTableProps {
   designers: SelectDesigner[];
   workspaceSlug: string;
@@ -1560,6 +1719,12 @@ interface DesignerTableProps {
   columnWidths: { [key: string]: number };
   onResizeStart: (column: string, e: React.MouseEvent) => void;
   onDoubleClickResize: (column: string) => void;
+  editingCell: { id: number; field: string } | null;
+  onStartEdit: (id: number, field: string, value: any) => void;
+  onSaveEdit: (id: number, field: string, value: any) => void;
+  onCancelEdit: () => void;
+  editingValues: { [key: string]: any };
+  onEditingValueChange: (key: string, value: any) => void;
 }
 
 function DesignerTable({
@@ -1572,6 +1737,12 @@ function DesignerTable({
   columnWidths,
   onResizeStart,
   onDoubleClickResize,
+  editingCell,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  editingValues,
+  onEditingValueChange,
 }: DesignerTableProps) {
   return (
     <div className="bg-white border border-gray-200 overflow-hidden">
@@ -1734,73 +1905,64 @@ function DesignerTable({
                       {designer.title}{designer.company && ` at ${designer.company}`}
                     </div>
                   </td>
-                  <td 
-                    className="py-2 px-3 truncate"
-                    style={{ width: columnWidths.email }}
-                  >
-                    {designer.email && (
-                      <a 
-                        href={`mailto:${designer.email}`} 
-                        className="text-blue-600 hover:underline truncate block"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {designer.email}
-                      </a>
-                    )}
+                  <td style={{ width: columnWidths.email }}>
+                    <EditableCell
+                      value={designer.email}
+                      field="email"
+                      designerId={designer.id}
+                      isEditing={editingCell?.id === designer.id && editingCell?.field === 'email'}
+                      onStartEdit={onStartEdit}
+                      onSave={onSaveEdit}
+                      onCancel={onCancelEdit}
+                      editingValue={editingValues[`${designer.id}-email`] || ''}
+                      onEditingValueChange={(value) => onEditingValueChange(`${designer.id}-email`, value)}
+                      type="email"
+                      className="truncate"
+                    />
                   </td>
-                  <td 
-                    className="py-2 px-3 truncate"
-                    style={{ width: columnWidths.website }}
-                  >
-                    {designer.website && (
-                      <a 
-                        href={designer.website}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline truncate block"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {designer.website}
-                      </a>
-                    )}
+                  <td style={{ width: columnWidths.website }}>
+                    <EditableCell
+                      value={designer.website}
+                      field="website"
+                      designerId={designer.id}
+                      isEditing={editingCell?.id === designer.id && editingCell?.field === 'website'}
+                      onStartEdit={onStartEdit}
+                      onSave={onSaveEdit}
+                      onCancel={onCancelEdit}
+                      editingValue={editingValues[`${designer.id}-website`] || ''}
+                      onEditingValueChange={(value) => onEditingValueChange(`${designer.id}-website`, value)}
+                      type="url"
+                      className="truncate"
+                    />
                   </td>
-                  <td 
-                    className="py-2 px-3 truncate"
-                    style={{ width: columnWidths.linkedin }}
-                  >
-                    {designer.linkedIn && (
-                      <a 
-                        href={designer.linkedIn}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline truncate block"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        linkedin.com/in/{designer.linkedIn.split('/').pop()}
-                      </a>
-                    )}
+                  <td style={{ width: columnWidths.linkedin }}>
+                    <EditableCell
+                      value={designer.linkedIn}
+                      field="linkedIn"
+                      designerId={designer.id}
+                      isEditing={editingCell?.id === designer.id && editingCell?.field === 'linkedIn'}
+                      onStartEdit={onStartEdit}
+                      onSave={onSaveEdit}
+                      onCancel={onCancelEdit}
+                      editingValue={editingValues[`${designer.id}-linkedIn`] || ''}
+                      onEditingValueChange={(value) => onEditingValueChange(`${designer.id}-linkedIn`, value)}
+                      type="url"
+                      className="truncate"
+                    />
                   </td>
-                  <td 
-                    className="py-2 px-3"
-                    style={{ width: columnWidths.tags }}
-                  >
-                    {skills && skills.length > 0 ? (
-                      <div className="flex gap-1 overflow-hidden">
-                        {skills.slice(0, 6).map((skill: string, skillIndex: number) => (
-                          <span 
-                            key={skillIndex} 
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 flex-shrink-0 whitespace-nowrap"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {skills.length > 6 && (
-                          <span className="text-xs text-gray-500 flex-shrink-0 self-center">
-                            +{skills.length - 6}
-                          </span>
-                        )}
-                      </div>
-                    ) : null}
+                  <td style={{ width: columnWidths.tags }}>
+                    <EditableCell
+                      value={skills}
+                      field="skills"
+                      designerId={designer.id}
+                      isEditing={editingCell?.id === designer.id && editingCell?.field === 'skills'}
+                      onStartEdit={onStartEdit}
+                      onSave={onSaveEdit}
+                      onCancel={onCancelEdit}
+                      editingValue={editingValues[`${designer.id}-skills`] || []}
+                      onEditingValueChange={(value) => onEditingValueChange(`${designer.id}-skills`, value)}
+                      type="tags"
+                    />
                   </td>
                 </tr>
               );

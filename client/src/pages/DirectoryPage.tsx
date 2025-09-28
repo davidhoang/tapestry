@@ -163,6 +163,55 @@ export default function DirectoryPage() {
   
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null);
+  
+  // Inline editing state
+  const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
+  const [editingValues, setEditingValues] = useState<{ [key: string]: any }>({});
+
+  // Inline editing handlers
+  const startEditing = useCallback((id: number, field: string, currentValue: any) => {
+    setEditingCell({ id, field });
+    setEditingValues({ [`${id}-${field}`]: currentValue || '' });
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingCell(null);
+    setEditingValues({});
+  }, []);
+
+  const saveEdit = useCallback(async (id: number, field: string, newValue: any) => {
+    try {
+      const designer = filteredDesigners?.find(d => d.id === id);
+      if (!designer) return;
+
+      // Prepare update data
+      const updateData = { 
+        ...designer, 
+        [field]: newValue 
+      };
+
+      // Process skills array properly if editing tags
+      if (field === 'skills' && Array.isArray(newValue)) {
+        updateData.skills = newValue;
+      }
+
+      await updateDesigner.mutateAsync(updateData);
+      
+      setEditingCell(null);
+      setEditingValues({});
+      
+      toast({
+        title: "Updated successfully",
+        description: `${field} has been updated`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating",
+        description: "Failed to save changes",
+        variant: "destructive",
+      });
+    }
+  }, [filteredDesigners, updateDesigner, toast]);
 
   // Column resizing handlers
   const handleResizeStart = useCallback((column: string, e: React.MouseEvent) => {

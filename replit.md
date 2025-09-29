@@ -39,6 +39,7 @@ Button styling: All buttons should use sentence case instead of all capitals.
 - **List Management**: Curated designer lists, sharing capabilities (public/private), email sharing (SendGrid), collaborative building.
 - **Hiring Feature**: Job posting, AI-powered designer matching, job management, status tracking.
 - **Recruiting Board**: Visual kanban board for tracking designers through recruitment pipeline. Features drag-and-drop functionality, customizable columns (default: Backlog, Outreach, Interviewing, Offer, Hired), bulk designer import from lists or directory, notes tracking. Built with @dnd-kit for smooth drag-and-drop experience.
+- **Inbox Feature**: AI-powered recommendation system for workspace maintenance. Provides intelligent suggestions for adding designers to lists based on skills/metadata, recommending new list creation, and identifying outdated designer profiles that need updating. Features quick approval workflows, filtering/sorting capabilities, and comprehensive audit trails. Built with modular generator architecture supporting three recommendation types (add_to_list, create_list, update_profile) with RLHF integration for continuous improvement.
 - **Modal Positioning System**: Uses Radix UI Dialog with custom CSS for consistent, reliable centering across devices. This system is stable and should not be rewritten.
 
 ## External Dependencies

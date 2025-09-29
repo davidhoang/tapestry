@@ -2,7 +2,20 @@ import { Link, useLocation } from "wouter";
 import { useUser } from "../hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspacePermissions } from "../hooks/use-permissions";
+import { SelectUser, SelectWorkspace } from "@db/schema";
 import { Button } from "@/components/ui/button";
+
+// Type for workspace with owner relation included (as returned by /api/workspaces)
+type WorkspaceWithOwner = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  owner: SelectUser;
+  role: string;
+  isOwner: boolean;
+  joinedAt: string;
+};
 import {
   Dialog,
   DialogContent,
@@ -25,7 +38,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User, Users, Building2, Check } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Inbox } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -84,7 +97,7 @@ export default function Navigation() {
 
   // Get current workspace from URL path
   const currentWorkspaceSlug = location.split('/')[1] || "david-hoang";
-  const userWorkspace = workspaces?.find(w => w.slug === currentWorkspaceSlug) || workspaces?.[0];
+  const userWorkspace = workspaces?.find((w: WorkspaceWithOwner) => w.slug === currentWorkspaceSlug) || workspaces?.[0];
   const workspaceSlug = userWorkspace?.slug || "david-hoang";
 
   // Update permissions to use current workspace context
@@ -123,7 +136,12 @@ export default function Navigation() {
               >
                 Directory
               </Link>
-              
+              <Link
+                to={`/${workspaceSlug}/inbox`}
+                className={location === `/${workspaceSlug}/inbox` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Inbox
+              </Link>
               <Link
                 to={`/${workspaceSlug}/lists`}
                 className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
@@ -259,6 +277,17 @@ export default function Navigation() {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Directory
+                      </Link>
+                      <Link
+                        to={`/${workspaceSlug}/inbox`}
+                        className={`text-lg py-2 px-4 rounded transition-colors ${
+                          location === `/${workspaceSlug}/inbox`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Inbox
                       </Link>
                       {permissions.canViewLists && (
                         <Link

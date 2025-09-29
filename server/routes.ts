@@ -342,7 +342,7 @@ export function registerRoutes(app: Express): Server {
             });
           } else if (typeof designer.skills === 'string') {
             // Handle comma-separated string format
-            designer.skills.split(',').forEach(skill => {
+            (designer.skills as string).split(',').forEach((skill: string) => {
               const trimmedSkill = skill.trim();
               if (trimmedSkill) {
                 allSkills.add(trimmedSkill);
@@ -1023,7 +1023,7 @@ export function registerRoutes(app: Express): Server {
     }
 
     // Get last backup time from pg_stat_archiver
-    const [backupStatus] = await db.execute(sql`
+    const backupStatusResult = await db.execute(sql`
       SELECT 
         last_archived_time,
         last_archived_wal,
@@ -1033,7 +1033,7 @@ export function registerRoutes(app: Express): Server {
       FROM pg_stat_archiver;
     `);
 
-    res.json(backupStatus);
+    res.json(backupStatusResult.rows[0] || {});
   }));
 
   // Add health check endpoint
@@ -1047,20 +1047,20 @@ export function registerRoutes(app: Express): Server {
       return res.status(403).send("Not authorized");
     }
 
-    const [healthStatus] = await db.execute(sql`
+    const healthStatusResult = await db.execute(sql`
       SELECT * FROM db_health_check;
     `);
 
     // Add connection pool status
-    const poolStatus = await db.execute(sql`
+    const poolStatusResult = await db.execute(sql`
       SELECT count(*) as active_connections 
       FROM pg_stat_activity 
       WHERE state = 'active';
     `);
 
     res.json({
-      health: healthStatus,
-      connections: poolStatus[0],
+      health: healthStatusResult.rows[0] || {},
+      connections: poolStatusResult.rows[0] || {},
       status: 'healthy'
     });
   }));
@@ -1095,7 +1095,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Not authorized to share this list" });
       }
 
-      await sendListEmail(list, email, subject, summary);
+      // Transform the list to match SelectList type expected by sendListEmail
+      const emailList = {
+        ...list!,
+        designers: list!.designers?.map(ld => ({
+          designer: ld.designer!,
+          notes: ld.notes || undefined
+        })) || []
+      };
+      await sendListEmail(emailList, email, subject, summary);
       res.json({ message: "Email sent successfully" });
     } catch (err: any) {
       console.error('Error sending email:', err);
@@ -1560,7 +1568,7 @@ Please analyze this role and recommend the best matching designers.`
       const mappings = JSON.parse(req.body.mappings);
       
       // Parse CSV content
-      const lines = csvContent.split('\n').filter(line => line.trim());
+      const lines = csvContent.split('\n').filter((line: string) => line.trim());
       if (lines.length === 0) {
         return res.status(400).json({ 
           success: false, 
@@ -1568,7 +1576,7 @@ Please analyze this role and recommend the best matching designers.`
         });
       }
 
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const headers = lines[0].split(',').map((h: string) => h.trim().replace(/"/g, ''));
       const dataRows = lines.slice(1);
 
       const results = {
@@ -1580,7 +1588,7 @@ Please analyze this role and recommend the best matching designers.`
       // Process each row
       for (let i = 0; i < dataRows.length; i++) {
         const rowNumber = i + 2; // +2 because we skip header and array is 0-indexed
-        const values = dataRows[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        const values = dataRows[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
         
         try {
           const designerData: any = {
@@ -1598,7 +1606,7 @@ Please analyze this role and recommend the best matching designers.`
             
             if (dbField === 'skills') {
               // Parse skills as comma-separated values
-              designerData.skills = value ? value.split(',').map(s => s.trim()).filter(s => s) : [];
+              designerData.skills = value ? value.split(',').map((s: string) => s.trim()).filter((s: string) => s) : [];
             } else if (dbField === 'available') {
               // Parse boolean values
               designerData.available = value.toLowerCase() === 'true' || value === '1';
@@ -2003,7 +2011,7 @@ Please analyze this role and recommend the best matching designers.`
         where: eq(users.id, userId),
       });
 
-      const oldFilename = existingUser?.profilePhotoUrl;
+      const oldFilename = existingUser?.profilePhotoUrl || undefined;
       const photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
 
       // Update user's profile photo URL
@@ -2075,7 +2083,7 @@ Please analyze this role and recommend the best matching designers.`
 
       await db.update(users)
         .set({ onboardingDebugMode: debugMode })
-        .where(eq(users.id, req.user.id));
+        .where(eq(users.id, req.user!.id));
 
       res.json({ success: true });
     } catch (error: any) {
@@ -3315,7 +3323,7 @@ ${feedbackInsights.commonNegativeFeedback.map(f => `- ${f.type}: ${f.comments ||
 
 ${feedbackInsights.successfulMatches.length > 0 ? `
 Successful matches in the past:
-${feedbackInsights.successfulMatches.map(f => `- Rating ${f.rating}/5: Designer with skills ${JSON.stringify(f.designerData?.skills)} was successful`).join('\n')}
+${feedbackInsights.successfulMatches.map(f => `- Rating ${f.rating}/5: Designer with skills ${JSON.stringify((f.designerData as any)?.skills || [])} was successful`).join('\n')}
 ` : 'No successful match patterns identified yet.'}
 `.trim();
 

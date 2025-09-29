@@ -1,7 +1,23 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
+
+// Enums for type safety
+export const recommendationTypeEnum = pgEnum('recommendation_type', [
+  'add_to_list',
+  'create_list', 
+  'update_profile'
+]);
+
+export const recommendationStatusEnum = pgEnum('recommendation_status', [
+  'new',
+  'approved',
+  'applied', 
+  'dismissed',
+  'snoozed',
+  'error'
+]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -271,6 +287,133 @@ export const portfolioInquiries = pgTable("portfolio_inquiries", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const inboxRecommendations = pgTable("inbox_recommendations", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  recommendationType: recommendationTypeEnum("recommendation_type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: text("priority").default("medium"), // "low", "medium", "high", "urgent"
+  status: recommendationStatusEnum("status").default("new"),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }),
+  targetListId: integer("target_list_id").references(() => lists.id, { onDelete: 'cascade' }),
+  score: integer("score").default(0),
+  groupKey: text("group_key"),
+  dedupHash: text("dedup_hash"),
+  snoozeUntil: timestamp("snooze_until"),
+  appliedAt: timestamp("applied_at"),
+  resolvedBy: integer("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  metadata: jsonb("metadata").$type<{
+    sourceType?: string;
+    sourceId?: number;
+    jobId?: number;
+    listId?: number;
+    filters?: Record<string, any>;
+    aiReasoning?: string;
+    candidateCount?: number;
+    estimatedValue?: string;
+    actionUrl?: string;
+    expiresAt?: string;
+    [key: string]: any;
+  }>(),
+  actionTaken: text("action_taken"), // Track what action was taken when acted upon
+  actionMetadata: jsonb("action_metadata"), // Additional data about the action taken
+  seenAt: timestamp("seen_at"),
+  actedUponAt: timestamp("acted_upon_at"),
+  dismissedAt: timestamp("dismissed_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Composite index for efficient multi-tenant queries
+    workspaceStatusTypeScoreIdx: index("inbox_recommendations_workspace_status_type_score_idx")
+      .on(table.workspaceId, table.status, table.recommendationType, table.score.desc()),
+    
+    // GIN index on metadata for fast JSONB queries
+    metadataGinIdx: index("inbox_recommendations_metadata_gin_idx")
+      .using("gin", table.metadata),
+    
+    // Robust composite uniqueness constraint to prevent duplicate recommendations
+    // Note: This will be enhanced with COALESCE after creation via raw SQL
+    robustDedupUniqueIdx: uniqueIndex("inbox_recommendations_robust_dedup_unique_idx")
+      .on(
+        table.workspaceId, 
+        table.recommendationType, 
+        table.designerId,
+        table.targetListId, 
+        table.groupKey,
+        table.dedupHash
+      ),
+    
+    // Partial index for open items (high-frequency queries)
+    openItemsIdx: index("inbox_recommendations_open_items_idx")
+      .on(table.workspaceId, table.status, table.score.desc())
+      .where(sql`${table.status} IN ('new', 'snoozed')`)
+  };
+});
+
+export const inboxRecommendationCandidates = pgTable("inbox_recommendation_candidates", {
+  id: serial("id").primaryKey(),
+  recommendationId: integer("recommendation_id").references(() => inboxRecommendations.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  score: integer("score"), // Match score from 0-100
+  rank: integer("rank"), // Ranking within this recommendation
+  reasoning: text("reasoning"), // AI reasoning for why this candidate was recommended
+  metadata: jsonb("metadata").$type<{
+    skillMatches?: string[];
+    experienceMatch?: number;
+    locationMatch?: boolean;
+    availabilityMatch?: boolean;
+    portfolioRelevance?: number;
+    previousFeedback?: string;
+    confidence?: number;
+    [key: string]: any;
+  }>(),
+  isSelected: boolean("is_selected").default(false), // Whether this candidate was chosen when acting on the recommendation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Performance indexes for candidates
+    recommendationIdIdx: index("inbox_recommendation_candidates_recommendation_id_idx")
+      .on(table.recommendationId),
+    designerIdIdx: index("inbox_recommendation_candidates_designer_id_idx")
+      .on(table.designerId),
+    
+    // GIN index on metadata for fast JSONB queries
+    metadataGinIdx: index("inbox_recommendation_candidates_metadata_gin_idx")
+      .using("gin", table.metadata),
+  };
+});
+
+export const inboxRecommendationEvents = pgTable("inbox_recommendation_events", {
+  id: serial("id").primaryKey(),
+  recommendationId: integer("recommendation_id").references(() => inboxRecommendations.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  eventType: text("event_type").notNull(), // "created", "viewed", "seen", "dismissed", "acted_upon", "expired", "updated"
+  description: text("description"), // Human-readable description of the event
+  metadata: json("metadata").$type<{
+    previousStatus?: string;
+    newStatus?: string;
+    actionTaken?: string;
+    candidatesSelected?: number[];
+    userAgent?: string;
+    ipAddress?: string;
+    source?: string;
+    [key: string]: any;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Performance indexes for events
+    recommendationIdIdx: index("inbox_recommendation_events_recommendation_id_idx")
+      .on(table.recommendationId),
+    createdAtDescIdx: index("inbox_recommendation_events_created_at_desc_idx")
+      .on(table.createdAt.desc()),
+  };
+});
+
 
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
@@ -284,6 +427,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   invitations: many(workspaceInvitations),
   jobs: many(jobs),
   aiSystemPrompts: many(aiSystemPrompts),
+  inboxRecommendations: many(inboxRecommendations),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -447,6 +591,41 @@ export const portfolioInquiryRelations = relations(portfolioInquiries, ({ one })
   }),
 }));
 
+export const inboxRecommendationRelations = relations(inboxRecommendations, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [inboxRecommendations.workspaceId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [inboxRecommendations.userId],
+    references: [users.id],
+  }),
+  candidates: many(inboxRecommendationCandidates),
+  events: many(inboxRecommendationEvents),
+}));
+
+export const inboxRecommendationCandidateRelations = relations(inboxRecommendationCandidates, ({ one }) => ({
+  recommendation: one(inboxRecommendations, {
+    fields: [inboxRecommendationCandidates.recommendationId],
+    references: [inboxRecommendations.id],
+  }),
+  designer: one(designers, {
+    fields: [inboxRecommendationCandidates.designerId],
+    references: [designers.id],
+  }),
+}));
+
+export const inboxRecommendationEventRelations = relations(inboxRecommendationEvents, ({ one }) => ({
+  recommendation: one(inboxRecommendations, {
+    fields: [inboxRecommendationEvents.recommendationId],
+    references: [inboxRecommendations.id],
+  }),
+  user: one(users, {
+    fields: [inboxRecommendationEvents.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -536,3 +715,18 @@ export const insertPortfolioInquirySchema = createInsertSchema(portfolioInquirie
 export const selectPortfolioInquirySchema = createSelectSchema(portfolioInquiries);
 export type InsertPortfolioInquiry = typeof portfolioInquiries.$inferInsert;
 export type SelectPortfolioInquiry = typeof portfolioInquiries.$inferSelect;
+
+export const insertInboxRecommendationSchema = createInsertSchema(inboxRecommendations);
+export const selectInboxRecommendationSchema = createSelectSchema(inboxRecommendations);
+export type InsertInboxRecommendation = typeof inboxRecommendations.$inferInsert;
+export type SelectInboxRecommendation = typeof inboxRecommendations.$inferSelect;
+
+export const insertInboxRecommendationCandidateSchema = createInsertSchema(inboxRecommendationCandidates);
+export const selectInboxRecommendationCandidateSchema = createSelectSchema(inboxRecommendationCandidates);
+export type InsertInboxRecommendationCandidate = typeof inboxRecommendationCandidates.$inferInsert;
+export type SelectInboxRecommendationCandidate = typeof inboxRecommendationCandidates.$inferSelect;
+
+export const insertInboxRecommendationEventSchema = createInsertSchema(inboxRecommendationEvents);
+export const selectInboxRecommendationEventSchema = createSelectSchema(inboxRecommendationEvents);
+export type InsertInboxRecommendationEvent = typeof inboxRecommendationEvents.$inferInsert;
+export type SelectInboxRecommendationEvent = typeof inboxRecommendationEvents.$inferSelect;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { 
   useInboxRecommendations, 
   useApproveRecommendation, 
@@ -208,11 +208,14 @@ function RecommendationCard({
   useEffect(() => {
     if (recommendation.seenAt || !cardRef.current) return;
 
+    let hasTriggered = false; // Additional safeguard to prevent multiple calls
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           // Mark as seen when 50% of the card is visible
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && !hasTriggered && !recommendation.seenAt) {
+            hasTriggered = true;
             onMarkSeen(recommendation.id);
             observer.disconnect(); // Only mark once
           }
@@ -229,7 +232,7 @@ function RecommendationCard({
     return () => {
       observer.disconnect();
     };
-  }, [recommendation.id, recommendation.seenAt, onMarkSeen]);
+  }, [recommendation.id, recommendation.seenAt]); // Removed onMarkSeen from dependencies to prevent re-creation
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -926,9 +929,9 @@ export default function InboxPage() {
     generateRecommendations.mutate({});
   };
 
-  const handleMarkSeen = (id: number) => {
+  const handleMarkSeen = useCallback((id: number) => {
     markRecommendationSeen.mutate(id);
-  };
+  }, [markRecommendationSeen]);
 
   if (error) {
     return (

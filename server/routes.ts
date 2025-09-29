@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -4097,17 +4097,17 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
       if (status && status !== 'all') {
         if (Array.isArray(status)) {
-          whereConditions.push(inArray(inboxRecommendations.status, status as string[]));
+          whereConditions.push(inArray(inboxRecommendations.status, status as any));
         } else {
-          whereConditions.push(eq(inboxRecommendations.status, status as string));
+          whereConditions.push(eq(inboxRecommendations.status, status as typeof recommendationStatusEnum.enumValues[number]));
         }
       }
 
       if (type && type !== 'all') {
         if (Array.isArray(type)) {
-          whereConditions.push(inArray(inboxRecommendations.recommendationType, type as string[]));
+          whereConditions.push(inArray(inboxRecommendations.recommendationType, type as any));
         } else {
-          whereConditions.push(eq(inboxRecommendations.recommendationType, type as string));
+          whereConditions.push(eq(inboxRecommendations.recommendationType, type as typeof recommendationTypeEnum.enumValues[number]));
         }
       }
 
@@ -4363,8 +4363,8 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
       // Log dismiss event
       await db.insert(inboxRecommendationEvents).values({
-        recommendationId,
-        userId,
+        recommendationId: recommendationId,
+        userId: userId,
         eventType: 'dismissed',
         description: `Recommendation dismissed by user`,
         metadata: {
@@ -4372,7 +4372,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
           notes: notes || null,
           previousStatus: recommendation.status,
         },
-      });
+      } as any);
 
       res.json({
         success: true,
@@ -4442,7 +4442,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
         .update(inboxRecommendations)
         .set({ 
           status: 'snoozed',
-          snoozedUntil: snoozeTime,
+          snoozeUntil: snoozeTime,
           updatedAt: new Date(),
         })
         .where(eq(inboxRecommendations.id, recommendationId))
@@ -4450,8 +4450,8 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
       // Log snooze event
       await db.insert(inboxRecommendationEvents).values({
-        recommendationId,
-        userId,
+        recommendationId: recommendationId,
+        userId: userId,
         eventType: 'snoozed',
         description: `Recommendation snoozed until ${snoozeTime.toISOString()}`,
         metadata: {
@@ -4460,7 +4460,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
           notes: notes || null,
           previousStatus: recommendation.status,
         },
-      });
+      } as any);
 
       res.json({
         success: true,
@@ -4707,8 +4707,8 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
           // Log apply event
           await tx.insert(inboxRecommendationEvents).values({
-            recommendationId,
-            userId,
+            recommendationId: recommendationId,
+            userId: userId,
             eventType: 'applied',
             description: `Recommendation applied: ${appliedResult.action}`,
             metadata: {
@@ -4716,7 +4716,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
               notes: notes || null,
               previousStatus: recommendation.status,
             },
-          });
+          } as any);
 
         } catch (error) {
           console.error('Error applying recommendation:', error);

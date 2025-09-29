@@ -9,6 +9,8 @@ import {
   type InboxRecommendation, 
   type InboxFilters 
 } from "@/hooks/use-inbox";
+import { useDesigners } from "@/hooks/use-designer";
+import { useLists } from "@/hooks/use-lists";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,9 +75,12 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  ArrowRight
 } from "lucide-react";
 import { formatDistance } from "date-fns";
+import { Link } from "wouter";
 
 interface FilterBarProps {
   filters: InboxFilters;
@@ -748,29 +753,140 @@ function LoadingSkeleton() {
 
 function EmptyState({ filters }: { filters: InboxFilters }) {
   const hasActiveFilters = filters.status || filters.type;
+  const { data: designers, isLoading: isLoadingDesigners } = useDesigners();
+  const { data: lists, isLoading: isLoadingLists } = useLists();
 
-  return (
-    <div className="text-center py-12">
-      <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
-        <Sparkles className="h-12 w-12 text-muted-foreground" />
+  // Helper function to handle pluralization
+  const pluralize = (count: number, singular: string, plural?: string) => {
+    return count === 1 ? singular : (plural || singular + 's');
+  };
+
+  // Don't show specific messages while data is loading
+  if (isLoadingDesigners || isLoadingLists) {
+    return (
+      <div className="text-center py-12">
+        <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+          <Sparkles className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Loading...</h3>
+        <p className="text-muted-foreground">Checking your workspace data...</p>
       </div>
-      <h3 className="text-lg font-semibold mb-2">
-        {hasActiveFilters ? "No recommendations match your filters" : "No recommendations yet"}
-      </h3>
-      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-        {hasActiveFilters 
-          ? "Try adjusting your filters to see more recommendations."
-          : "Recommendations will appear here as our AI analyzes your workspace and suggests improvements."
-        }
-      </p>
-      {hasActiveFilters && (
+    );
+  }
+
+  // If filters are active, show filter-specific empty state
+  if (hasActiveFilters) {
+    return (
+      <div className="text-center py-12">
+        <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+          <Sparkles className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">No recommendations match your filters</h3>
+        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+          Try adjusting your filters to see more recommendations.
+        </p>
         <Button 
           variant="outline" 
           onClick={() => window.location.reload()}
         >
           Clear Filters
         </Button>
-      )}
+      </div>
+    );
+  }
+
+  const designerCount: number = designers?.length || 0;
+  const listCount: number = lists?.length || 0;
+
+  // Determine what's missing and show appropriate message
+  const needsDesigners = designerCount < 5;
+  const needsLists = listCount === 0;
+
+  if (needsDesigners && needsLists) {
+    return (
+      <div className="text-center py-12">
+        <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+          <Users className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Get started with your workspace</h3>
+        <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+          To get AI-powered recommendations, you need at least 5 designers and 1 list in your workspace. 
+          Currently you have {designerCount} {pluralize(designerCount, 'designer')} and {listCount} {pluralize(listCount, 'list')}.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/directory">
+            <Button className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Add Designers
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/lists">
+            <Button variant="outline" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Create Lists
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (needsDesigners) {
+    return (
+      <div className="text-center py-12">
+        <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+          <UserPlus className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Need more designers for recommendations</h3>
+        <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+          You currently have {designerCount} {pluralize(designerCount, 'designer')} in your workspace. 
+          Add at least {5 - designerCount} more {pluralize(5 - designerCount, 'designer')} to get AI suggestions for creating new lists.
+        </p>
+        <Link href="/directory">
+          <Button className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />
+            Add Designers
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (needsLists) {
+    return (
+      <div className="text-center py-12">
+        <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+          <FileText className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Create your first list</h3>
+        <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+          No lists exist yet. Create some lists first to get recommendations for adding designers to them.
+          You have {designerCount} {pluralize(designerCount, 'designer')} ready to be organized.
+        </p>
+        <Link href="/lists">
+          <Button className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Create Lists
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Fallback for when workspace has adequate data but no recommendations 
+  return (
+    <div className="text-center py-12">
+      <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+        <Sparkles className="h-12 w-12 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">No new recommendations</h3>
+      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+        Your workspace looks well organized! New recommendations will appear here as your data grows or changes.
+      </p>
     </div>
   );
 }

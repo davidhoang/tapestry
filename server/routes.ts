@@ -4114,19 +4114,22 @@ Analyze this role and recommend matching designers, considering feedback pattern
       // Build order by
       const orderBy = [];
       if (sortBy === 'score') {
-        orderBy.push(sortOrder === 'asc' ? asc(inboxRecommendations.score) : desc(inboxRecommendations.score));
+        orderBy.push(sortOrder === 'desc' ? desc(inboxRecommendations.score) : asc(inboxRecommendations.score));
       } else if (sortBy === 'created') {
         orderBy.push(sortOrder === 'asc' ? asc(inboxRecommendations.createdAt) : desc(inboxRecommendations.createdAt));
       } else if (sortBy === 'priority') {
         // Custom priority order: urgent, high, medium, low
+        // Higher numbers = higher priority for correct DESC sorting
         orderBy.push(
           sql`CASE ${inboxRecommendations.priority} 
-            WHEN 'urgent' THEN 1 
-            WHEN 'high' THEN 2 
-            WHEN 'medium' THEN 3 
-            WHEN 'low' THEN 4 
-            ELSE 5 END ${sortOrder === 'desc' ? sql`DESC` : sql`ASC`}`
+            WHEN 'urgent' THEN 4 
+            WHEN 'high' THEN 3 
+            WHEN 'medium' THEN 2 
+            WHEN 'low' THEN 1 
+            ELSE 0 END ${sortOrder === 'desc' ? sql`DESC` : sql`ASC`}`
         );
+        // Add score as secondary sort for items with same priority
+        orderBy.push(sortOrder === 'desc' ? desc(inboxRecommendations.score) : asc(inboxRecommendations.score));
       }
       
       // Add secondary sort by creation date
@@ -4220,10 +4223,10 @@ Analyze this role and recommend matching designers, considering feedback pattern
         forceRefresh,
       });
 
-      // Log generation event
-      if (recommendations.length > 0) {
+      // Log generation event - only if we have valid recommendations with IDs
+      if (recommendations.length > 0 && recommendations[0].id) {
         await db.insert(inboxRecommendationEvents).values({
-          recommendationId: recommendations[0].id || null,
+          recommendationId: recommendations[0].id,
           userId,
           eventType: 'created',
           description: `Manual recommendation generation triggered by user`,

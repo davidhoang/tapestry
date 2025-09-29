@@ -264,7 +264,14 @@ export class RecommendationEngine {
       try {
         await db.transaction(async (tx) => {
           // Insert or update recommendation
-          const [savedRecommendation] = await tx
+          // Handle NULL values to match the database constraint's COALESCE logic
+          const dedupHash = this.utils.generateDedupHash(recommendation);
+          const designerId = recommendation.metadata?.designerId || null;
+          const targetListId = recommendation.metadata?.targetListId || null;
+          const groupKey = recommendation.groupKey || '';
+          
+          // Try to insert new recommendation, ignore conflicts
+          const insertResult = await tx
             .insert(inboxRecommendations)
             .values({
               workspaceId: context.workspaceId,
@@ -275,30 +282,75 @@ export class RecommendationEngine {
               score: recommendation.score,
               priority: recommendation.priority,
               status: 'new' as any,
-              designerId: recommendation.metadata?.designerId || null,
-              targetListId: recommendation.metadata?.targetListId || null,
-              groupKey: recommendation.groupKey,
-              dedupHash: this.utils.generateDedupHash(recommendation),
+              designerId: designerId,
+              targetListId: targetListId,
+              groupKey: groupKey,
+              dedupHash: dedupHash,
               metadata: recommendation.metadata,
               expiresAt: recommendation.expiresAt,
             })
-            .onConflictDoUpdate({
-              target: [
-                inboxRecommendations.workspaceId,
-                inboxRecommendations.recommendationType,
-                inboxRecommendations.designerId,
-                inboxRecommendations.targetListId,
-                inboxRecommendations.groupKey,
-                inboxRecommendations.dedupHash,
-              ],
-              set: {
-                score: recommendation.score,
-                priority: recommendation.priority,
-                metadata: recommendation.metadata,
-                updatedAt: new Date(),
-              },
-            })
+            .onConflictDoNothing()
             .returning();
+          
+          let savedRecommendation;
+          
+          if (insertResult.length > 0) {
+            // New recommendation was inserted
+            savedRecommendation = insertResult[0];
+            console.log(`Inserted new recommendation with ID: ${savedRecommendation.id}`);
+          } else {
+            // Conflict occurred, find existing recommendation and update it
+            const existing = await tx.query.inboxRecommendations.findFirst({
+              where: and(
+                eq(inboxRecommendations.workspaceId, context.workspaceId),
+                eq(inboxRecommendations.recommendationType, recommendation.type as any),
+                designerId ? eq(inboxRecommendations.designerId, designerId) : isNull(inboxRecommendations.designerId),
+                targetListId ? eq(inboxRecommendations.targetListId, targetListId) : isNull(inboxRecommendations.targetListId),
+                eq(inboxRecommendations.groupKey, groupKey),
+                eq(inboxRecommendations.dedupHash, dedupHash)
+              ),
+            });
+            
+            if (existing) {
+              console.log(`Found existing recommendation with ID: ${existing.id}, updating...`);
+              // Update existing recommendation
+              const updateResult = await tx
+                .update(inboxRecommendations)
+                .set({
+                  score: recommendation.score,
+                  priority: recommendation.priority,
+                  status: 'new' as any,
+                  metadata: recommendation.metadata,
+                  updatedAt: new Date(),
+                })
+                .where(eq(inboxRecommendations.id, existing.id))
+                .returning();
+              
+              if (updateResult.length > 0) {
+                savedRecommendation = updateResult[0];
+                console.log(`Updated recommendation with ID: ${savedRecommendation.id}`);
+              } else {
+                // Fallback to use the existing record if update doesn't return anything
+                savedRecommendation = existing;
+                console.log(`Using existing recommendation with ID: ${savedRecommendation.id}`);
+              }
+            } else {
+              // This should not happen, but fallback to basic insert without constraint handling
+              console.warn('Failed to find existing recommendation after conflict, skipping...');
+              return; // Skip this recommendation
+            }
+          }
+
+          // Validate that we have a valid recommendation with ID before proceeding
+          if (!savedRecommendation || !savedRecommendation.id) {
+            console.error('Critical error: savedRecommendation is null or missing ID', {
+              savedRecommendation,
+              recommendationType: recommendation.type,
+              workspaceId: context.workspaceId,
+              userId: context.userId
+            });
+            throw new Error('Failed to get valid recommendation ID for database operations');
+          }
 
           // Insert candidates
           for (const candidate of recommendation.candidates) {

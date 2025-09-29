@@ -10,6 +10,7 @@ import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
 import HiringPage from "./pages/HiringPage";
 import FeedbackAnalyticsPage from "./pages/FeedbackAnalyticsPage";
+import InboxPage from "./pages/InboxPage";
 
 import ComponentsPage from "./pages/ComponentsPage";
 import PublicListPage from "./pages/PublicListPage";
@@ -97,6 +98,7 @@ function App() {
                   <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
                   <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
                   <Route path="/:workspaceSlug/lists" component={ListsPage} />
+                  <Route path="/:workspaceSlug/inbox" component={InboxPage} />
                   <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
                   <Route path="/:workspaceSlug/hiring" component={HiringPage} />
                   <Route path="/:workspaceSlug/feedback-analytics" component={FeedbackAnalyticsPage} />

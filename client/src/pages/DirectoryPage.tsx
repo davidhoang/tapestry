@@ -1933,9 +1933,9 @@ function DesignerTable({
                       left: columnWidths.checkbox 
                     }}
                   >
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-8 h-8 rounded-md">
                       <AvatarImage src={designer.photoUrl || ""} />
-                      <AvatarFallback className="text-xs">
+                      <AvatarFallback className="text-xs rounded-md">
                         {designer.name
                           .split(" ")
                           .map((n: string) => n[0])

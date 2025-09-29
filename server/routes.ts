@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -25,6 +25,7 @@ import express from "express";
 import { sql } from "drizzle-orm";
 import { Client } from "@replit/object-storage";
 import OpenAI from "openai";
+import { RecommendationEngine } from "./recommendation-engine";
 
 // Initialize Object Storage client
 const objectStorage = new Client();
@@ -33,6 +34,9 @@ const objectStorage = new Client();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Initialize Recommendation Engine
+const recommendationEngine = new RecommendationEngine();
 
 // Configure multer for memory storage
 const upload = multer({
@@ -3994,7 +3998,745 @@ Analyze this role and recommend matching designers, considering feedback pattern
     res.json({ success: true, inquiryId: inquiry.id });
   }));
 
+  // Helper function to get workspace context with proper scoping
+  const getWorkspaceContext = async (req: any) => {
+    let workspaceId: number | null = null;
+    
+    // Try to get workspace from x-workspace-slug header (set by frontend)
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+    
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+      
+      if (workspace) {
+        workspaceId = workspace.id;
+      }
+    }
+    
+    // If no workspace slug header, fall back to user's default workspace
+    if (!workspaceId) {
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (userWorkspace) {
+        workspaceId = userWorkspace.id;
+      }
+    }
+    
+    if (!workspaceId) {
+      throw new Error("No workspace access");
+    }
+    
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, workspaceId)
+      ),
+    });
+    
+    if (!membership) {
+      throw new Error("Not authorized to access this workspace");
+    }
+    
+    return { workspaceId, userId: req.user.id, userRole: membership.role };
+  };
 
+  // Rate limiting for recommendation generation (in memory - could be Redis in production)
+  const generateRateLimit = new Map<number, { count: number; resetTime: number }>();
+  const GENERATE_RATE_LIMIT = 5; // 5 requests per hour per workspace
+  const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+
+  const checkGenerateRateLimit = (workspaceId: number): boolean => {
+    const now = Date.now();
+    const key = workspaceId;
+    const limit = generateRateLimit.get(key);
+    
+    if (!limit || now > limit.resetTime) {
+      generateRateLimit.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      return true;
+    }
+    
+    if (limit.count >= GENERATE_RATE_LIMIT) {
+      return false;
+    }
+    
+    limit.count++;
+    return true;
+  };
+
+  // Inbox API Endpoints
+
+  // GET /api/inbox - Fetch recommendations for current workspace with filtering, pagination, and sorting
+  app.get("/api/inbox", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { workspaceId, userId } = await getWorkspaceContext(req);
+      
+      // Parse query parameters
+      const {
+        status = 'new',
+        type,
+        page = '1',
+        limit = '20',
+        sortBy = 'score',
+        sortOrder = 'desc'
+      } = req.query;
+
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string))); // Max 100 items per page
+      const offset = (pageNum - 1) * limitNum;
+
+      // Build where conditions
+      const whereConditions = [
+        eq(inboxRecommendations.workspaceId, workspaceId),
+      ];
+
+      if (status && status !== 'all') {
+        if (Array.isArray(status)) {
+          whereConditions.push(inArray(inboxRecommendations.status, status as string[]));
+        } else {
+          whereConditions.push(eq(inboxRecommendations.status, status as string));
+        }
+      }
+
+      if (type && type !== 'all') {
+        if (Array.isArray(type)) {
+          whereConditions.push(inArray(inboxRecommendations.recommendationType, type as string[]));
+        } else {
+          whereConditions.push(eq(inboxRecommendations.recommendationType, type as string));
+        }
+      }
+
+      // Build order by
+      const orderBy = [];
+      if (sortBy === 'score') {
+        orderBy.push(sortOrder === 'asc' ? asc(inboxRecommendations.score) : desc(inboxRecommendations.score));
+      } else if (sortBy === 'created') {
+        orderBy.push(sortOrder === 'asc' ? asc(inboxRecommendations.createdAt) : desc(inboxRecommendations.createdAt));
+      } else if (sortBy === 'priority') {
+        // Custom priority order: urgent, high, medium, low
+        orderBy.push(
+          sql`CASE ${inboxRecommendations.priority} 
+            WHEN 'urgent' THEN 1 
+            WHEN 'high' THEN 2 
+            WHEN 'medium' THEN 3 
+            WHEN 'low' THEN 4 
+            ELSE 5 END ${sortOrder === 'desc' ? sql`DESC` : sql`ASC`}`
+        );
+      }
+      
+      // Add secondary sort by creation date
+      orderBy.push(desc(inboxRecommendations.createdAt));
+
+      // Fetch recommendations with candidates
+      const recommendations = await db.query.inboxRecommendations.findMany({
+        where: and(...whereConditions),
+        with: {
+          candidates: {
+            with: {
+              designer: true,
+            },
+            orderBy: [asc(inboxRecommendationCandidates.rank)],
+          },
+        },
+        orderBy,
+        limit: limitNum,
+        offset,
+      });
+
+      // Get total count for pagination
+      const totalCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(inboxRecommendations)
+        .where(and(...whereConditions));
+      
+      const total = totalCountResult[0]?.count || 0;
+      const totalPages = Math.ceil(total / limitNum);
+
+      res.json({
+        recommendations,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error fetching inbox recommendations:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  }));
+
+  // POST /api/inbox/generate - Manually trigger recommendation generation with rate limiting
+  app.post("/api/inbox/generate", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to generate recommendations (Admin/Editor required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or Admin role required to generate recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      
+      // Check rate limit
+      if (!checkGenerateRateLimit(workspaceId)) {
+        return res.status(429).json({ 
+          error: "Rate limit exceeded. You can generate recommendations up to 5 times per hour." 
+        });
+      }
+
+      const { types, limit = 20, forceRefresh = false } = req.body;
+
+      // Validate types if provided
+      const validTypes = ['add_to_list', 'create_list', 'update_profile'];
+      if (types && Array.isArray(types)) {
+        const invalidTypes = types.filter((type: string) => !validTypes.includes(type));
+        if (invalidTypes.length > 0) {
+          return res.status(400).json({ 
+            error: `Invalid recommendation types: ${invalidTypes.join(', ')}. Valid types: ${validTypes.join(', ')}` 
+          });
+        }
+      }
+
+      // Generate recommendations
+      const recommendations = await recommendationEngine.generate({
+        workspaceId,
+        userId,
+        types: types || validTypes,
+        limit: Math.min(50, Math.max(1, limit)), // Clamp between 1-50
+        forceRefresh,
+      });
+
+      // Log generation event
+      if (recommendations.length > 0) {
+        await db.insert(inboxRecommendationEvents).values({
+          recommendationId: recommendations[0].id || null,
+          userId,
+          eventType: 'created',
+          description: `Manual recommendation generation triggered by user`,
+          metadata: {
+            generationType: 'manual',
+            requestedTypes: types || validTypes,
+            generatedCount: recommendations.length,
+          },
+        });
+      }
+
+      res.json({
+        success: true,
+        generated: recommendations.length,
+        recommendations: recommendations.slice(0, 10), // Return first 10 for preview
+      });
+    } catch (error: any) {
+      console.error('Error generating recommendations:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to generate recommendations" });
+    }
+  }));
+
+  // POST /api/inbox/:id/approve - Approve a recommendation and mark it as approved
+  app.post("/api/inbox/:id/approve", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to approve recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to approve recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { notes } = req.body;
+
+      // Fetch and verify recommendation
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status !== 'new') {
+        return res.status(400).json({ error: "Only new recommendations can be approved" });
+      }
+
+      // Update recommendation status
+      const [updatedRecommendation] = await db
+        .update(inboxRecommendations)
+        .set({ 
+          status: 'approved',
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId))
+        .returning();
+
+      // Log approval event
+      await db.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'approved',
+        description: `Recommendation approved by user`,
+        metadata: {
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      });
+
+      res.json({
+        success: true,
+        recommendation: updatedRecommendation,
+      });
+    } catch (error: any) {
+      console.error('Error approving recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to approve recommendation" });
+    }
+  }));
+
+  // POST /api/inbox/:id/dismiss - Dismiss a recommendation permanently
+  app.post("/api/inbox/:id/dismiss", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to dismiss recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to dismiss recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { reason, notes } = req.body;
+
+      // Fetch and verify recommendation
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status === 'dismissed') {
+        return res.status(400).json({ error: "Recommendation is already dismissed" });
+      }
+
+      // Update recommendation status
+      const [updatedRecommendation] = await db
+        .update(inboxRecommendations)
+        .set({ 
+          status: 'dismissed',
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId))
+        .returning();
+
+      // Log dismiss event
+      await db.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'dismissed',
+        description: `Recommendation dismissed by user`,
+        metadata: {
+          reason: reason || null,
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      });
+
+      res.json({
+        success: true,
+        recommendation: updatedRecommendation,
+      });
+    } catch (error: any) {
+      console.error('Error dismissing recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to dismiss recommendation" });
+    }
+  }));
+
+  // POST /api/inbox/:id/snooze - Snooze a recommendation for a specified time
+  app.post("/api/inbox/:id/snooze", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to snooze recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to snooze recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { snoozeUntil, snoozeDuration, notes } = req.body;
+
+      // Validate snooze parameters
+      let snoozeTime: Date;
+      if (snoozeUntil) {
+        snoozeTime = new Date(snoozeUntil);
+        if (isNaN(snoozeTime.getTime()) || snoozeTime <= new Date()) {
+          return res.status(400).json({ error: "Invalid snooze date. Must be in the future." });
+        }
+      } else if (snoozeDuration) {
+        // Duration in hours
+        const hours = parseInt(snoozeDuration);
+        if (isNaN(hours) || hours <= 0 || hours > 8760) { // Max 1 year
+          return res.status(400).json({ error: "Invalid snooze duration. Must be between 1 and 8760 hours." });
+        }
+        snoozeTime = new Date(Date.now() + hours * 60 * 60 * 1000);
+      } else {
+        return res.status(400).json({ error: "Either snoozeUntil date or snoozeDuration in hours is required" });
+      }
+
+      // Fetch and verify recommendation
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status === 'dismissed' || recommendation.status === 'applied') {
+        return res.status(400).json({ error: "Cannot snooze dismissed or applied recommendations" });
+      }
+
+      // Update recommendation status and snooze time
+      const [updatedRecommendation] = await db
+        .update(inboxRecommendations)
+        .set({ 
+          status: 'snoozed',
+          snoozedUntil: snoozeTime,
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId))
+        .returning();
+
+      // Log snooze event
+      await db.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'snoozed',
+        description: `Recommendation snoozed until ${snoozeTime.toISOString()}`,
+        metadata: {
+          snoozeUntil: snoozeTime.toISOString(),
+          snoozeDurationHours: Math.round((snoozeTime.getTime() - Date.now()) / (60 * 60 * 1000)),
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      });
+
+      res.json({
+        success: true,
+        recommendation: updatedRecommendation,
+        snoozeUntil: snoozeTime.toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Error snoozing recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to snooze recommendation" });
+    }
+  }));
+
+  // POST /api/inbox/:id/apply - Apply a recommendation and mark as applied
+  app.post("/api/inbox/:id/apply", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to apply recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to apply recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { notes } = req.body;
+
+      // Fetch and verify recommendation with candidates
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+        with: {
+          candidates: {
+            with: {
+              designer: true,
+            },
+            orderBy: [asc(inboxRecommendationCandidates.rank)],
+          },
+        },
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status === 'applied') {
+        return res.status(400).json({ error: "Recommendation is already applied" });
+      }
+
+      if (recommendation.status === 'dismissed') {
+        return res.status(400).json({ error: "Cannot apply dismissed recommendations" });
+      }
+
+      let appliedResult: any = null;
+
+      // Apply the recommendation based on its type
+      await db.transaction(async (tx) => {
+        try {
+          switch (recommendation.recommendationType) {
+            case 'add_to_list':
+              // Check permission to edit lists
+              if (!permissions.canEditLists) {
+                throw new Error("Permission denied: Cannot edit lists");
+              }
+              
+              // Add designer(s) to the target list
+              if (!recommendation.targetListId) {
+                throw new Error("Target list ID is required for add_to_list recommendations");
+              }
+
+              // Verify list exists and user has access
+              const targetList = await tx.query.lists.findFirst({
+                where: and(
+                  eq(lists.id, recommendation.targetListId),
+                  eq(lists.workspaceId, workspaceId)
+                ),
+              });
+
+              if (!targetList) {
+                throw new Error("Target list not found or access denied");
+              }
+
+              // Add the top candidate(s) to the list
+              const candidatesToAdd = recommendation.candidates.slice(0, 3); // Add top 3 candidates
+              for (const candidate of candidatesToAdd) {
+                // Check if designer is already in the list
+                const existingEntry = await tx.query.listDesigners.findFirst({
+                  where: and(
+                    eq(listDesigners.listId, recommendation.targetListId),
+                    eq(listDesigners.designerId, candidate.designerId)
+                  ),
+                });
+
+                if (!existingEntry) {
+                  await tx.insert(listDesigners).values({
+                    listId: recommendation.targetListId,
+                    designerId: candidate.designerId,
+                    notes: `Added via recommendation: ${candidate.reasoning || 'AI-recommended match'}`,
+                  });
+                }
+              }
+
+              appliedResult = {
+                action: 'added_to_list',
+                listId: recommendation.targetListId,
+                listName: targetList.name,
+                designersAdded: candidatesToAdd.length,
+                candidates: candidatesToAdd.map(c => ({
+                  designerId: c.designerId,
+                  designerName: c.designer.name,
+                  score: c.score,
+                })),
+              };
+              break;
+
+            case 'create_list':
+              // Check permission to create lists
+              if (!permissions.canCreateLists) {
+                throw new Error("Permission denied: Cannot create lists");
+              }
+              
+              // Create a new list with the recommendation metadata
+              const metadata = recommendation.metadata as any;
+              if (!metadata?.suggestedListName) {
+                throw new Error("Suggested list name is required for create_list recommendations");
+              }
+
+              // Generate unique slug for the list
+              let listSlug = slugify(metadata.suggestedListName);
+              let counter = 1;
+              while (true) {
+                const existingSlug = await tx.query.lists.findFirst({
+                  where: and(
+                    eq(lists.slug, listSlug),
+                    eq(lists.workspaceId, workspaceId)
+                  ),
+                });
+                if (!existingSlug) break;
+                listSlug = `${slugify(metadata.suggestedListName)}-${counter}`;
+                counter++;
+              }
+
+              const [newList] = await tx.insert(lists).values({
+                userId,
+                workspaceId,
+                name: metadata.suggestedListName,
+                slug: listSlug,
+                description: metadata.suggestedDescription || `AI-recommended list: ${metadata.suggestedListName}`,
+                summary: metadata.suggestedSummary || null,
+                isPublic: false,
+              }).returning();
+
+              // Add top candidates to the new list
+              const topCandidates = recommendation.candidates.slice(0, 5); // Add top 5 candidates
+              for (const candidate of topCandidates) {
+                await tx.insert(listDesigners).values({
+                  listId: newList.id,
+                  designerId: candidate.designerId,
+                  notes: `Initial member: ${candidate.reasoning || 'AI-recommended match'}`,
+                });
+              }
+
+              appliedResult = {
+                action: 'created_list',
+                listId: newList.id,
+                listName: newList.name,
+                listSlug: newList.slug,
+                designersAdded: topCandidates.length,
+                candidates: topCandidates.map(c => ({
+                  designerId: c.designerId,
+                  designerName: c.designer.name,
+                  score: c.score,
+                })),
+              };
+              break;
+
+            case 'update_profile':
+              // Check permission to edit designers
+              if (!permissions.canEditDesigners) {
+                throw new Error("Permission denied: Cannot edit designers");
+              }
+              
+              // Update designer profile with suggested improvements
+              if (!recommendation.designerId) {
+                throw new Error("Designer ID is required for update_profile recommendations");
+              }
+
+              const profileMetadata = recommendation.metadata as any;
+              const updateData: any = {};
+
+              // Apply suggested profile updates
+              if (profileMetadata?.suggestedSkills) {
+                updateData.skills = profileMetadata.suggestedSkills;
+              }
+              if (profileMetadata?.suggestedTitle) {
+                updateData.title = profileMetadata.suggestedTitle;
+              }
+              if (profileMetadata?.suggestedDescription) {
+                updateData.description = profileMetadata.suggestedDescription;
+              }
+
+              if (Object.keys(updateData).length > 0) {
+                updateData.updatedAt = new Date();
+                
+                const [updatedDesigner] = await tx
+                  .update(designers)
+                  .set(updateData)
+                  .where(and(
+                    eq(designers.id, recommendation.designerId),
+                    eq(designers.workspaceId, workspaceId)
+                  ))
+                  .returning();
+
+                appliedResult = {
+                  action: 'updated_profile',
+                  designerId: recommendation.designerId,
+                  designerName: updatedDesigner.name,
+                  updates: updateData,
+                };
+              } else {
+                throw new Error("No valid profile updates found in recommendation metadata");
+              }
+              break;
+
+            default:
+              throw new Error(`Unsupported recommendation type: ${recommendation.recommendationType}`);
+          }
+
+          // Update recommendation status
+          await tx
+            .update(inboxRecommendations)
+            .set({ 
+              status: 'applied',
+              appliedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(inboxRecommendations.id, recommendationId));
+
+          // Log apply event
+          await tx.insert(inboxRecommendationEvents).values({
+            recommendationId,
+            userId,
+            eventType: 'applied',
+            description: `Recommendation applied: ${appliedResult.action}`,
+            metadata: {
+              result: appliedResult,
+              notes: notes || null,
+              previousStatus: recommendation.status,
+            },
+          });
+
+        } catch (error) {
+          console.error('Error applying recommendation:', error);
+          throw error;
+        }
+      });
+
+      res.json({
+        success: true,
+        applied: true,
+        result: appliedResult,
+      });
+    } catch (error: any) {
+      console.error('Error applying recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      if (error.message.includes("Target list") || error.message.includes("Designer ID") || error.message.includes("Suggested list name")) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to apply recommendation" });
+    }
+  }));
 
   const httpServer = createServer(app);
   return httpServer;

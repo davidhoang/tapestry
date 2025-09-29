@@ -70,6 +70,30 @@ import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
 import { SelectDesigner } from "@db/schema";
 
+// Utility function to safely process skills
+const processSkills = (skills: any): string[] => {
+  if (Array.isArray(skills)) {
+    return skills;
+  }
+  if (typeof skills === "string" && skills.length > 0) {
+    const trimmedSkills = skills.trim();
+    if (trimmedSkills.length > 0) {
+      try {
+        // Try parsing as JSON first
+        const parsed = JSON.parse(trimmedSkills);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        // If JSON parsing fails, treat as comma-separated string
+        return trimmedSkills
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0);
+      }
+    }
+  }
+  return [];
+};
+
 // Helper function to normalize LinkedIn URLs
 const normalizeLinkedInUrl = (url: string): string => {
   if (!url || url.trim() === "") return "";
@@ -331,25 +355,8 @@ export default function DirectoryPage() {
         designer.company?.toLowerCase().includes(searchLower);
 
       // Search in skills
-      const skills = (() => {
-        if (Array.isArray(designer.skills)) {
-          return designer.skills;
-        }
-        if (typeof designer.skills === "string" && designer.skills.trim()) {
-          try {
-            // Try parsing as JSON first
-            return JSON.parse(designer.skills);
-          } catch {
-            // If JSON parsing fails, treat as comma-separated string
-            return designer.skills
-              .split(",")
-              .map((s) => s.trim())
-              .filter((s) => s);
-          }
-        }
-        return [];
-      })();
-      const matchesSkills = skills.some((skill) =>
+      const skills = processSkills(designer.skills);
+      const matchesSkills = skills.some((skill: string) =>
         skill.toLowerCase().includes(searchLower),
       );
 
@@ -528,7 +535,7 @@ export default function DirectoryPage() {
         ) : (
           <DesignerTable
             designers={filteredDesigners}
-            workspaceSlug={workspaceSlug}
+            workspaceSlug={workspaceSlug || ''}
             onEdit={setDesignerToEdit}
             onEnrich={(designer) => {
               setEnrichmentDesigner(designer);
@@ -857,7 +864,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
         }
         if (data.skills && data.skills.length > 0) {
           const currentSkills = form.getValues("skills") || [];
-          const newSkills = [...new Set([...currentSkills, ...data.skills])];
+          const newSkills = [...Array.from(new Set([...currentSkills, ...data.skills]))];
           form.setValue("skills", newSkills);
         }
 
@@ -1091,7 +1098,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                         if (skills && skills.length > 0) {
                           const currentSkills = field.value || [];
                           const newSkills = [
-                            ...new Set([...currentSkills, ...skills]),
+                            ...Array.from(new Set([...currentSkills, ...skills])),
                           ];
                           field.onChange(newSkills);
                           toast({
@@ -1345,9 +1352,9 @@ function AddToListDialog({
                       <SelectItem key={list.id} value={list.id.toString()}>
                         <div className="flex items-center">
                           <span>{list.name}</span>
-                          {list.designerCount > 0 && (
+                          {((list as any).designerCount > 0) && (
                             <span className="text-muted-foreground ml-2">
-                              ({list.designerCount} designer{list.designerCount !== 1 ? 's' : ''})
+                              ({(list as any).designerCount} designer{(list as any).designerCount !== 1 ? 's' : ''})
                             </span>
                           )}
                         </div>
@@ -1450,24 +1457,7 @@ function DesignerListItem({
   isSelected: boolean;
   onToggleSelect: (id: number) => void;
 }) {
-  const skills = (() => {
-    if (Array.isArray(designer.skills)) {
-      return designer.skills;
-    }
-    if (typeof designer.skills === "string" && designer.skills.trim()) {
-      try {
-        // Try parsing as JSON first
-        return JSON.parse(designer.skills);
-      } catch {
-        // If JSON parsing fails, treat as comma-separated string
-        return designer.skills
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s);
-      }
-    }
-    return [];
-  })();
+  const skills = processSkills(designer.skills);
 
   const handleClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on checkbox or edit button
@@ -1478,7 +1468,7 @@ function DesignerListItem({
       return;
     }
     // Navigate to designer details page
-    window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
+    window.location.href = `/${workspaceSlug || ''}/directory/${slugify(designer.name)}`;
   };
 
   return (
@@ -1875,22 +1865,7 @@ function DesignerTable({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {designers.map((designer, index) => {
-              const skills = (() => {
-                if (Array.isArray(designer.skills)) {
-                  return designer.skills;
-                }
-                if (typeof designer.skills === "string" && designer.skills.trim()) {
-                  try {
-                    return JSON.parse(designer.skills);
-                  } catch {
-                    return designer.skills
-                      .split(",")
-                      .map((s: string) => s.trim())
-                      .filter((s: string) => s);
-                  }
-                }
-                return [];
-              })();
+              const skills = processSkills(designer.skills);
 
               return (
                 <tr
@@ -1913,7 +1888,7 @@ function DesignerTable({
                     // Only navigate when clicking on the name column
                     const nameCell = (e.target as HTMLElement).closest('td[data-name-cell]');
                     if (nameCell) {
-                      window.location.href = `/${workspaceSlug}/directory/${slugify(designer.name)}`;
+                      window.location.href = `/${workspaceSlug || ''}/directory/${slugify(designer.name)}`;
                     }
                   }}
                 >

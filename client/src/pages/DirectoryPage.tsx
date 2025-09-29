@@ -155,6 +155,7 @@ export default function DirectoryPage() {
   // Column widths for resizable table
   const [columnWidths, setColumnWidths] = useState({
     checkbox: 40,
+    profile: 60,
     name: 250,
     email: 200,
     website: 200,
@@ -267,6 +268,7 @@ export default function DirectoryPage() {
     // Simple auto-fit logic - could be enhanced to measure actual content
     const autoSizes = {
       checkbox: 40,
+      profile: 60,
       name: 250,
       email: 220,
       website: 180,
@@ -1790,12 +1792,23 @@ function DesignerTable({
                 />
               </th>
 
+              {/* Profile column */}
+              <th 
+                className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                style={{ 
+                  width: columnWidths.profile, 
+                  left: columnWidths.checkbox 
+                }}
+              >
+                {/* Empty header for profile column */}
+              </th>
+
               {/* Name column */}
               <th 
                 className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
                 style={{ 
                   width: columnWidths.name, 
-                  left: columnWidths.checkbox 
+                  left: columnWidths.checkbox + columnWidths.profile 
                 }}
               >
                 Name
@@ -1913,10 +1926,27 @@ function DesignerTable({
                     />
                   </td>
                   <td 
+                    className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100"
+                    style={{ 
+                      width: columnWidths.profile,
+                      left: columnWidths.checkbox 
+                    }}
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={designer.photoUrl || ""} />
+                      <AvatarFallback className="text-xs">
+                        {designer.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                  </td>
+                  <td 
                     className="sticky left-0 z-10 bg-white py-2 px-3 border-r border-gray-100 cursor-pointer"
                     style={{ 
                       width: columnWidths.name,
-                      left: columnWidths.checkbox 
+                      left: columnWidths.checkbox + columnWidths.profile 
                     }}
                     data-name-cell
                   >

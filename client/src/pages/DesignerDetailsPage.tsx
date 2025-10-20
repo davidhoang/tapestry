@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2 } from "lucide-react";
 import { RichTextPreview } from "@/components/ui/rich-text-preview";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useDesignerBySlug } from "@/hooks/use-designer";
 import { useState, useRef } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
@@ -489,11 +490,11 @@ export default function DesignerDetailsPage() {
                     <FormItem>
                       <FormLabel>Notes</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Additional information about the designer..."
-                          className="min-h-[100px]"
-                          {...field}
+                        <RichTextEditor
                           value={field.value || ""}
+                          onChange={field.onChange}
+                          placeholder="Additional information about the designer..."
+                          height={200}
                         />
                       </FormControl>
                       <FormMessage />

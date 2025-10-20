@@ -35,8 +35,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,7 +81,7 @@ function DesignerSelect({
   excludeDesignerIds?: number[];
 }) {
   const { data: designers, isLoading } = useDesigners();
-  const [selectedValue, setSelectedValue] = useState<string | undefined>(undefined);
+  const [open, setOpen] = useState(false);
 
   if (isLoading) return null;
 
@@ -76,46 +89,61 @@ function DesignerSelect({
     designer => !excludeDesignerIds.includes(designer.id)
   ) || [];
 
-  const handleSelect = (value: string) => {
-    onSelect(parseInt(value));
-    setSelectedValue(undefined); // Reset selection after adding
+  const handleSelect = (designerId: number) => {
+    onSelect(designerId);
+    setOpen(false);
   };
 
   return (
-    <Select value={selectedValue} onValueChange={handleSelect}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="Select a designer to add" />
-      </SelectTrigger>
-      <SelectContent className="max-h-[200px] overflow-y-auto">
-        {availableDesigners.length === 0 ? (
-          <div className="p-2 text-sm text-muted-foreground text-center">
-            No designers available to add
-          </div>
-        ) : (
-          availableDesigners.map((designer) => (
-            <SelectItem key={designer.id} value={designer.id.toString()}>
-              <div className="flex items-center gap-3 w-full min-w-0">
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarImage src={designer.photoUrl || ""} />
-                  <AvatarFallback className="text-xs">
-                    {designer.name
-                      .split(" ")
-                      .map((n: string) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium truncate">{designer.name}</div>
-                  <div className="text-sm text-muted-foreground truncate">
-                    {designer.title} {designer.company && `• ${designer.company}`}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-11"
+        >
+          Select a designer to add
+          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search designers..." />
+          <CommandList>
+            <CommandEmpty>No designers found.</CommandEmpty>
+            <CommandGroup>
+              {availableDesigners.map((designer) => (
+                <CommandItem
+                  key={designer.id}
+                  value={`${designer.name} ${designer.title || ''} ${designer.company || ''}`}
+                  onSelect={() => handleSelect(designer.id)}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 w-full min-w-0">
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarImage src={designer.photoUrl || ""} />
+                      <AvatarFallback className="text-xs">
+                        {designer.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{designer.name}</div>
+                      <div className="text-sm text-muted-foreground truncate">
+                        {designer.title} {designer.company && `• ${designer.company}`}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </SelectItem>
-          ))
-        )}
-      </SelectContent>
-    </Select>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -472,7 +500,6 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const pathParts = location.split("/");
   const workspaceSlug = pathParts[1];
   const [designerNotes, setDesignerNotes] = useState<Record<number, string | undefined>>({});
-  const [searchQuery, setSearchQuery] = useState("");
   
   // Track changes for batch operations
   const [currentDesigners, setCurrentDesigners] = useState(list.designers || []);
@@ -683,27 +710,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
             <div className="space-y-2">
               <h3 className="font-medium">Current Designers</h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search designers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
               <div className="space-y-2">
-                {list.designers
-                  ?.filter(({ designer }) => {
-                    if (!searchQuery) return true;
-                    const query = searchQuery.toLowerCase();
-                    return (
-                      designer.name.toLowerCase().includes(query) ||
-                      (designer.title || '').toLowerCase().includes(query) ||
-                      (designer.company || '').toLowerCase().includes(query)
-                    );
-                  })
-                  .map(({ designer, notes }) => {
+                {list.designers?.map(({ designer, notes }) => {
                   const isBeingRemoved = designersToRemove.includes(designer.id);
                   return (
                     <div

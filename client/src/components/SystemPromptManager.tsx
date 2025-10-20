@@ -293,7 +293,6 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
-                  className="h-11"
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -304,7 +303,6 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
               <div className="space-y-2">
                 <Label htmlFor="description">Description (optional)</Label>
                 <Input
-                  className="h-11"
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -444,7 +442,6 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
             <div className="space-y-2">
               <Label htmlFor="edit-name">Name</Label>
               <Input
-                className="h-11"
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -454,7 +451,6 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description (optional)</Label>
               <Input
-                className="h-11"
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}

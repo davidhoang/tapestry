@@ -383,7 +383,7 @@ export default function ProfilePage() {
                                 <FormItem>
                                   <FormLabel>Email Address</FormLabel>
                                   <FormControl>
-                                    <Input className="h-11" placeholder="Enter email address" {...field} />
+                                    <Input placeholder="Enter email address" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -399,7 +399,7 @@ export default function ProfilePage() {
                                   <FormLabel>Role</FormLabel>
                                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                      <SelectTrigger className="h-11">
+                                      <SelectTrigger>
                                         <SelectValue placeholder="Select a role" />
                                       </SelectTrigger>
                                     </FormControl>

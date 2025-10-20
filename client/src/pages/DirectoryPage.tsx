@@ -941,7 +941,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                     Name <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -956,7 +956,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} type="email" />
+                    <Input {...field} type="email" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -976,7 +976,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                     Title <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -997,7 +997,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger className="h-11">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select level" />
                       </SelectTrigger>
                     </FormControl>
@@ -1025,7 +1025,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                 <FormItem>
                   <FormLabel>Company</FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1040,7 +1040,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1058,7 +1058,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                 <FormItem>
                   <FormLabel>Website</FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} type="url" />
+                    <Input {...field} type="url" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1073,7 +1073,7 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                 <FormItem>
                   <FormLabel>LinkedIn URL</FormLabel>
                   <FormControl>
-                    <Input className="h-11" {...field} type="url" />
+                    <Input {...field} type="url" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1358,7 +1358,7 @@ function AddToListDialog({
                   value={selectedListId?.toString()} 
                   onValueChange={(value) => setSelectedListId(parseInt(value))}
                 >
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger>
                     <SelectValue placeholder="Choose a list..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -1410,7 +1410,7 @@ function AddToListDialog({
                       <FormItem>
                         <FormLabel>List name</FormLabel>
                         <FormControl>
-                          <Input className="h-11" {...field} placeholder="e.g., Design Technologists" />
+                          <Input {...field} placeholder="e.g., Design Technologists" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

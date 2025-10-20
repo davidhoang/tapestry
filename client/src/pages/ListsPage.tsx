@@ -83,7 +83,7 @@ function DesignerSelect({
 
   return (
     <Select value={selectedValue} onValueChange={handleSelect}>
-      <SelectTrigger className="w-full h-11">
+      <SelectTrigger className="w-full">
         <SelectValue placeholder="Select a designer to add" />
       </SelectTrigger>
       <SelectContent className="max-h-[200px] overflow-y-auto">
@@ -421,7 +421,7 @@ function ViewListDialog({
                         <Input
                           readOnly
                           value={shareUrl}
-                          className="font-mono text-sm h-11"
+                          className="font-mono text-sm"
                         />
                         <Button
                           variant="outline"
@@ -599,7 +599,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                       <FormItem>
                         <FormLabel>List Name</FormLabel>
                         <FormControl>
-                          <Input className="h-11" {...field} />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -974,7 +974,7 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input className="h-11" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1098,7 +1098,6 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
                     <FormLabel>Recipient Email</FormLabel>
                     <FormControl>
                       <Input
-                        className="h-11"
                         type="email"
                         {...field}
                         placeholder="Email address"
@@ -1117,7 +1116,7 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
                   <FormItem>
                     <FormLabel>Subject</FormLabel>
                     <FormControl>
-                      <Input className="h-11" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -240,14 +240,13 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="E-commerce Website"
                     required
-                    className="h-11"
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger className="h-11">
+                    <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -290,7 +289,6 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     value={formData.clientName}
                     onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                     placeholder="Acme Corporation"
-                    className="h-11"
                   />
                 </div>
                 
@@ -301,7 +299,6 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     placeholder="Lead Designer"
-                    className="h-11"
                   />
                 </div>
               </div>
@@ -314,7 +311,6 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                     placeholder="3 months"
-                    className="h-11"
                   />
                 </div>
                 
@@ -326,7 +322,6 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     value={formData.projectUrl}
                     onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value })}
                     placeholder="https://example.com"
-                    className="h-11"
                   />
                 </div>
               </div>
@@ -338,7 +333,6 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                   value={formData.tags.join(', ')}
                   onChange={(e) => handleTagsChange(e.target.value)}
                   placeholder="responsive, ecommerce, minimal"
-                  className="h-11"
                 />
               </div>
 
@@ -349,7 +343,6 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                   value={formData.technologies.join(', ')}
                   onChange={(e) => handleTechnologiesChange(e.target.value)}
                   placeholder="React, TypeScript, Tailwind CSS"
-                  className="h-11"
                 />
               </div>
 
@@ -532,14 +525,13 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="E-commerce Website"
                   required
-                  className="h-11"
                 />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="edit-category">Category</Label>
                 <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>

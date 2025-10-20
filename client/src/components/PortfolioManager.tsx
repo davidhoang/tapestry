@@ -204,7 +204,6 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="My Design Portfolio"
                   required
-                  className="h-11"
                 />
               </div>
               
@@ -215,7 +214,6 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                   value={formData.tagline}
                   onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                   placeholder="Creating beautiful digital experiences"
-                  className="h-11"
                 />
               </div>
               
@@ -234,7 +232,7 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme</Label>
                 <Select value={formData.theme} onValueChange={(value) => setFormData({ ...formData, theme: value })}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -255,13 +253,13 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                     type="color"
                     value={formData.primaryColor}
                     onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    className="w-20 h-11"
+                    className="w-20"
                   />
                   <Input
                     value={formData.primaryColor}
                     onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
                     placeholder="#C8944B"
-                    className="flex-1 h-11"
+                    className="flex-1"
                   />
                 </div>
               </div>
@@ -405,7 +403,6 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="My Design Portfolio"
                 required
-                className="h-11"
               />
             </div>
             
@@ -416,7 +413,6 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                 value={formData.tagline}
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                 placeholder="Creating beautiful digital experiences"
-                className="h-11"
               />
             </div>
             
@@ -435,7 +431,7 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
             <div className="space-y-2">
               <Label htmlFor="edit-theme">Theme</Label>
               <Select value={formData.theme} onValueChange={(value) => setFormData({ ...formData, theme: value })}>
-                <SelectTrigger className="h-11">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -456,13 +452,13 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                   type="color"
                   value={formData.primaryColor}
                   onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                  className="w-20 h-11"
+                  className="w-20"
                 />
                 <Input
                   value={formData.primaryColor}
                   onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
                   placeholder="#C8944B"
-                  className="flex-1 h-11"
+                  className="flex-1"
                 />
               </div>
             </div>

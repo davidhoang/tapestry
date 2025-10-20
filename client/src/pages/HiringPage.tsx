@@ -590,7 +590,6 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
             <div className="space-y-2">
               <Label htmlFor="listName">List Name</Label>
               <Input
-                className="h-11"
                 id="listName"
                 value={newListName}
                 onChange={(e) => setNewListName(e.target.value)}
@@ -629,7 +628,6 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
             <div className="space-y-2">
               <Label htmlFor="jobTitle">Job Title</Label>
               <Input
-                className="h-11"
                 id="jobTitle"
                 value={newJobTitle}
                 onChange={(e) => setNewJobTitle(e.target.value)}

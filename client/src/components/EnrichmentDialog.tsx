@@ -273,7 +273,6 @@ export default function EnrichmentDialog({
                       value={newDesignerName}
                       onChange={(e) => setNewDesignerName(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleEnrich()}
-                      className="h-11"
                     />
                   </div>
                 )}

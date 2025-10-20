@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Mail, Pencil, Copy } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -472,6 +472,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const pathParts = location.split("/");
   const workspaceSlug = pathParts[1];
   const [designerNotes, setDesignerNotes] = useState<Record<number, string | undefined>>({});
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Track changes for batch operations
   const [currentDesigners, setCurrentDesigners] = useState(list.designers || []);
@@ -606,6 +607,61 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                     )}
                   />
                 </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium">Add</h3>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <DesignerSelect 
+                        onSelect={handleAddDesigner}
+                        excludeDesignerIds={[
+                          ...(list.designers?.map(d => d.designer.id) || []),
+                          ...designersToAdd
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Show pending additions */}
+                  {designersToAdd.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-green-600">Pending Additions</h4>
+                      <div className="space-y-2">
+                        {designersToAdd.map((designerId) => {
+                          const designer = designers?.find(d => d.id === designerId);
+                          if (!designer) return null;
+                          return (
+                            <div key={designerId} className="flex items-center justify-between p-2 rounded-md border border-green-200 bg-green-50">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={designer.photoUrl || ""} />
+                                  <AvatarFallback>
+                                    {designer.name.split(" ").map((n) => n[0]).join("")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-sm">{designer.name}</p>
+                                  <p className="text-xs text-muted-foreground">{designer.title}</p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setDesignersToAdd(prev => prev.filter(id => id !== designerId));
+                                  setHasChanges(designersToAdd.length > 1 || designersToRemove.length > 0);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <FormField
                     control={form.control}
@@ -625,64 +681,29 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
               </form>
             </Form>
 
-            <div className="space-y-4">
-              <h3 className="font-medium">Add</h3>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <DesignerSelect 
-                    onSelect={handleAddDesigner}
-                    excludeDesignerIds={[
-                      ...(list.designers?.map(d => d.designer.id) || []),
-                      ...designersToAdd
-                    ]}
-                  />
-                </div>
-              </div>
-
-              {/* Show pending additions */}
-              {designersToAdd.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-green-600">Pending Additions</h4>
-                  <div className="space-y-2">
-                    {designersToAdd.map((designerId) => {
-                      const designer = designers?.find(d => d.id === designerId);
-                      if (!designer) return null;
-                      return (
-                        <div key={designerId} className="flex items-center justify-between p-2 rounded-md border border-green-200 bg-green-50">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={designer.photoUrl || ""} />
-                              <AvatarFallback>
-                                {designer.name.split(" ").map((n) => n[0]).join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-sm">{designer.name}</p>
-                              <p className="text-xs text-muted-foreground">{designer.title}</p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setDesignersToAdd(prev => prev.filter(id => id !== designerId));
-                              setHasChanges(designersToAdd.length > 1 || designersToRemove.length > 0);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div className="space-y-2">
               <h3 className="font-medium">Current Designers</h3>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search designers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
               <div className="space-y-2">
-                {list.designers?.map(({ designer, notes }) => {
+                {list.designers
+                  ?.filter(({ designer }) => {
+                    if (!searchQuery) return true;
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      designer.name.toLowerCase().includes(query) ||
+                      (designer.title || '').toLowerCase().includes(query) ||
+                      (designer.company || '').toLowerCase().includes(query)
+                    );
+                  })
+                  .map(({ designer, notes }) => {
                   const isBeingRemoved = designersToRemove.includes(designer.id);
                   return (
                     <div

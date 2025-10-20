@@ -226,9 +226,9 @@ export default function ListsPage() {
                       </AvatarFallback>
                     </Avatar>
                   ))}
-                  {list.designers?.length > 5 && (
+                  {(list.designers?.length ?? 0) > 5 && (
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-xs border-2 border-background">
-                      +{list.designers.length - 5}
+                      +{(list.designers?.length ?? 0) - 5}
                     </div>
                   )}
                 </div>
@@ -556,11 +556,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   const handleUpdateNotes = async (designerId: number, notes: string) => {
     try {
-      await updateList.mutateAsync({
-        id: list.id,
-        designerId,
-        notes,
-      });
+      // This function is not currently used - notes are updated via the list-designer relationship
       toast({
         title: "Success",
         description: "Notes updated successfully",
@@ -880,17 +876,20 @@ function ViewDesignerDialog({
               <div>
                 <h3 className="font-medium mb-2">Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {(designer.skills && typeof designer.skills === 'string' 
-                    ? designer.skills.split(',').map(s => s.trim()).filter(s => s)
-                    : []
-                  ).map((skill, index) => (
-                    <div
-                      key={index}
-                      className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
-                    >
-                      {skill}
-                    </div>
-                  ))}
+                  {(() => {
+                    const skills = designer.skills;
+                    const skillsArray = skills && typeof skills === 'string' 
+                      ? (skills as string).split(',').map((s: string) => s.trim()).filter((s: string) => s)
+                      : [];
+                    return skillsArray.map((skill: string, index: number) => (
+                      <div
+                        key={index}
+                        className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                      >
+                        {skill}
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             )}

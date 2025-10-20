@@ -90,7 +90,7 @@ export function useUpdateList() {
   const workspaceSlug = pathParts[1];
 
   return useMutation({
-    mutationFn: async (data: { id: number; name: string; description?: string }) => {
+    mutationFn: async (data: { id: number; name?: string; description?: string; summary?: string; isPublic?: boolean }) => {
       const response = await fetch(`/api/lists/${data.id}`, {
         method: "PUT",
         headers: {

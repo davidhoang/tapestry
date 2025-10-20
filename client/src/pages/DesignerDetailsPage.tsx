@@ -266,7 +266,7 @@ export default function DesignerDetailsPage() {
                     <div className="relative">
                       {photoPreview || designer.photoUrl ? (
                         <img
-                          src={photoPreview || designer.photoUrl}
+                          src={photoPreview || designer.photoUrl || undefined}
                           alt={designer.name}
                           className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
                         />
@@ -374,7 +374,7 @@ export default function DesignerDetailsPage() {
                       <FormItem>
                         <FormLabel>Email *</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="email@example.com" {...field} />
+                          <Input type="email" placeholder="email@example.com" {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -474,7 +474,7 @@ export default function DesignerDetailsPage() {
                       <FormLabel>Skills</FormLabel>
                       <FormControl>
                         <SkillsInput 
-                          value={Array.isArray(field.value) ? field.value : []} 
+                          value={Array.isArray(field.value) ? (field.value as string[]) : []} 
                           onChange={field.onChange} 
                         />
                       </FormControl>
@@ -609,12 +609,13 @@ export default function DesignerDetailsPage() {
                 <h2 className="text-3xl font-bold">Skills & Expertise</h2>
                 <div className="flex flex-wrap gap-3">
                   {(() => {
-                    let skillsArray = [];
-                    if (designer.skills) {
-                      if (typeof designer.skills === 'string') {
-                        skillsArray = designer.skills.split(',').map(s => s.trim()).filter(s => s);
-                      } else if (Array.isArray(designer.skills)) {
-                        skillsArray = designer.skills.filter(s => s);
+                    let skillsArray: string[] = [];
+                    const skills = designer.skills;
+                    if (skills) {
+                      if (typeof skills === 'string') {
+                        skillsArray = (skills as string).split(',').map((s: string) => s.trim()).filter((s: string) => s);
+                      } else if (Array.isArray(skills)) {
+                        skillsArray = (skills as string[]).filter((s: string) => s);
                       }
                     }
                     
@@ -622,7 +623,7 @@ export default function DesignerDetailsPage() {
                       return <p className="text-muted-foreground text-sm">No skills listed</p>;
                     }
                     
-                    return skillsArray.map((skill, i) => (
+                    return skillsArray.map((skill: string, i: number) => (
                       <Badge 
                         key={i} 
                         variant="secondary"

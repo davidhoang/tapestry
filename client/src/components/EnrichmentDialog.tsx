@@ -182,14 +182,15 @@ export default function EnrichmentDialog({
     const isDifferent = hasExistingValue && (designer as any)[key] !== value;
 
     return (
-      <div key={key} className="space-y-2">
-        <div className="flex items-center space-x-2">
+      <div key={key} className="space-y-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+        <div className="flex items-center space-x-3">
           <Checkbox
             id={key}
             checked={isSelected}
             onCheckedChange={() => handleFieldToggle(key)}
+            className="mt-0.5"
           />
-          <Label htmlFor={key} className="font-medium">
+          <Label htmlFor={key} className="font-medium cursor-pointer flex-1">
             {label}
             {isNew && <Badge variant="secondary" className="ml-2 text-xs">New</Badge>}
             {isDifferent && <Badge variant="outline" className="ml-2 text-xs">Updated</Badge>}
@@ -197,7 +198,7 @@ export default function EnrichmentDialog({
         </div>
         
         {Array.isArray(value) ? (
-          <div className="flex flex-wrap gap-1 ml-6">
+          <div className="flex flex-wrap gap-2 ml-7">
             {value.map((item, index) => (
               <Badge key={index} variant="outline" className="text-xs">
                 {item}
@@ -205,7 +206,7 @@ export default function EnrichmentDialog({
             ))}
           </div>
         ) : typeof value === 'object' ? (
-          <div className="ml-6 space-y-1">
+          <div className="ml-7 space-y-2">
             {Object.entries(value).map(([subKey, subValue]) => (
               subValue && (
                 <div key={subKey} className="flex items-center gap-2 text-sm">
@@ -224,7 +225,7 @@ export default function EnrichmentDialog({
             ))}
           </div>
         ) : (
-          <div className="ml-6 text-sm text-muted-foreground">
+          <div className="ml-7 text-sm text-muted-foreground">
             {String(value)}
           </div>
         )}
@@ -234,7 +235,7 @@ export default function EnrichmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden" aria-describedby="enrichment-description">
+      <DialogContent className="max-w-4xl" aria-describedby="enrichment-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -248,10 +249,10 @@ export default function EnrichmentDialog({
           }
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 -mt-2">
           {!enrichmentResult && (
             <div className="space-y-4">
-              <div className="text-center py-8">
+              <div className="text-center py-4">
                 <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">
                   {isNewDesigner ? "Find Designer Information" : "Enhance Profile Data"}
@@ -264,14 +265,15 @@ export default function EnrichmentDialog({
                 </p>
 
                 {isNewDesigner && (
-                  <div className="max-w-md mx-auto mb-6">
-                    <Label htmlFor="designer-name">Designer Name</Label>
+                  <div className="max-w-md mx-auto mb-6 space-y-2">
+                    <Label htmlFor="designer-name" className="text-left block">Designer Name</Label>
                     <Input
                       id="designer-name"
                       placeholder="e.g., John Smith, Designer at Company"
                       value={newDesignerName}
                       onChange={(e) => setNewDesignerName(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleEnrich()}
+                      className="h-11"
                     />
                   </div>
                 )}
@@ -337,8 +339,8 @@ export default function EnrichmentDialog({
                     </p>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-96">
-                      <div className="space-y-4">
+                    <ScrollArea className="max-h-[50vh]">
+                      <div className="space-y-5 pr-4">
                         {renderField('title', enrichmentResult.data.title, 'Job Title')}
                         {renderField('company', enrichmentResult.data.company, 'Company')}
                         {renderField('bio', enrichmentResult.data.bio, 'Bio')}

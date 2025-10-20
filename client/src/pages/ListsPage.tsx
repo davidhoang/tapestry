@@ -44,10 +44,10 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Command as CommandPrimitive } from "cmdk";
 import { useForm } from "react-hook-form";
 import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -109,8 +109,13 @@ function DesignerSelect({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
         <Command>
-          <CommandInput placeholder="Search designers..." className="[&_svg]:hidden" />
-          <CommandList>
+          <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+            <CommandPrimitive.Input
+              placeholder="Search designers..."
+              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+          <CommandList className="max-h-[300px]">
             <CommandEmpty>No designers found.</CommandEmpty>
             <CommandGroup>
               {availableDesigners.map((designer) => (

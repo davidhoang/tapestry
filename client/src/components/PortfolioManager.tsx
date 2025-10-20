@@ -188,15 +188,15 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
               Create Portfolio
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-xl">
             <DialogHeader>
               <DialogTitle>Create New Portfolio</DialogTitle>
               <DialogDescription>
                 Create a new portfolio to showcase your design work and projects.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreatePortfolio} className="space-y-4">
-              <div>
+            <form onSubmit={handleCreatePortfolio} className="space-y-5">
+              <div className="space-y-2">
                 <Label htmlFor="title">Portfolio Title *</Label>
                 <Input
                   id="title"
@@ -204,34 +204,37 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="My Design Portfolio"
                   required
+                  className="h-11"
                 />
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="tagline">Tagline</Label>
                 <Input
                   id="tagline"
                   value={formData.tagline}
                   onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                   placeholder="Creating beautiful digital experiences"
+                  className="h-11"
                 />
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Tell visitors about your design philosophy and approach..."
-                  rows={3}
+                  rows={4}
+                  className="resize-none"
                 />
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="theme">Theme</Label>
                 <Select value={formData.theme} onValueChange={(value) => setFormData({ ...formData, theme: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -244,21 +247,21 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                 </Select>
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="primaryColor">Primary Color</Label>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <Input
                     id="primaryColor"
                     type="color"
                     value={formData.primaryColor}
                     onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    className="w-16 h-10"
+                    className="w-20 h-11"
                   />
                   <Input
                     value={formData.primaryColor}
                     onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
                     placeholder="#C8944B"
-                    className="flex-1"
+                    className="flex-1 h-11"
                   />
                 </div>
               </div>
@@ -386,15 +389,15 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
 
       {/* Edit Portfolio Dialog */}
       <Dialog open={!!editingPortfolio} onOpenChange={(open) => !open && setEditingPortfolio(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Edit Portfolio</DialogTitle>
             <DialogDescription>
               Update your portfolio settings and information.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdatePortfolio} className="space-y-4">
-            <div>
+          <form onSubmit={handleUpdatePortfolio} className="space-y-5">
+            <div className="space-y-2">
               <Label htmlFor="edit-title">Portfolio Title *</Label>
               <Input
                 id="edit-title"
@@ -402,34 +405,37 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="My Design Portfolio"
                 required
+                className="h-11"
               />
             </div>
             
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-tagline">Tagline</Label>
               <Input
                 id="edit-tagline"
                 value={formData.tagline}
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                 placeholder="Creating beautiful digital experiences"
+                className="h-11"
               />
             </div>
             
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Tell visitors about your design philosophy and approach..."
-                rows={3}
+                rows={4}
+                className="resize-none"
               />
             </div>
             
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-theme">Theme</Label>
               <Select value={formData.theme} onValueChange={(value) => setFormData({ ...formData, theme: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -442,21 +448,21 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
               </Select>
             </div>
             
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-primaryColor">Primary Color</Label>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <Input
                   id="edit-primaryColor"
                   type="color"
                   value={formData.primaryColor}
                   onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                  className="w-16 h-10"
+                  className="w-20 h-11"
                 />
                 <Input
                   value={formData.primaryColor}
                   onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
                   placeholder="#C8944B"
-                  className="flex-1"
+                  className="flex-1 h-11"
                 />
               </div>
             </div>

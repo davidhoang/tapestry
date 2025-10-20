@@ -223,16 +223,16 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
                 Add a new project to your portfolio with details and media.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+            <form onSubmit={handleCreateProject} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
                   <Label htmlFor="title">Project Title *</Label>
                   <Input
                     id="title"
@@ -240,13 +240,14 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="E-commerce Website"
                     required
+                    className="h-11"
                   />
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -260,18 +261,19 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                 </div>
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="description">Short Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="A brief overview of this project..."
-                  rows={2}
+                  rows={3}
+                  className="resize-none"
                 />
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="content">Project Details</Label>
                 <RichTextEditor
                   value={formData.content}
@@ -280,40 +282,43 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
                   <Label htmlFor="clientName">Client Name</Label>
                   <Input
                     id="clientName"
                     value={formData.clientName}
                     onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                     placeholder="Acme Corporation"
+                    className="h-11"
                   />
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="role">Your Role</Label>
                   <Input
                     id="role"
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     placeholder="Lead Designer"
+                    className="h-11"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
                   <Label htmlFor="duration">Duration</Label>
                   <Input
                     id="duration"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                     placeholder="3 months"
+                    className="h-11"
                   />
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="projectUrl">Project URL</Label>
                   <Input
                     id="projectUrl"
@@ -321,27 +326,30 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                     value={formData.projectUrl}
                     onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value })}
                     placeholder="https://example.com"
+                    className="h-11"
                   />
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="tags">Tags (comma-separated)</Label>
                 <Input
                   id="tags"
                   value={formData.tags.join(', ')}
                   onChange={(e) => handleTagsChange(e.target.value)}
                   placeholder="responsive, ecommerce, minimal"
+                  className="h-11"
                 />
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="technologies">Technologies (comma-separated)</Label>
                 <Input
                   id="technologies"
                   value={formData.technologies.join(', ')}
                   onChange={(e) => handleTechnologiesChange(e.target.value)}
                   placeholder="React, TypeScript, Tailwind CSS"
+                  className="h-11"
                 />
               </div>
 
@@ -507,17 +515,16 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
 
       {/* Edit Project Dialog */}
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
             <DialogDescription>
               Update your project details and settings.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdateProject} className="space-y-4">
-            {/* Same form fields as create, but for editing */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+          <form onSubmit={handleUpdateProject} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
                 <Label htmlFor="edit-title">Project Title *</Label>
                 <Input
                   id="edit-title"
@@ -525,13 +532,14 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="E-commerce Website"
                   required
+                  className="h-11"
                 />
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="edit-category">Category</Label>
                 <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -545,18 +553,19 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
               </div>
             </div>
             
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-description">Short Description</Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="A brief overview of this project..."
-                rows={2}
+                rows={3}
+                className="resize-none"
               />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-content">Project Details</Label>
               <RichTextEditor
                 value={formData.content}

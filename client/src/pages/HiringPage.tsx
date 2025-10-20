@@ -586,10 +586,11 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
               Create List from Matches
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-6">
+            <div className="space-y-2">
               <Label htmlFor="listName">List Name</Label>
               <Input
+                className="h-11"
                 id="listName"
                 value={newListName}
                 onChange={(e) => setNewListName(e.target.value)}
@@ -624,17 +625,18 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
           <DialogHeader>
             <DialogTitle className="font-serif">Create New Job</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-6">
+            <div className="space-y-2">
               <Label htmlFor="jobTitle">Job Title</Label>
               <Input
+                className="h-11"
                 id="jobTitle"
                 value={newJobTitle}
                 onChange={(e) => setNewJobTitle(e.target.value)}
                 placeholder="e.g. Senior Product Designer"
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="jobDescription">Job Description</Label>
               <div className="mt-2">
                 <MDEditor

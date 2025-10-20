@@ -349,7 +349,7 @@ function ViewListDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">{list.name}</DialogTitle>
             <p className="text-muted-foreground">{list.description}</p>
@@ -357,7 +357,7 @@ function ViewListDialog({
               {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
             </p>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto pr-2">
+          <div className="space-y-5">
             <div className="space-y-4">
               {list.designers?.map(
                 ({
@@ -580,7 +580,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-4xl w-[95vw] max-h-[85vh] overflow-hidden flex flex-col relative !p-0">
+      <DialogContent className="!fixed !left-[50vw] !top-[50vh] !transform !-translate-x-1/2 !-translate-y-1/2 max-w-4xl w-[95vw] flex flex-col relative !p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
@@ -589,34 +589,38 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
+                className="space-y-6"
               >
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>List Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>List Name</FormLabel>
+                        <FormControl>
+                          <Input className="h-11" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea className="resize-none" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
               </form>
             </Form>
@@ -843,11 +847,11 @@ function ViewDesignerDialog({
 }: ViewDesignerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="space-y-6">
           <div className="space-y-6">
             <div className="flex items-center space-x-4">
               <Avatar className="w-16 h-16">
@@ -956,13 +960,13 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
           Create list
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create new list</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
               <FormField
                 control={form.control}
                 name="name"
@@ -970,12 +974,14 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
+            <div className="space-y-2">
               <FormField
                 control={form.control}
                 name="description"
@@ -983,40 +989,40 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea className="resize-none" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="space-y-4">
-                <h3 className="font-medium">Add Designers</h3>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <DesignerSelect onSelect={handleAddDesigner} />
+            </div>
+            <div className="space-y-5">
+              <h3 className="font-medium">Add Designers</h3>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <DesignerSelect onSelect={handleAddDesigner} />
+                </div>
+              </div>
+              {selectedDesignerIds.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Selected Designers</h4>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedDesignerIds.length} designer
+                    {selectedDesignerIds.length !== 1 ? "s" : ""} selected
                   </div>
                 </div>
-                {selectedDesignerIds.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Selected Designers</h4>
-                    <div className="text-sm text-muted-foreground">
-                      {selectedDesignerIds.length} designer
-                      {selectedDesignerIds.length !== 1 ? "s" : ""} selected
-                    </div>
-                  </div>
+              )}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button type="submit" disabled={createList.isPending}>
+                {createList.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="submit" disabled={createList.isPending}>
-                  {createList.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Create List
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </div>
+                Create List
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
@@ -1082,53 +1088,61 @@ function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
           <DialogTitle>Email List</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recipient Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      {...field}
-                      placeholder="Email address"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="subject"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subject</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="summary"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Summary</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Add a summary for the email..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Recipient Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="h-11"
+                        type="email"
+                        {...field}
+                        placeholder="Email address"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <FormField
+                control={form.control}
+                name="subject"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subject</FormLabel>
+                    <FormControl>
+                      <Input className="h-11" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <FormField
+                control={form.control}
+                name="summary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Summary</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="resize-none"
+                        {...field}
+                        placeholder="Add a summary for the email..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <div className="flex justify-end">
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -282,17 +282,18 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
               Create prompt
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Create system prompt</DialogTitle>
               <DialogDescription>
                 Create a custom system prompt to improve AI matching performance.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
+                  className="h-11"
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -300,23 +301,24 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
                   required
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="description">Description (optional)</Label>
                 <Input
+                  className="h-11"
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Brief description of this prompt's purpose"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="systemPrompt">System prompt</Label>
                 <Textarea
                   id="systemPrompt"
                   value={formData.systemPrompt}
                   onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
                   rows={15}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm resize-none"
                   placeholder="Enter the system prompt for the AI..."
                   required
                 />
@@ -431,39 +433,41 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
 
       {/* Edit Modal */}
       <Dialog open={!!editingPrompt} onOpenChange={() => setEditingPrompt(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Edit system prompt</DialogTitle>
             <DialogDescription>
               Modify the system prompt settings and content.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
               <Label htmlFor="edit-name">Name</Label>
               <Input
+                className="h-11"
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 required
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-description">Description (optional)</Label>
               <Input
+                className="h-11"
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="edit-systemPrompt">System prompt</Label>
               <Textarea
                 id="edit-systemPrompt"
                 value={formData.systemPrompt}
                 onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
                 rows={15}
-                className="font-mono text-sm"
+                className="font-mono text-sm resize-none"
                 required
               />
             </div>

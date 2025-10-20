@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Mail, Phone, MapPin, Globe, Linkedin, Twitter, Instagram, Github, Calendar, User, Building } from "lucide-react";
-import { MarkdownPreview } from "@/components/ui/markdown-preview";
+import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { usePublicPortfolio, useSubmitInquiry } from "@/hooks/use-portfolios";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -258,7 +258,7 @@ export default function PublicPortfolioPage() {
         {portfolio.description && (
           <section className="mb-16">
             <div className="prose prose-lg max-w-none">
-              <MarkdownPreview source={portfolio.description} />
+              <RichTextPreview source={portfolio.description} />
             </div>
           </section>
         )}
@@ -354,7 +354,7 @@ export default function PublicPortfolioPage() {
                       
                       {project.content && (
                         <div className="prose prose-sm max-w-none mt-4">
-                          <MarkdownPreview source={project.content} />
+                          <RichTextPreview source={project.content} />
                         </div>
                       )}
                       

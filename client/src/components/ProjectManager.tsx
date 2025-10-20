@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { usePortfolioProjects, useCreateProject, useUpdateProject, useDeleteProject } from "@/hooks/use-portfolios";
 import type { SelectPortfolio, SelectPortfolioProject } from '@db/schema';
 
@@ -273,7 +273,7 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
 
               <div>
                 <Label htmlFor="content">Project Details</Label>
-                <MarkdownEditor
+                <RichTextEditor
                   value={formData.content}
                   onChange={(value) => setFormData({ ...formData, content: value || "" })}
                   placeholder="Write detailed information about this project, your process, challenges, and solutions..."
@@ -558,7 +558,7 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
 
             <div>
               <Label htmlFor="edit-content">Project Details</Label>
-              <MarkdownEditor
+              <RichTextEditor
                 value={formData.content}
                 onChange={(value) => setFormData({ ...formData, content: value || "" })}
                 placeholder="Write detailed information about this project..."

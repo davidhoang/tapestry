@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2 } from "lucide-react";
-import { MarkdownPreview } from "@/components/ui/markdown-preview";
+import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { useDesignerBySlug } from "@/hooks/use-designer";
 import { useState, useRef } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
@@ -598,7 +598,7 @@ export default function DesignerDetailsPage() {
                 <div className="space-y-6">
                   <h2 className="text-3xl font-bold">About</h2>
                   <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed designer-profile-text">
-                    <MarkdownPreview source={designer.notes} />
+                    <RichTextPreview source={designer.notes} />
                   </div>
                 </div>
               )}

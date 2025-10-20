@@ -18,6 +18,7 @@ Button styling: All buttons should use sentence case instead of all capitals.
 - **Routing**: Wouter
 - **Form Handling**: React Hook Form with Zod validation
 - **Build Tool**: Vite
+- **Rich Text Editor**: TipTap (ProseMirror-based) with DOMPurify sanitization for security
 
 ### Backend Architecture
 - **Framework**: Express.js with TypeScript

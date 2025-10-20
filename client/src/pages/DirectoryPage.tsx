@@ -49,7 +49,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useForm } from "react-hook-form";
 import {
   Loader2,
@@ -1156,11 +1156,9 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
                   </Button>
                 </div>
                 <FormControl>
-                  <MarkdownEditor
+                  <RichTextEditor
                     value={field.value}
                     onChange={(value) => field.onChange(value || "")}
-                    data-color-mode="light"
-                    preview="edit"
                     height={200}
                   />
                 </FormControl>

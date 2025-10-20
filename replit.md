@@ -31,6 +31,13 @@ Button styling: All buttons should use sentence case instead of all capitals.
 - **Theme**: Professional warm color palette with gold primary color
 - **Typography**: Serif-first design using Crimson Text
 - **Layout**: Minimal border radius (flat design) with focus on typography and whitespace
+- **Modal Design System**: Comprehensive spacing and sizing standards for all dialog modals:
+  - Base dialog: max-h-[calc(100vh-4rem)] with my-8 margins for proper viewport fitting
+  - Form controls: h-11 height for all Input and SelectTrigger components
+  - Textareas: resize-none to prevent manual resizing
+  - Field spacing: space-y-2 for label-input pairs, space-y-6 for form sections
+  - Responsive layouts: grid-cols-1 md:grid-cols-2 with gap-5 for multi-field forms
+  - Enhanced keyboard ergonomics: Escape dismissal, smooth tab navigation
 
 ### Key Features
 - **Authentication System**: Session-based, user registration, password hashing, protected routes with role-based access control. Custom authentication modal is a critical, unchangeable component.
@@ -41,7 +48,7 @@ Button styling: All buttons should use sentence case instead of all capitals.
 - **Hiring Feature**: Job posting, AI-powered designer matching, job management, status tracking.
 - **Recruiting Board**: Visual kanban board for tracking designers through recruitment pipeline. Features drag-and-drop functionality, customizable columns (default: Backlog, Outreach, Interviewing, Offer, Hired), bulk designer import from lists or directory, notes tracking. Built with @dnd-kit for smooth drag-and-drop experience.
 - **Inbox Feature**: AI-powered recommendation system for workspace maintenance. Provides intelligent suggestions for adding designers to lists based on skills/metadata, recommending new list creation, and identifying outdated designer profiles that need updating. Features quick approval workflows, filtering/sorting capabilities, and comprehensive audit trails. Built with modular generator architecture supporting three recommendation types (add_to_list, create_list, update_profile) with RLHF integration for continuous improvement.
-- **Modal Positioning System**: Uses Radix UI Dialog with custom CSS for consistent, reliable centering across devices. This system is stable and should not be rewritten.
+- **Modal System**: Uses Radix UI Dialog with comprehensive design system for consistent, reliable centering and optimal usability across devices. All modals follow standardized spacing patterns (h-11 inputs, space-y-6 forms, space-y-2 field wrappers, resize-none textareas) with responsive grid layouts. The system provides excellent keyboard ergonomics with Escape dismissal and smooth tab navigation. Updated October 2025 with improved form field padding, optimized vertical space usage, and responsive width handling.
 
 ## External Dependencies
 

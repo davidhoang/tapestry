@@ -83,7 +83,7 @@ function DesignerSelect({
 
   return (
     <Select value={selectedValue} onValueChange={handleSelect}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full h-11">
         <SelectValue placeholder="Select a designer to add" />
       </SelectTrigger>
       <SelectContent className="max-h-[200px] overflow-y-auto">
@@ -421,7 +421,7 @@ function ViewListDialog({
                         <Input
                           readOnly
                           value={shareUrl}
-                          className="font-mono text-sm"
+                          className="font-mono text-sm h-11"
                         />
                         <Button
                           variant="outline"
@@ -767,7 +767,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
                                 [designer.id]: e.target.value,
                               }))
                             }
-                            className="min-h-[80px]"
+                            className="min-h-[80px] resize-none"
                           />
                           <div className="flex justify-end">
                             <Button

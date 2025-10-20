@@ -81,6 +81,7 @@ export function useCreateDesigner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
     },
   });
 }
@@ -102,8 +103,13 @@ export function useUpdateDesigner() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/designers/slug"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/designers", data.id, "portfolios"] });
+      }
     },
   });
 }
@@ -130,6 +136,8 @@ export function useDeleteDesigners() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/designers/slug"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
     },
   });
 }

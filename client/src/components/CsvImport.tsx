@@ -169,6 +169,7 @@ export default function CsvImport() {
     onSuccess: (result: ImportResult) => {
       setImportResult(result);
       queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
       
       if (result.success) {
         toast({

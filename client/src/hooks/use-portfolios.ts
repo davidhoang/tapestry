@@ -131,10 +131,18 @@ export function useDeletePortfolio() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/designers'] 
       });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/portfolios'] 
+      });
+      if (data?.designerId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/designers', data.designerId, 'portfolios'] 
+        });
+      }
     },
   });
 }

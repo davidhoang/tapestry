@@ -51,6 +51,7 @@ export function useEnrichDesigner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/designers/slug"] });
     },
   });
 }
@@ -106,7 +107,11 @@ export function useApplyEnrichment() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/designers", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/designers/slug"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/designers", data.id, "portfolios"] });
+      }
     },
   });
 }

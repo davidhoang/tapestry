@@ -101,6 +101,7 @@ export default function LinkedInImportModal({ onClose }: LinkedInImportModalProp
     onSuccess: (result) => {
       setImportResult(result);
       queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
       toast({
         title: "Import completed",
         description: `Successfully imported ${result.imported} contacts`,

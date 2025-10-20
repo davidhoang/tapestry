@@ -139,6 +139,9 @@ export function useDeleteList() {
 
 export function useAddDesignersToList() {
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
 
   return useMutation({
     mutationFn: async ({
@@ -166,7 +169,8 @@ export function useAddDesignersToList() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/lists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
+      queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
     },
   });
 }

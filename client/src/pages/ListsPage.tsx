@@ -8,6 +8,7 @@ import {
 } from "@/hooks/use-lists";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designer";
+import { useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -467,6 +468,9 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   const { data: designers } = useDesigners();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
   const [designerNotes, setDesignerNotes] = useState<Record<number, string | undefined>>({});
   
   // Track changes for batch operations
@@ -532,7 +536,8 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
       
       form.reset();
       // Refresh data
-      await queryClient.invalidateQueries({ queryKey: ['/api/lists'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/lists', workspaceSlug] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
       onOpenChange(false);
     } catch (error: any) {
       toast({

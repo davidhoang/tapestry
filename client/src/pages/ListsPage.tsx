@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designer";
 import { useLocation } from "wouter";
+import { slugify } from "@/utils/slugify";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -393,7 +394,7 @@ function ViewListDialog({
                   <Card
                     key={designer.id}
                     className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setLocation(`/${workspaceSlug}/designers/${designer.slug}`)}
+                    onClick={() => setLocation(`/${workspaceSlug}/designers/${slugify(designer.name)}`)}
                   >
                     <CardContent className="flex items-start space-x-4 pt-6">
                       <Avatar className="w-12 h-12">

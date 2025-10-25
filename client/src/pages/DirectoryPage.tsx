@@ -510,11 +510,7 @@ export default function DirectoryPage() {
         </div>
 
         {/* Content section */}
-        <div className={`mx-auto px-4 sm:px-6 pb-8 mt-6 ${
-          viewMode === "list" 
-            ? "max-w-full xl:px-8 2xl:px-12" 
-            : "container"
-        }`}>
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 pb-8 mt-6 max-w-full">
           {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />

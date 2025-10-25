@@ -610,8 +610,8 @@ export default function DesignerDetailsPage() {
 
               {/* Notes Section */}
               {designer.notes && (
-                <div className="space-y-6">
-                  <h2 className="text-3xl font-bold">About</h2>
+                <div className="space-y-6 pb-12 border-b">
+                  <h2 className="text-3xl font-bold">Notes</h2>
                   <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed designer-profile-text">
                     <RichTextPreview source={designer.notes} />
                   </div>
@@ -619,8 +619,8 @@ export default function DesignerDetailsPage() {
               )}
 
               {/* Skills Section */}
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold">Skills & Expertise</h2>
+              <div className="space-y-6 pb-12 border-b">
+                <h2 className="text-3xl font-bold">Tags</h2>
                 <div className="flex flex-wrap gap-3">
                   {(() => {
                     let skillsArray: string[] = [];

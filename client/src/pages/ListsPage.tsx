@@ -156,8 +156,6 @@ export default function ListsPage() {
   const { data: lists, isLoading } = useLists();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<SelectList | null>(null);
-  const [selectedDesigner, setSelectedDesigner] =
-    useState<SelectDesigner | null>(null);
   const [listToEdit, setListToEdit] = useState<SelectList | null>(null);
   const [listToDelete, setListToDelete] = useState<SelectList | null>(null);
   const { toast } = useToast();
@@ -276,7 +274,6 @@ export default function ListsPage() {
           list={selectedList}
           open={Boolean(selectedList)}
           onOpenChange={(open) => !open && setSelectedList(null)}
-          onViewDesigner={setSelectedDesigner}
         />
       )}
 
@@ -285,14 +282,6 @@ export default function ListsPage() {
           list={listToEdit}
           open={Boolean(listToEdit)}
           onOpenChange={(open) => !open && setListToEdit(null)}
-        />
-      )}
-
-      {selectedDesigner && (
-        <ViewDesignerDialog
-          designer={selectedDesigner}
-          open={Boolean(selectedDesigner)}
-          onOpenChange={(open) => !open && setSelectedDesigner(null)}
         />
       )}
 
@@ -335,15 +324,16 @@ interface ViewListDialogProps {
   list: SelectList;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onViewDesigner: (designer: SelectDesigner) => void;
 }
 
 function ViewListDialog({
   list,
   open,
   onOpenChange,
-  onViewDesigner,
 }: ViewListDialogProps) {
+  const [location, setLocation] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
   const [isPublic, setIsPublic] = useState(list.isPublic || false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const updateList = useUpdateList();
@@ -403,7 +393,7 @@ function ViewListDialog({
                   <Card
                     key={designer.id}
                     className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => onViewDesigner(designer)}
+                    onClick={() => setLocation(`/${workspaceSlug}/designers/${designer.slug}`)}
                   >
                     <CardContent className="flex items-start space-x-4 pt-6">
                       <Avatar className="w-12 h-12">
@@ -868,75 +858,6 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
   );
 }
 
-interface ViewDesignerDialogProps {
-  designer: SelectDesigner;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-function ViewDesignerDialog({
-  designer,
-  open,
-  onOpenChange,
-}: ViewDesignerDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Designer Profile</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6">
-          <div className="space-y-6">
-            <div className="flex items-center space-x-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={designer.photoUrl || ""} />
-                <AvatarFallback>
-                  {designer.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold">{designer.name}</h2>
-                <p className="text-muted-foreground">{designer.title}</p>
-              </div>
-            </div>
-            {designer.notes && (
-              <div>
-                <h3 className="font-medium mb-2">Notes</h3>
-                <p className="text-sm text-muted-foreground">
-                  {designer.notes}
-                </p>
-              </div>
-            )}
-            {designer.skills && (
-              <div>
-                <h3 className="font-medium mb-2">Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(() => {
-                    const skills = designer.skills;
-                    const skillsArray = skills && typeof skills === 'string' 
-                      ? (skills as string).split(',').map((s: string) => s.trim()).filter((s: string) => s)
-                      : [];
-                    return skillsArray.map((skill: string, index: number) => (
-                      <div
-                        key={index}
-                        className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
-                      >
-                        {skill}
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 interface CreateListDialogProps {
   open: boolean;

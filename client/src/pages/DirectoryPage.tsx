@@ -1617,10 +1617,10 @@ function EditableCell({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isEditing && inputRef.current) {
+    if (isEditing && inputRef.current && type !== 'tags') {
       inputRef.current.focus();
     }
-  }, [isEditing]);
+  }, [isEditing, type]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -1633,25 +1633,39 @@ function EditableCell({
   };
 
   const handleBlur = () => {
-    onSave(designerId, field, editingValue);
+    // Don't auto-save for tags since they have explicit Save/Cancel buttons
+    if (type !== 'tags') {
+      onSave(designerId, field, editingValue);
+    }
   };
 
   if (isEditing) {
     if (type === 'tags') {
       return (
         <div className={`py-2 px-3 ${className}`}>
-          <Input
-            ref={inputRef}
-            value={Array.isArray(editingValue) ? editingValue.join(', ') : ''}
-            onChange={(e) => {
-              const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-              onEditingValueChange(tags);
-            }}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            placeholder="Enter tags separated by commas"
-            className="text-xs border-blue-300 focus:border-blue-500"
-          />
+          <div className="border rounded-md p-2 bg-white">
+            <SkillsInput
+              value={Array.isArray(editingValue) ? editingValue : []}
+              onChange={onEditingValueChange}
+            />
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              onClick={() => onSave(designerId, field, editingValue)}
+              className="h-7 text-xs"
+            >
+              Save
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onCancel}
+              className="h-7 text-xs"
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       );
     }
@@ -1680,23 +1694,11 @@ function EditableCell({
         onClick={() => onStartEdit(designerId, field, value)}
       >
         {value.length > 0 ? (
-          <div className="flex gap-1 overflow-hidden">
-            {value.slice(0, 6).map((skill: string, skillIndex: number) => (
-              <span 
-                key={skillIndex} 
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700 flex-shrink-0 whitespace-nowrap"
-              >
-                {skill}
-              </span>
-            ))}
-            {value.length > 6 && (
-              <span className="text-xs text-gray-500 flex-shrink-0 self-center">
-                +{value.length - 6}
-              </span>
-            )}
-          </div>
+          <span className="text-sm text-gray-700">
+            {value.join(', ')}
+          </span>
         ) : (
-          <span className="text-gray-400 text-sm">No tags</span>
+          <span className="text-gray-400 text-sm">Click to add tags</span>
         )}
       </div>
     );

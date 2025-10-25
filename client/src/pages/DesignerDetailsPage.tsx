@@ -1,4 +1,4 @@
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -541,11 +541,25 @@ export default function DesignerDetailsPage() {
                     <div className="min-w-0 flex-1">
                       <h1 className="text-3xl font-bold leading-tight tracking-tight">{designer.name}</h1>
                       <p className="text-xl text-muted-foreground font-light mt-2">
-                        {designer.level} {designer.title} at {designer.company}
+                        {designer.level}{' '}
+                        <Link 
+                          href={`/${workspaceSlug}/search?type=title&value=${encodeURIComponent(designer.title)}`}
+                          className="hover:underline hover:text-foreground cursor-pointer transition-colors"
+                        >
+                          {designer.title}
+                        </Link>
+                        {' '}at {designer.company}
                       </p>
-                      <p className="text-lg text-muted-foreground designer-meta mt-1">
-                        {designer.location}
-                      </p>
+                      {designer.location && (
+                        <p className="text-lg text-muted-foreground designer-meta mt-1">
+                          <Link 
+                            href={`/${workspaceSlug}/search?type=location&value=${encodeURIComponent(designer.location)}`}
+                            className="hover:underline hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            {designer.location}
+                          </Link>
+                        </p>
+                      )}
                       {/* Contact Icons */}
                       <div className="flex items-center gap-2 mt-3">
                         {designer.website && (
@@ -624,13 +638,17 @@ export default function DesignerDetailsPage() {
                     }
                     
                     return skillsArray.map((skill: string, i: number) => (
-                      <Badge 
-                        key={i} 
-                        variant="secondary"
-                        className="text-sm px-3 py-1"
+                      <Link
+                        key={i}
+                        href={`/${workspaceSlug}/search?type=skill&value=${encodeURIComponent(skill)}`}
                       >
-                        {skill}
-                      </Badge>
+                        <Badge 
+                          variant="secondary"
+                          className="text-sm px-3 py-1 cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                        >
+                          {skill}
+                        </Badge>
+                      </Link>
                     ));
                   })()}
                 </div>

@@ -1773,11 +1773,11 @@ function DesignerTable({
     <div className="bg-white border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px]">
-          <thead className="sticky z-20 bg-gray-50 border-b border-gray-200 shadow-sm" style={{ top: 'calc(4rem + 68px)' }}>
+          <thead className="sticky z-30 bg-gray-50 border-b border-gray-200 shadow-sm" style={{ top: 'calc(4rem + 68px)' }}>
             <tr>
               {/* Checkbox column */}
               <th 
-                className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                className="sticky left-0 z-40 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
                 style={{ width: columnWidths.checkbox }}
               >
                 <Checkbox
@@ -1803,7 +1803,7 @@ function DesignerTable({
 
               {/* Profile column */}
               <th 
-                className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                className="sticky left-0 z-40 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
                 style={{ 
                   width: columnWidths.profile, 
                   left: columnWidths.checkbox 
@@ -1814,7 +1814,7 @@ function DesignerTable({
 
               {/* Name column */}
               <th 
-                className="sticky left-0 z-10 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
+                className="sticky left-0 z-40 bg-gray-50 text-left py-2 px-3 font-medium text-gray-700 text-sm relative group"
                 style={{ 
                   width: columnWidths.name, 
                   left: columnWidths.checkbox + columnWidths.profile 

@@ -13,9 +13,9 @@ export default function SimilarDesigners({ designerId }: SimilarDesignersProps) 
     return (
       <div className="space-y-6 pb-12">
         <h2 className="text-3xl font-bold">Similar designers</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex gap-4 overflow-x-auto pb-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse">
+            <div key={i} className="flex-shrink-0 w-80 animate-pulse">
               <Card className="h-full">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -41,9 +41,11 @@ export default function SimilarDesigners({ designerId }: SimilarDesignersProps) 
   return (
     <div className="space-y-6 pb-12">
       <h2 className="text-3xl font-bold">Similar designers</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2">
         {similarDesigners.map((designer: any) => (
-          <CompactDesignerCard key={designer.id} designer={designer} />
+          <div key={designer.id} className="flex-shrink-0 w-80">
+            <CompactDesignerCard designer={designer} />
+          </div>
         ))}
       </div>
     </div>

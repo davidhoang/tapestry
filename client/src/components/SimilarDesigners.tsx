@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { DesignerAvatar } from "./DesignerAvatar";
 import { useParams, useLocation } from "wouter";
 import { slugify } from "@/utils/slugify";
-import { Users } from "lucide-react";
 
 interface SimilarDesignersProps {
   designerId: number;
@@ -18,10 +17,7 @@ export default function SimilarDesigners({ designerId }: SimilarDesignersProps) 
   if (isLoading) {
     return (
       <div className="space-y-6 pb-12">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6" />
-          <h2 className="text-3xl font-bold">Similar designers</h2>
-        </div>
+        <h2 className="text-3xl font-bold">Similar designers</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
@@ -49,10 +45,7 @@ export default function SimilarDesigners({ designerId }: SimilarDesignersProps) 
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex items-center gap-2">
-        <Users className="h-6 w-6" />
-        <h2 className="text-3xl font-bold">Similar designers</h2>
-      </div>
+      <h2 className="text-3xl font-bold">Similar designers</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {similarDesigners.map((designer: any) => (
           <Card

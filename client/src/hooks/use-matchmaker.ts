@@ -11,7 +11,7 @@ export interface MatchRecommendation {
     name: string;
     title: string | null;
     company: string | null;
-    skills: string[] | null;
+    skills: string[] | string | null;
     bio: string | null;
     experience: string | null;
     portfolioUrl: string | null;

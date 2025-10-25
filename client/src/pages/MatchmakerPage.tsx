@@ -332,22 +332,22 @@ export default function MatchmakerPage() {
 
                         <div className="flex flex-wrap gap-1 mb-3">
                           {(() => {
-                            const skills = (() => {
+                            const skills: string[] = (() => {
                               if (Array.isArray(rec.designer.skills)) {
                                 return rec.designer.skills;
                               }
                               if (typeof rec.designer.skills === 'string' && rec.designer.skills.trim()) {
                                 try {
-                                  return JSON.parse(rec.designer.skills);
+                                  return JSON.parse(rec.designer.skills) as string[];
                                 } catch {
-                                  return rec.designer.skills.split(',').map(s => s.trim()).filter(s => s);
+                                  return rec.designer.skills.split(',').map((s: string) => s.trim()).filter((s: string) => s);
                                 }
                               }
                               return [];
                             })();
                             return (
                               <>
-                                {skills.slice(0, 3).map((skill, idx) => (
+                                {skills.slice(0, 3).map((skill: string, idx: number) => (
                                   <Badge key={idx} variant="secondary" className="text-xs px-2 py-0.5">
                                     #{skill}
                                   </Badge>

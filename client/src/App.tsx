@@ -6,6 +6,7 @@ import Navigation from "./components/Navigation";
 import HomePage from "./pages/HomePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import DesignerDetailsPage from "./pages/DesignerDetailsPage";
+import SearchResultsPage from "./pages/SearchResultsPage";
 import ListsPage from "./pages/ListsPage";
 import MatchmakerPage from "./pages/MatchmakerPage";
 import HiringPage from "./pages/HiringPage";
@@ -97,6 +98,7 @@ function App() {
                   <Route path="/:workspaceSlug" component={DirectoryPage} />
                   <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
                   <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
+                  <Route path="/:workspaceSlug/search" component={SearchResultsPage} />
                   <Route path="/:workspaceSlug/lists" component={ListsPage} />
                   <Route path="/:workspaceSlug/inbox" component={InboxPage} />
                   <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />

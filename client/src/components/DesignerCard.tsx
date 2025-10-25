@@ -42,9 +42,16 @@ export default function DesignerCard({
   const coverImageUrl = `${getDesignerCoverImage(designer.id)}${cacheBuster}`;
   
   // Parse skills string into array and check if skills overflow one line
-  const skillsArray = (designer.skills && typeof designer.skills === 'string') 
-    ? designer.skills.split(',').map(s => s.trim()).filter(s => s) 
-    : [];
+  const skillsArray: string[] = (() => {
+    const skills = designer.skills as string[] | string | null | undefined;
+    if (Array.isArray(skills)) {
+      return skills;
+    }
+    if (typeof skills === 'string') {
+      return skills.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+    }
+    return [];
+  })();
   const shouldShowExpansion = skillsArray.length > 3;
   const displayedSkills = isSkillsExpanded ? skillsArray : skillsArray.slice(0, 3);
 
@@ -116,12 +123,14 @@ export default function DesignerCard({
             />
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start gap-4">
-                <div className="min-w-0">
-                  <h3 className="text-lg designer-name truncate">{designer.name}</h3>
-                  <p className="text-sm text-muted-foreground truncate">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg designer-name font-semibold break-words line-clamp-2">{designer.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
                     {designer.title}{designer.company ? ` at ${designer.company}` : ''}
                   </p>
-                  <p className="text-sm text-muted-foreground truncate">{designer.location}</p>
+                  {designer.location && (
+                    <p className="text-sm text-muted-foreground line-clamp-1">{designer.location}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -131,7 +140,7 @@ export default function DesignerCard({
           <div className="space-y-2">
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
-                {displayedSkills.map((skill, i) => (
+                {displayedSkills.map((skill: string, i: number) => (
                   <span 
                     key={i} 
                     className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"

@@ -364,6 +364,103 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Search designers by skill, title, or location
+  app.get("/api/designers/search", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { type, value } = req.query;
+      
+      if (!type || !value) {
+        return res.status(400).json({ error: "Search type and value are required" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      // Get all designers in workspace
+      const allDesigners = await db.query.designers.findMany({
+        where: eq(designers.workspaceId, workspaceId),
+        orderBy: desc(designers.createdAt),
+      });
+
+      // Filter designers based on search type
+      const filteredDesigners = allDesigners.filter(designer => {
+        if (!designer.name || !designer.name.trim()) {
+          return false;
+        }
+
+        const searchValue = (value as string).toLowerCase();
+
+        switch (type) {
+          case 'skill': {
+            // Check if designer has the skill
+            const skills = designer.skills;
+            if (Array.isArray(skills)) {
+              return skills.some((skill: string) => 
+                skill.toLowerCase() === searchValue
+              );
+            }
+            return false;
+          }
+          case 'title': {
+            // Match title exactly (case-insensitive)
+            return designer.title?.toLowerCase() === searchValue;
+          }
+          case 'location': {
+            // Match location exactly (case-insensitive)
+            return designer.location?.toLowerCase() === searchValue;
+          }
+          default:
+            return false;
+        }
+      });
+
+      res.json(filteredDesigners);
+    } catch (err) {
+      console.error('Error searching designers:', err);
+      res.status(500).json({ error: "Failed to search designers" });
+    }
+  });
+
   // Get designers in user's workspace
   app.get("/api/designers", async (req, res) => {
     if (!req.isAuthenticated()) {

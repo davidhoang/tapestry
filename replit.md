@@ -7,6 +7,7 @@ Tapestry is an intelligent design matchmaking platform that connects users with 
 Preferred communication style: Simple, everyday language.
 Cost-conscious: Avoid unnecessary rewrites of working components.
 Button styling: All buttons should use sentence case instead of all capitals.
+No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 
 ## System Architecture
 

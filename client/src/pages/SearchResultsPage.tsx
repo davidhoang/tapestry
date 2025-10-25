@@ -74,19 +74,6 @@ export default function SearchResultsPage() {
     }
   };
 
-  const getFilterIcon = () => {
-    switch (filterType) {
-      case 'skill':
-        return '🎯';
-      case 'title':
-        return '💼';
-      case 'location':
-        return '📍';
-      default:
-        return '🔍';
-    }
-  };
-
   if (!filterValue) {
     return (
       <div className="min-h-screen bg-background">
@@ -125,7 +112,6 @@ export default function SearchResultsPage() {
           </div>
           
           <div className="flex items-center gap-3 mt-4">
-            <span className="text-4xl">{getFilterIcon()}</span>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">{getFilterTitle()}</h1>
               <p className="text-muted-foreground mt-1">
@@ -169,7 +155,6 @@ export default function SearchResultsPage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
             <h2 className="text-2xl font-bold mb-2">No designers found</h2>
             <p className="text-muted-foreground mb-6">
               We couldn't find any designers matching your search criteria.

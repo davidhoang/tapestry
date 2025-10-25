@@ -1368,7 +1368,7 @@ export function registerRoutes(app: Express): Server {
 
     // Use OpenAI to analyze and recommend matches
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

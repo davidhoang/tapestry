@@ -141,3 +141,31 @@ export function useDeleteDesigners() {
     },
   });
 }
+
+export function useSimilarDesigners(designerId: number | undefined) {
+  const [location] = useLocation();
+  
+  // Extract workspace slug from URL path
+  const pathParts = location.split('/');
+  const workspaceSlug = pathParts[1];
+  
+  return useQuery<SelectDesigner[]>({
+    queryKey: ["/api/designers", designerId, "similar", workspaceSlug],
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
+      const response = await fetch(`/api/designers/${designerId}/similar`, {
+        headers,
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch similar designers: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !!designerId && !!workspaceSlug && workspaceSlug.length > 0,
+  });
+}

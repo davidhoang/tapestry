@@ -44,6 +44,7 @@ import { getDesignerCoverImage } from "@/utils/coverImages";
 import PortfolioManager from "@/components/PortfolioManager";
 import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-lists";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
+import SimilarDesigners from "@/components/SimilarDesigners";
 
 const EXPERIENCE_LEVELS = [
   "Mid-level",
@@ -653,6 +654,9 @@ export default function DesignerDetailsPage() {
                   })()}
                 </div>
               </div>
+
+              {/* Similar Designers Section */}
+              <SimilarDesigners designerId={designer.id} />
             </>
           )}
         </div>

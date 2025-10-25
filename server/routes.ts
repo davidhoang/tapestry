@@ -696,6 +696,118 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Get similar designers
+  app.get("/api/designers/:id/similar", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const designerId = parseInt(req.params.id);
+      
+      // Get the target designer
+      const targetDesigner = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      if (!targetDesigner) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to target designer's workspace
+      if (!workspaceId) {
+        workspaceId = targetDesigner.workspaceId;
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      // Get all designers in the same workspace, excluding the target designer
+      const allDesigners = await db.query.designers.findMany({
+        where: and(
+          eq(designers.workspaceId, workspaceId),
+          sql`${designers.id} != ${designerId}`
+        ),
+      });
+
+      // Calculate similarity scores for each designer
+      const targetSkills = Array.isArray(targetDesigner.skills) ? targetDesigner.skills : [];
+      const targetLocation = targetDesigner.location?.toLowerCase().trim();
+      const targetLevel = targetDesigner.level?.toLowerCase().trim();
+
+      const designersWithScores = allDesigners
+        .filter(designer => designer.name && designer.name.trim()) // Only complete profiles
+        .map(designer => {
+          let score = 0;
+          const reasons: string[] = [];
+
+          // Location match (high weight: +3 points)
+          const designerLocation = designer.location?.toLowerCase().trim();
+          if (targetLocation && designerLocation && designerLocation === targetLocation) {
+            score += 3;
+            reasons.push(`Same location: ${designer.location}`);
+          }
+
+          // Level match (medium weight: +2 points)
+          const designerLevel = designer.level?.toLowerCase().trim();
+          if (targetLevel && designerLevel && designerLevel === targetLevel) {
+            score += 2;
+            reasons.push(`Same level: ${designer.level}`);
+          }
+
+          // Skill overlap (high weight: +1 point per matching skill)
+          const designerSkills = Array.isArray(designer.skills) ? designer.skills : [];
+          const commonSkills = designerSkills.filter(skill => 
+            targetSkills.some(targetSkill => 
+              targetSkill.toLowerCase() === skill.toLowerCase()
+            )
+          );
+          if (commonSkills.length > 0) {
+            score += commonSkills.length;
+            reasons.push(`${commonSkills.length} shared skill${commonSkills.length > 1 ? 's' : ''}`);
+          }
+
+          return {
+            ...designer,
+            similarityScore: score,
+            similarityReasons: reasons,
+          };
+        })
+        .filter(designer => designer.similarityScore > 0) // Only include designers with some similarity
+        .sort((a, b) => b.similarityScore - a.similarityScore) // Sort by similarity score
+        .slice(0, 6); // Return top 6 similar designers
+
+      res.json(designersWithScores);
+    } catch (err) {
+      console.error('Error fetching similar designers:', err);
+      res.status(500).json({ error: "Failed to fetch similar designers" });
+    }
+  });
+
   // List routes with workspace support
   app.post("/api/lists", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     try {

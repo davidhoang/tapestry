@@ -1410,7 +1410,16 @@ Please analyze this role and recommend the best matching designers.`
     }
 
     try {
-      const analysis = JSON.parse(aiResponse);
+      // Strip markdown code blocks if present
+      let jsonContent = aiResponse.trim();
+      if (jsonContent.startsWith('```')) {
+        // Remove opening ```json or ```
+        jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/, '');
+        // Remove closing ```
+        jsonContent = jsonContent.replace(/\n?```\s*$/, '');
+      }
+      
+      const analysis = JSON.parse(jsonContent);
       
       // Enrich recommendations with full designer data
       const enrichedRecommendations = analysis.recommendations.map((rec: any) => {

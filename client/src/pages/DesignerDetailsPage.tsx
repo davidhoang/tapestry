@@ -653,12 +653,6 @@ export default function DesignerDetailsPage() {
                   })()}
                 </div>
               </div>
-
-
-              {/* Portfolio Management Section */}
-              <div className="border-t pt-12">
-                <PortfolioManager designer={designer} />
-              </div>
             </>
           )}
         </div>

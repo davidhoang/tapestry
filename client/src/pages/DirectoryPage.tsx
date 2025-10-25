@@ -510,13 +510,17 @@ export default function DirectoryPage() {
         </div>
 
         {/* Content section */}
-        <div className="container mx-auto px-4 sm:px-6 pb-8 mt-6">
+        <div className={`mx-auto px-4 sm:px-6 pb-8 mt-6 ${
+          viewMode === "list" 
+            ? "max-w-full xl:px-8 2xl:px-12" 
+            : "container"
+        }`}>
           {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6">
             {filteredDesigners.map((designer) => (
               <DesignerCard
                 key={designer.id}

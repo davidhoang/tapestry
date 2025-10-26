@@ -673,6 +673,114 @@ export function registerRoutes(app: Express): Server {
     res.json(designer);
   }));
 
+  // Partial update endpoint for quick profile edits from inbox
+  app.patch("/api/designers/:id/quick-update", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+
+    // Verify designer exists and user has access
+    const existingDesigner = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!existingDesigner) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, existingDesigner.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to update this designer" });
+    }
+
+    // Verify user has edit permissions
+    const canEdit = ['owner', 'admin', 'editor'].includes(membership.role);
+    if (!canEdit) {
+      return res.status(403).json({ error: "You do not have permission to edit designers" });
+    }
+
+    // Handle photo upload if provided
+    let photoUrl;
+    if (req.file?.buffer) {
+      const oldFilename = existingDesigner.photoUrl?.split('/').pop();
+      photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
+    }
+
+    // Parse update data (can be form data or JSON)
+    let updateData: any = {};
+    if (req.body.data) {
+      try {
+        updateData = JSON.parse(req.body.data);
+      } catch (err) {
+        throw new Error("Invalid data format");
+      }
+    } else {
+      // Direct form fields
+      updateData = req.body;
+    }
+
+    // Only update non-empty fields
+    const fieldsToUpdate: any = {};
+    
+    if (updateData.description !== undefined && updateData.description !== null) {
+      fieldsToUpdate.description = updateData.description;
+    }
+    if (updateData.website !== undefined && updateData.website !== null) {
+      fieldsToUpdate.website = updateData.website;
+    }
+    if (updateData.linkedIn !== undefined && updateData.linkedIn !== null) {
+      fieldsToUpdate.linkedIn = updateData.linkedIn;
+    }
+    if (updateData.location !== undefined && updateData.location !== null) {
+      fieldsToUpdate.location = updateData.location;
+    }
+    if (updateData.skills !== undefined && updateData.skills !== null) {
+      fieldsToUpdate.skills = Array.isArray(updateData.skills) ? updateData.skills : updateData.skills;
+    }
+    if (photoUrl) {
+      fieldsToUpdate.photoUrl = photoUrl;
+    }
+
+    if (Object.keys(fieldsToUpdate).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    // Add timestamp
+    fieldsToUpdate.updatedAt = new Date();
+
+    // Calculate profile completeness
+    const updatedData = { ...existingDesigner, ...fieldsToUpdate };
+    const requiredFields = ['name', 'description', 'photoUrl'];
+    const optionalFields = ['title', 'company', 'website', 'linkedIn', 'location'];
+    
+    const completedRequired = requiredFields.filter(f => updatedData[f as keyof typeof updatedData]).length;
+    const completedOptional = optionalFields.filter(f => updatedData[f as keyof typeof updatedData]).length;
+    const hasSkills = (updatedData.skills as string[] || []).length > 0;
+    
+    fieldsToUpdate.profileCompleteness = Math.round(
+      (completedRequired / requiredFields.length) * 50 +
+      (completedOptional / optionalFields.length) * 30 +
+      (hasSkills ? 20 : 0)
+    );
+
+    const [updatedDesigner] = await db
+      .update(designers)
+      .set(fieldsToUpdate)
+      .where(eq(designers.id, designerId))
+      .returning();
+
+    res.json(updatedDesigner);
+  }));
+
   app.delete("/api/designers/batch", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");

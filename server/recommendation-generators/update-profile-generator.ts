@@ -71,22 +71,29 @@ export class UpdateProfileGenerator implements RecommendationGenerator {
       }
     }
 
-    // Group designers by issue types for better recommendations
-    const groupedRecommendations = this.groupDesignersByIssues(designersWithIssues, context);
-
-    recommendations.push(...groupedRecommendations);
-
-    // Create individual recommendations for high-priority cases
+    // Focus on individual recommendations for precision and clarity
+    // Create individual recommendations for all designers with issues
     const individualRecommendations = this.createIndividualRecommendations(
-      designersWithIssues.filter(d => d.priority === 'high'),
+      designersWithIssues,
       context
     );
 
     recommendations.push(...individualRecommendations);
 
+    // Sort by priority (high > medium > low) and score
     return recommendations
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 15); // Limit to top 15 recommendations
+      .sort((a, b) => {
+        const priorityOrder: Record<string, number> = { 'high': 3, 'medium': 2, 'low': 1 };
+        const priorityA = priorityOrder[a.priority] || 0;
+        const priorityB = priorityOrder[b.priority] || 0;
+        
+        if (priorityA !== priorityB) {
+          return priorityB - priorityA;
+        }
+        
+        return b.score - a.score;
+      })
+      .slice(0, 30); // Increased limit for individual recommendations
   }
 
   private analyzeProfileIssues(designer: any, context: GeneratorContext): ProfileIssue[] {
@@ -326,7 +333,7 @@ export class UpdateProfileGenerator implements RecommendationGenerator {
   }
 
   private createIndividualRecommendations(
-    highPriorityEntries: Array<{
+    entries: Array<{
       designer: any;
       issues: ProfileIssue[];
       completeness: number;
@@ -334,16 +341,19 @@ export class UpdateProfileGenerator implements RecommendationGenerator {
     }>,
     context: GeneratorContext
   ): RecommendationResult[] {
-    return highPriorityEntries.slice(0, 5).map(entry => { // Limit to top 5 individual recommendations
+    return entries.map(entry => {
       const mainIssue = entry.issues.find(i => i.severity === 'high') || entry.issues[0];
+      const issueCountText = entry.issues.length === 1 
+        ? '1 profile improvement' 
+        : `${entry.issues.length} profile improvements`;
 
       return {
         id: 0,
         type: 'update_profile',
         title: `Update ${entry.designer.name}'s profile`,
-        description: `${entry.designer.name} has ${entry.issues.length} profile improvements to make`,
+        description: `${entry.designer.name} has ${issueCountText} to make`,
         score: this.calculateDesignerUpdateScore(entry.designer, entry.issues, context),
-        priority: 'high',
+        priority: entry.priority,
         candidates: [{
           designerId: entry.designer.id,
           score: this.calculateDesignerUpdateScore(entry.designer, entry.issues, context),
@@ -367,8 +377,9 @@ export class UpdateProfileGenerator implements RecommendationGenerator {
           issueCount: entry.issues.length,
           completeness: entry.completeness,
           mainIssue: mainIssue.type,
+          issues: entry.issues,
           actionUrl: `/designers/${entry.designer.id}/edit`,
-          estimatedValue: 'High - Individual attention needed',
+          estimatedValue: entry.priority === 'high' ? 'High - Individual attention needed' : `${entry.priority} priority`,
         },
         groupKey: `update_profile_individual_${entry.designer.id}`,
         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days

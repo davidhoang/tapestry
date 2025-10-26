@@ -26,6 +26,53 @@ import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
 import OnboardingProvider from "./components/OnboardingProvider";
 import InvitePage from "./pages/InvitePage";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+
+// Component to handle default route redirection based on user role
+function DefaultRoute() {
+  const [, setLocation] = useLocation();
+  const [hasRedirected, setHasRedirected] = useState(false);
+  
+  const { data: workspaces, isLoading } = useQuery({
+    queryKey: ['/api/workspaces'],
+  });
+
+  useEffect(() => {
+    if (!isLoading && workspaces && workspaces.length > 0 && !hasRedirected) {
+      // Sort workspaces by role priority: owner > admin > editor > member
+      const roleOrder: Record<string, number> = { 'owner': 4, 'admin': 3, 'editor': 2, 'member': 1 };
+      const sortedWorkspaces = [...workspaces].sort((a, b) => {
+        const roleA = roleOrder[a.role] || 0;
+        const roleB = roleOrder[b.role] || 0;
+        return roleB - roleA;
+      });
+
+      const defaultWorkspace = sortedWorkspaces[0];
+      const canEdit = ['owner', 'admin', 'editor'].includes(defaultWorkspace.role);
+      
+      // Redirect to inbox for users who can edit, directory for view-only
+      const targetPath = canEdit 
+        ? `/${defaultWorkspace.slug}/inbox` 
+        : `/${defaultWorkspace.slug}/directory`;
+      
+      setHasRedirected(true);
+      setLocation(targetPath);
+    }
+  }, [workspaces, isLoading, hasRedirected, setLocation]);
+
+  // Show loading only while fetching, then nothing after redirect
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // After redirect or if no workspaces, render nothing
+  return null;
+}
 
 function App() {
   const { user, isLoading } = useUser();
@@ -83,7 +130,7 @@ function App() {
               <Route path="/invite/:token" component={InvitePage} />
               {user ? (
                 <>
-                  <Route path="/" component={MatchmakerPage} />
+                  <Route path="/" component={DefaultRoute} />
                   <Route path="/profile" component={ProfilePage} />
                   <Route path="/workspaces" component={WorkspacePage} />
                   <Route path="/workspaces/members" component={WorkspaceMembersPage} />

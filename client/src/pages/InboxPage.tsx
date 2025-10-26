@@ -77,10 +77,13 @@ import {
   ChevronUp,
   RefreshCw,
   FileText,
-  ArrowRight
+  ArrowRight,
+  Upload
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
+import LinkedInImportModal from "@/components/LinkedInImportModal";
+import ProfileQuickEdit from "@/components/ProfileQuickEdit";
 
 interface FilterBarProps {
   filters: InboxFilters;
@@ -90,88 +93,112 @@ interface FilterBarProps {
 }
 
 function FilterBar({ filters, onFiltersChange, onGenerate, isGenerating }: FilterBarProps) {
+  const [showLinkedInImport, setShowLinkedInImport] = useState(false);
+
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-muted/50 p-4 rounded-lg">
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Filters:</span>
+    <>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-muted/50 p-4 rounded-lg">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Filters:</span>
+          </div>
+          
+          <Select
+            value={filters.status as string || "all"}
+            onValueChange={(value) => 
+              onFiltersChange({ ...filters, status: value === "all" ? undefined : value, page: 1 })
+            }
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="applied">Applied</SelectItem>
+              <SelectItem value="dismissed">Dismissed</SelectItem>
+              <SelectItem value="snoozed">Snoozed</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filters.type as string || "all"}
+            onValueChange={(value) => 
+              onFiltersChange({ ...filters, type: value === "all" ? undefined : value, page: 1 })
+            }
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="add_to_list">Add to List</SelectItem>
+              <SelectItem value="create_list">Create List</SelectItem>
+              <SelectItem value="update_profile">Update Profile</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={`${filters.sortBy || "score"}-${filters.sortOrder || "desc"}`}
+            onValueChange={(value) => {
+              const [sortBy, sortOrder] = value.split('-');
+              onFiltersChange({ 
+                ...filters, 
+                sortBy: sortBy as 'score' | 'created' | 'priority',
+                sortOrder: sortOrder as 'asc' | 'desc'
+              });
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="score-desc">Score: High to Low</SelectItem>
+              <SelectItem value="score-asc">Score: Low to High</SelectItem>
+              <SelectItem value="created-desc">Newest First</SelectItem>
+              <SelectItem value="created-asc">Oldest First</SelectItem>
+              <SelectItem value="priority-asc">Priority: Low to High</SelectItem>
+              <SelectItem value="priority-desc">Priority: High to Low</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        
-        <Select
-          value={filters.status as string || "all"}
-          onValueChange={(value) => 
-            onFiltersChange({ ...filters, status: value === "all" ? undefined : value, page: 1 })
-          }
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="applied">Applied</SelectItem>
-            <SelectItem value="dismissed">Dismissed</SelectItem>
-            <SelectItem value="snoozed">Snoozed</SelectItem>
-          </SelectContent>
-        </Select>
 
-        <Select
-          value={filters.type as string || "all"}
-          onValueChange={(value) => 
-            onFiltersChange({ ...filters, type: value === "all" ? undefined : value, page: 1 })
-          }
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="add_to_list">Add to List</SelectItem>
-            <SelectItem value="create_list">Create List</SelectItem>
-            <SelectItem value="update_profile">Update Profile</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={`${filters.sortBy || "score"}-${filters.sortOrder || "desc"}`}
-          onValueChange={(value) => {
-            const [sortBy, sortOrder] = value.split('-');
-            onFiltersChange({ 
-              ...filters, 
-              sortBy: sortBy as 'score' | 'created' | 'priority',
-              sortOrder: sortOrder as 'asc' | 'desc'
-            });
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="score-desc">Score: High to Low</SelectItem>
-            <SelectItem value="score-asc">Score: Low to High</SelectItem>
-            <SelectItem value="created-desc">Newest First</SelectItem>
-            <SelectItem value="created-asc">Oldest First</SelectItem>
-            <SelectItem value="priority-asc">Priority: Low to High</SelectItem>
-            <SelectItem value="priority-desc">Priority: High to Low</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setShowLinkedInImport(true)}
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Upload LinkedIn PDFs
+          </Button>
+          
+          <Button 
+            onClick={onGenerate} 
+            disabled={isGenerating}
+            className="flex items-center gap-2"
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Generate New
+          </Button>
+        </div>
       </div>
 
-      <Button 
-        onClick={onGenerate} 
-        disabled={isGenerating}
-        className="flex items-center gap-2"
-      >
-        {isGenerating ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <RefreshCw className="h-4 w-4" />
-        )}
-        Generate New
-      </Button>
-    </div>
+      <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload LinkedIn PDFs</DialogTitle>
+          </DialogHeader>
+          <LinkedInImportModal onClose={() => setShowLinkedInImport(false)} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -203,6 +230,7 @@ function RecommendationCard({
   const [snoozeDate, setSnoozeDate] = useState("");
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showQuickEdit, setShowQuickEdit] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -458,6 +486,44 @@ function RecommendationCard({
               <p className="text-sm text-muted-foreground">
                 {recommendation.metadata.aiReasoning}
               </p>
+            </div>
+          )}
+
+          {/* Quick Edit for Update Profile Recommendations */}
+          {recommendation.recommendationType === 'update_profile' && recommendation.candidates && recommendation.candidates[0] && (
+            <div className="mt-4">
+              {!showQuickEdit ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowQuickEdit(true)}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Quick Edit Profile
+                </Button>
+              ) : (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <div className="flex items-center justify-between mb-4">
+                    <h5 className="font-medium">Update {recommendation.candidates[0].designer.name}'s Profile</h5>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowQuickEdit(false)}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <ProfileQuickEdit
+                    designer={recommendation.candidates[0].designer}
+                    issues={recommendation.metadata?.issues || []}
+                    onSuccess={() => {
+                      setShowQuickEdit(false);
+                      onApprove(recommendation.id);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 

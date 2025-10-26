@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { forwardRef, useImperativeHandle } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Check, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SkillsInput from "@/components/SkillsInput";
+import { useState } from "react";
 
 interface ProfileIssue {
   type: string;
@@ -36,70 +36,70 @@ interface ProfileQuickEditProps {
   onSuccess?: () => void;
 }
 
-export default function ProfileQuickEdit({ designer, issues, onSuccess }: ProfileQuickEditProps) {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
-    description: designer.description || "",
-    website: designer.website || "",
-    linkedIn: designer.linkedIn || "",
-    location: designer.location || "",
-    skills: designer.skills || [],
-  });
+export interface ProfileQuickEditHandle {
+  save: () => Promise<void>;
+  isPending: boolean;
+}
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const response = await fetch(`/api/designers/${designer.id}/quick-update`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/inbox/recommendations'] });
-      toast({
-        title: "Profile updated",
-        description: "Changes saved successfully",
-      });
-      onSuccess?.();
-    },
-    onError: () => {
-      toast({
-        title: "Update failed",
-        description: "Could not save changes",
-        variant: "destructive",
-      });
-    },
-  });
+const ProfileQuickEdit = forwardRef<ProfileQuickEditHandle, ProfileQuickEditProps>(
+  ({ designer, issues, onSuccess }, ref) => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    
+    const [formData, setFormData] = useState({
+      description: designer.description || "",
+      website: designer.website || "",
+      linkedIn: designer.linkedIn || "",
+      location: designer.location || "",
+      skills: designer.skills || [],
+    });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMutation.mutate(formData);
-  };
+    const updateMutation = useMutation({
+      mutationFn: async (data: typeof formData) => {
+        const response = await fetch(`/api/designers/${designer.id}/quick-update`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to update profile');
+        }
+        
+        return response.json();
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/designers'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/inbox/recommendations'] });
+        toast({
+          title: "Profile updated",
+          description: "Changes saved successfully",
+        });
+        onSuccess?.();
+      },
+      onError: () => {
+        toast({
+          title: "Update failed",
+          description: "Could not save changes",
+          variant: "destructive",
+        });
+      },
+    });
 
-  const missingFields = issues.filter(i => i.type === 'missing_field');
-  const otherIssues = issues.filter(i => i.type !== 'missing_field');
+    useImperativeHandle(ref, () => ({
+      save: async () => {
+        await updateMutation.mutateAsync(formData);
+      },
+      isPending: updateMutation.isPending,
+    }));
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    const missingFields = issues.filter(i => i.type === 'missing_field');
+    const otherIssues = issues.filter(i => i.type !== 'missing_field');
+
+    return (
       <div className="space-y-4">
-        <div>
-          <h4 className="font-medium text-sm mb-3">Missing Information</h4>
-          {missingFields.length === 0 && (
-            <p className="text-sm text-muted-foreground">No missing critical fields</p>
-          )}
-        </div>
-
         {issues.some(i => i.field === 'description') && (
           <div className="space-y-2">
             <Label htmlFor="description" className="flex items-center gap-2">
@@ -110,13 +110,10 @@ export default function ProfileQuickEdit({ designer, issues, onSuccess }: Profil
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe your design experience and expertise..."
-              rows={4}
+              placeholder="Describe design experience and expertise..."
+              rows={3}
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground">
-              {issues.find(i => i.field === 'description')?.impact}
-            </p>
           </div>
         )}
 
@@ -133,9 +130,6 @@ export default function ProfileQuickEdit({ designer, issues, onSuccess }: Profil
               onChange={(e) => setFormData({ ...formData, website: e.target.value })}
               placeholder="https://yourportfolio.com"
             />
-            <p className="text-xs text-muted-foreground">
-              {issues.find(i => i.field === 'website')?.impact}
-            </p>
           </div>
         )}
 
@@ -152,9 +146,6 @@ export default function ProfileQuickEdit({ designer, issues, onSuccess }: Profil
               onChange={(e) => setFormData({ ...formData, linkedIn: e.target.value })}
               placeholder="https://linkedin.com/in/yourprofile"
             />
-            <p className="text-xs text-muted-foreground">
-              {issues.find(i => i.field === 'linkedIn')?.impact}
-            </p>
           </div>
         )}
 
@@ -170,9 +161,6 @@ export default function ProfileQuickEdit({ designer, issues, onSuccess }: Profil
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="San Francisco, CA"
             />
-            <p className="text-xs text-muted-foreground">
-              {issues.find(i => i.field === 'location')?.impact}
-            </p>
           </div>
         )}
 
@@ -186,18 +174,15 @@ export default function ProfileQuickEdit({ designer, issues, onSuccess }: Profil
               value={formData.skills}
               onChange={(skills) => setFormData({ ...formData, skills })}
             />
-            <p className="text-xs text-muted-foreground">
-              {issues.find(i => i.type === 'incomplete_skills')?.impact}
-            </p>
           </div>
         )}
 
         {otherIssues.length > 0 && (
-          <div className="space-y-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
+          <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Other Improvements</p>
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Additional Improvements</p>
                 <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
                   {otherIssues.map((issue, index) => (
                     <li key={index}>• {issue.description}</li>
@@ -208,22 +193,10 @@ export default function ProfileQuickEdit({ designer, issues, onSuccess }: Profil
           </div>
         )}
       </div>
+    );
+  }
+);
 
-      <div className="flex gap-2 justify-end pt-4 border-t">
-        <Button type="submit" disabled={updateMutation.isPending}>
-          {updateMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
+ProfileQuickEdit.displayName = "ProfileQuickEdit";
+
+export default ProfileQuickEdit;

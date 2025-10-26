@@ -83,7 +83,7 @@ import {
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
-import ProfileQuickEdit from "@/components/ProfileQuickEdit";
+import ProfileQuickEdit, { ProfileQuickEditHandle } from "@/components/ProfileQuickEdit";
 
 interface FilterBarProps {
   filters: InboxFilters;
@@ -230,8 +230,9 @@ function RecommendationCard({
   const [snoozeDate, setSnoozeDate] = useState("");
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const profileEditRef = useRef<ProfileQuickEditHandle>(null);
 
   useEffect(() => {
     if (recommendation.seenAt || !cardRef.current) return;
@@ -262,7 +263,22 @@ function RecommendationCard({
     };
   }, [recommendation.id, recommendation.seenAt]); // Removed onMarkSeen from dependencies to prevent re-creation
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
+    // For update_profile recommendations, save the profile changes first
+    if (recommendation.recommendationType === 'update_profile' && profileEditRef.current) {
+      try {
+        setIsSaving(true);
+        await profileEditRef.current.save();
+        // onSuccess callback in ProfileQuickEdit will call onApprove automatically
+      } catch (error) {
+        console.error('Failed to save profile:', error);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    // For other recommendations, use the standard flow
     if (recommendation.candidates && recommendation.candidates.length > 1) {
       setShowApproveDialog(true);
     } else {
@@ -376,7 +392,7 @@ function RecommendationCard({
                 <span className="text-sm font-medium">{recommendation.score}</span>
               </div>
               
-              {recommendation.status === 'new' && (
+              {recommendation.status === 'new' && recommendation.recommendationType !== 'update_profile' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
@@ -441,73 +457,44 @@ function RecommendationCard({
             </div>
           )}
 
-          {/* Quick Edit for Update Profile Recommendations */}
+          {/* Inline Edit for Update Profile Recommendations */}
           {recommendation.recommendationType === 'update_profile' && recommendation.candidates && recommendation.candidates[0] && (
             <div className="mt-4">
-              {!showQuickEdit ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowQuickEdit(true)}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Quick Edit Profile
-                </Button>
-              ) : (
-                <div className="border rounded-lg p-4 bg-muted/30">
-                  <div className="flex items-center justify-between mb-4">
-                    <h5 className="font-medium">Update {recommendation.candidates[0].designer.name}'s Profile</h5>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowQuickEdit(false)}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <ProfileQuickEdit
-                    designer={recommendation.candidates[0].designer}
-                    issues={recommendation.metadata?.issues || []}
-                    onSuccess={() => {
-                      setShowQuickEdit(false);
-                      onApprove(recommendation.id);
-                    }}
-                  />
-                </div>
-              )}
+              <ProfileQuickEdit
+                ref={profileEditRef}
+                designer={recommendation.candidates[0].designer}
+                issues={recommendation.metadata?.issues || []}
+                onSuccess={() => {
+                  onApprove(recommendation.id);
+                }}
+              />
             </div>
           )}
 
           {recommendation.status === 'new' && (
             <>
               {recommendation.recommendationType === 'update_profile' ? (
-                <div className="flex gap-2 mt-4">
+                <div className="flex gap-2 mt-4 justify-end">
                   <Button 
-                    onClick={handleApprove} 
-                    size="sm" 
-                    className="flex-1"
-                    disabled={isApproving}
-                  >
-                    {isApproving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="mr-2 h-4 w-4" />
-                    )}
-                    Save
-                  </Button>
-                  <Button 
-                    variant="outline" 
                     onClick={() => setShowDismissDialog(true)} 
                     size="sm"
-                    disabled={isDismissing}
+                    disabled={isDismissing || isSaving}
                   >
                     {isDismissing ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <X className="mr-2 h-4 w-4" />
-                    )}
+                    ) : null}
                     Dismiss
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleApprove} 
+                    size="sm"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Save
                   </Button>
                 </div>
               ) : (

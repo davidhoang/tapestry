@@ -262,36 +262,6 @@ function RecommendationCard({
     };
   }, [recommendation.id, recommendation.seenAt]); // Removed onMarkSeen from dependencies to prevent re-creation
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'low': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new': return 'bg-green-100 text-green-800 border-green-200';
-      case 'approved': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'applied': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'dismissed': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'snoozed': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'add_to_list': return <UserPlus className="h-4 w-4" />;
-      case 'create_list': return <Users className="h-4 w-4" />;
-      case 'update_profile': return <Edit className="h-4 w-4" />;
-      default: return <Sparkles className="h-4 w-4" />;
-    }
-  };
-
   const handleApprove = () => {
     if (recommendation.candidates && recommendation.candidates.length > 1) {
       setShowApproveDialog(true);
@@ -329,8 +299,7 @@ function RecommendationCard({
 
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="font-medium text-sm">Candidate Designers</h4>
+        <div className="flex items-center justify-end">
           {recommendation.candidates.length > 3 && (
             <Button
               variant="ghost"
@@ -391,12 +360,8 @@ function RecommendationCard({
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                {getTypeIcon(recommendation.recommendationType)}
+              <div className="mb-2">
                 <CardTitle className="text-lg truncate">{recommendation.title}</CardTitle>
-                {!recommendation.seenAt && (
-                  <Badge variant="secondary" className="text-xs">New</Badge>
-                )}
               </div>
               {recommendation.description && (
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -462,19 +427,6 @@ function RecommendationCard({
               )}
             </div>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={getPriorityColor(recommendation.priority)}>
-              {recommendation.priority}
-            </Badge>
-            <Badge className={getStatusColor(recommendation.status)}>
-              {recommendation.status}
-            </Badge>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="h-3 w-3" />
-              {formatDistance(new Date(recommendation.createdAt), new Date(), { addSuffix: true })}
-            </div>
-          </div>
         </CardHeader>
 
         <CardContent className="pt-0">
@@ -528,47 +480,80 @@ function RecommendationCard({
           )}
 
           {recommendation.status === 'new' && (
-            <div className="flex gap-2 mt-4">
-              <Button 
-                onClick={handleApprove} 
-                size="sm" 
-                className="flex-1"
-                disabled={isApproving}
-              >
-                {isApproving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="mr-2 h-4 w-4" />
-                )}
-                Approve
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowSnoozeDialog(true)} 
-                size="sm"
-                disabled={isSnoozingRecommendation}
-              >
-                {isSnoozingRecommendation ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Clock className="mr-2 h-4 w-4" />
-                )}
-                Snooze
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowDismissDialog(true)} 
-                size="sm"
-                disabled={isDismissing}
-              >
-                {isDismissing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <X className="mr-2 h-4 w-4" />
-                )}
-                Dismiss
-              </Button>
-            </div>
+            <>
+              {recommendation.recommendationType === 'update_profile' ? (
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    onClick={handleApprove} 
+                    size="sm" 
+                    className="flex-1"
+                    disabled={isApproving}
+                  >
+                    {isApproving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="mr-2 h-4 w-4" />
+                    )}
+                    Save
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowDismissDialog(true)} 
+                    size="sm"
+                    disabled={isDismissing}
+                  >
+                    {isDismissing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="mr-2 h-4 w-4" />
+                    )}
+                    Dismiss
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    onClick={handleApprove} 
+                    size="sm" 
+                    className="flex-1"
+                    disabled={isApproving}
+                  >
+                    {isApproving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="mr-2 h-4 w-4" />
+                    )}
+                    Approve
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowSnoozeDialog(true)} 
+                    size="sm"
+                    disabled={isSnoozingRecommendation}
+                  >
+                    {isSnoozingRecommendation ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Clock className="mr-2 h-4 w-4" />
+                    )}
+                    Snooze
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowDismissDialog(true)} 
+                    size="sm"
+                    disabled={isDismissing}
+                  >
+                    {isDismissing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="mr-2 h-4 w-4" />
+                    )}
+                    Dismiss
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

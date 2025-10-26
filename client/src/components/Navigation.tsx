@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Inbox } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -119,7 +119,7 @@ export default function Navigation() {
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 mx-auto">
         {/* Left: Logo + Navigation Links */}
         <div className="flex items-center">
-          <Link to={user ? `/${workspaceSlug}/directory` : "/"} className="mr-6 flex items-center space-x-2">
+          <Link to={user ? `/${workspaceSlug}/inbox` : "/"} className="mr-6 flex items-center space-x-2">
             <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
           </Link>
           {user && (
@@ -135,12 +135,6 @@ export default function Navigation() {
                 className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Directory
-              </Link>
-              <Link
-                to={`/${workspaceSlug}/inbox`}
-                className={location === `/${workspaceSlug}/inbox` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-              >
-                Inbox
               </Link>
               <Link
                 to={`/${workspaceSlug}/lists`}
@@ -277,17 +271,6 @@ export default function Navigation() {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Directory
-                      </Link>
-                      <Link
-                        to={`/${workspaceSlug}/inbox`}
-                        className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === `/${workspaceSlug}/inbox`
-                            ? "text-gray-900 bg-gray-100 font-bold" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Inbox
                       </Link>
                       {permissions.canViewLists && (
                         <Link

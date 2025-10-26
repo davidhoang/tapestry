@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SkillsInput from "@/components/SkillsInput";
 import { useState } from "react";
@@ -95,9 +94,6 @@ const ProfileQuickEdit = forwardRef<ProfileQuickEditHandle, ProfileQuickEditProp
       isPending: updateMutation.isPending,
     }));
 
-    const missingFields = issues.filter(i => i.type === 'missing_field');
-    const otherIssues = issues.filter(i => i.type !== 'missing_field');
-
     return (
       <div className="space-y-4">
         {issues.some(i => i.field === 'description') && (
@@ -174,22 +170,6 @@ const ProfileQuickEdit = forwardRef<ProfileQuickEditHandle, ProfileQuickEditProp
               value={formData.skills}
               onChange={(skills) => setFormData({ ...formData, skills })}
             />
-          </div>
-        )}
-
-        {otherIssues.length > 0 && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Additional Improvements</p>
-                <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                  {otherIssues.map((issue, index) => (
-                    <li key={index}>• {issue.description}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
           </div>
         )}
       </div>

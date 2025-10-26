@@ -339,7 +339,7 @@ function RecommendationCard({
         <div className="space-y-2">
           {candidatesToShow.map((candidate) => (
             <div key={candidate.id} className="flex items-center gap-3 p-2 rounded-md border bg-muted/30">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarImage src={candidate.designer.photoUrl || ""} />
                 <AvatarFallback className="text-xs">
                   {candidate.designer.name.split(" ").map((n) => n[0]).join("")}
@@ -358,7 +358,15 @@ function RecommendationCard({
                   </div>
                 )}
               </div>
-              {candidate.reasoning && (
+              {recommendation.recommendationType === 'update_profile' && recommendation.metadata?.issues && (
+                <div className="text-xs text-muted-foreground">
+                  {recommendation.metadata.issues
+                    .filter((i: any) => i.type !== 'missing_field')
+                    .map((issue: any) => issue.description)
+                    .join(', ')}
+                </div>
+              )}
+              {candidate.reasoning && recommendation.recommendationType !== 'update_profile' && (
                 <div className="text-xs text-muted-foreground max-w-48 truncate" title={candidate.reasoning}>
                   {candidate.reasoning}
                 </div>

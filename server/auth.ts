@@ -42,12 +42,21 @@ declare global {
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
+  
+  // Configure proxy trust first - this is critical for Replit production
+  // Replit uses a reverse proxy that terminates HTTPS
+  app.set("trust proxy", 1);
+  
+  const isProduction = app.get("env") === "production";
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || process.env.REPL_ID || "design-matchmaker-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: app.get("env") === "production",
+      // With trust proxy enabled, Express will properly detect HTTPS from proxy headers
+      // This allows secure cookies to work correctly in Replit's production environment
+      secure: isProduction,
       httpOnly: true,
       sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
@@ -56,10 +65,6 @@ export function setupAuth(app: Express) {
       checkPeriod: 86400000, // prune expired entries every 24h
     }),
   };
-
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());

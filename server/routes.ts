@@ -804,6 +804,129 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Enrich designer profile with People Data Labs
+  app.post("/api/designers/:id/enrich", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+
+    // Get the designer
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Import enrichment function
+    const { enrichWithPeopleDataLabs } = await import('./enrichment');
+
+    // Call People Data Labs API
+    const enrichmentResult = await enrichWithPeopleDataLabs({
+      name: designer.name,
+      email: designer.email || undefined,
+      linkedin: designer.linkedIn || undefined,
+      company: designer.company || undefined,
+    });
+
+    if (!enrichmentResult.success) {
+      return res.status(400).json({ 
+        error: enrichmentResult.error || 'Failed to enrich profile'
+      });
+    }
+
+    res.json({
+      success: true,
+      suggestions: enrichmentResult.data,
+      likelihood: enrichmentResult.likelihood
+    });
+  }));
+
+  // Apply enrichment suggestions to designer profile
+  app.patch("/api/designers/:id/apply-enrichment", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+    const { suggestions } = req.body;
+
+    if (!suggestions || typeof suggestions !== 'object') {
+      return res.status(400).json({ error: "Invalid suggestions data" });
+    }
+
+    // Get the designer
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to update this designer" });
+    }
+
+    // Verify user has edit permissions
+    const canEdit = ['owner', 'admin', 'editor'].includes(membership.role);
+    if (!canEdit) {
+      return res.status(403).json({ error: "You do not have permission to edit designers" });
+    }
+
+    // Build update object with only provided suggestions
+    const updateData: any = {
+      enrichedAt: new Date(),
+      enrichmentSource: 'peopledatalabs'
+    };
+
+    if (suggestions.email) updateData.email = suggestions.email;
+    if (suggestions.phoneNumber) updateData.phoneNumber = suggestions.phoneNumber;
+    if (suggestions.location) updateData.location = suggestions.location;
+    if (suggestions.company) updateData.company = suggestions.company;
+    if (suggestions.title) updateData.title = suggestions.title;
+    if (suggestions.linkedin) updateData.linkedIn = suggestions.linkedin;
+    if (suggestions.website) updateData.website = suggestions.website;
+    if (suggestions.skills && Array.isArray(suggestions.skills)) {
+      // Merge with existing skills, avoiding duplicates
+      const existingSkills = designer.skills || [];
+      const skillSet = new Set([...existingSkills, ...suggestions.skills]);
+      updateData.skills = Array.from(skillSet);
+    }
+
+    // Update the designer
+    const [updatedDesigner] = await db
+      .update(designers)
+      .set(updateData)
+      .where(eq(designers.id, designerId))
+      .returning();
+
+    res.json(updatedDesigner);
+  }));
+
   // Get similar designers
   app.get("/api/designers/:id/similar", async (req, res) => {
     if (!req.isAuthenticated()) {

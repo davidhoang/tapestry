@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2 } from "lucide-react";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles } from "lucide-react";
 import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useDesignerBySlug } from "@/hooks/use-designer";
@@ -45,6 +45,7 @@ import PortfolioManager from "@/components/PortfolioManager";
 import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-lists";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import SimilarDesigners from "@/components/SimilarDesigners";
+import { EnrichmentModal } from "@/components/EnrichmentModal";
 
 const EXPERIENCE_LEVELS = [
   "Mid-level",
@@ -67,10 +68,11 @@ export default function DesignerDetailsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isEnrichmentModalOpen, setIsEnrichmentModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  const { data: designer, isLoading, error } = useDesignerBySlug(slug || "");
+  const { data: designer, isLoading, error, refetch } = useDesignerBySlug(slug || "");
   const updateDesigner = useUpdateDesigner();
 
   const form = useForm<FormData>({
@@ -598,6 +600,15 @@ export default function DesignerDetailsPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => setIsEnrichmentModalOpen(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Enrich
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleEdit}
                         className="flex items-center gap-2"
                       >
@@ -662,6 +673,27 @@ export default function DesignerDetailsPage() {
         </div>
       </div>
 
+      {/* Enrichment Modal */}
+      {designer && (
+        <EnrichmentModal
+          open={isEnrichmentModalOpen}
+          onOpenChange={setIsEnrichmentModalOpen}
+          designerId={designer.id}
+          currentData={{
+            email: designer.email,
+            phoneNumber: (designer as any).phoneNumber,
+            location: designer.location,
+            company: designer.company,
+            title: designer.title,
+            linkedIn: designer.linkedIn,
+            website: designer.website,
+            skills: Array.isArray(designer.skills) ? designer.skills : [],
+          }}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

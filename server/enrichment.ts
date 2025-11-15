@@ -3,6 +3,9 @@ import OpenAI from "openai";
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const PEOPLE_DATA_LABS_API_KEY = process.env.PEOPLE_DATA_LABS_API_KEY;
+const PDL_API_URL = 'https://api.peopledatalabs.com/v5/person/enrich';
+
 export interface DesignerEnrichmentData {
   name: string;
   title?: string;
@@ -169,5 +172,103 @@ Example: ["UI Design", "Figma", "User Research", "Design Systems", "React"]`;
   } catch (error) {
     console.error('Skills generation error:', error);
     return [];
+  }
+}
+
+export interface PDLEnrichmentData {
+  email?: string;
+  phoneNumber?: string;
+  location?: string;
+  company?: string;
+  title?: string;
+  linkedin?: string;
+  website?: string;
+  skills?: string[];
+}
+
+export interface PDLEnrichmentResult {
+  success: boolean;
+  data?: PDLEnrichmentData;
+  error?: string;
+  likelihood?: number;
+}
+
+export async function enrichWithPeopleDataLabs(params: {
+  name?: string;
+  email?: string;
+  linkedin?: string;
+  company?: string;
+}): Promise<PDLEnrichmentResult> {
+  if (!PEOPLE_DATA_LABS_API_KEY) {
+    return {
+      success: false,
+      error: 'People Data Labs API key not configured'
+    };
+  }
+
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (params.name) queryParams.append('name', params.name);
+    if (params.email) queryParams.append('email', params.email);
+    if (params.linkedin) queryParams.append('profile', params.linkedin);
+    if (params.company) queryParams.append('company', params.company);
+    
+    queryParams.append('pretty', 'true');
+
+    const response = await fetch(`${PDL_API_URL}?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': PEOPLE_DATA_LABS_API_KEY,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('PDL API error:', response.status, errorText);
+      return {
+        success: false,
+        error: `API request failed: ${response.status}`
+      };
+    }
+
+    const result = await response.json();
+
+    if (result.status === 200 && result.data) {
+      const person = result.data;
+      
+      const enrichmentData: PDLEnrichmentData = {
+        email: person.work_email || person.emails?.[0]?.address,
+        phoneNumber: person.phone_numbers?.[0],
+        location: person.location_name || 
+                 (person.location_locality && person.location_country 
+                   ? `${person.location_locality}, ${person.location_country}` 
+                   : undefined),
+        company: person.job_company_name,
+        title: person.job_title,
+        linkedin: person.linkedin_url,
+        website: person.personal_emails?.[0] ? undefined : person.websites?.[0],
+        skills: person.skills?.map((s: any) => s.name).slice(0, 10)
+      };
+
+      return {
+        success: true,
+        data: enrichmentData,
+        likelihood: result.likelihood || 0
+      };
+    }
+
+    return {
+      success: false,
+      error: 'No data found for the provided information'
+    };
+
+  } catch (error) {
+    console.error('People Data Labs enrichment error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to enrich profile'
+    };
   }
 }

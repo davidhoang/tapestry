@@ -72,11 +72,14 @@ export const designers = pgTable("designers", {
   website: text("website"),
   linkedIn: text("linkedin"),
   email: text("email"),
+  phoneNumber: text("phone_number"),
   photoUrl: text("photo_url"),
   skills: json("skills").$type<string[]>().notNull(),
   available: boolean("available").default(false),
   description: text("description"),
   notes: text("notes"),
+  enrichedAt: timestamp("enriched_at"),
+  enrichmentSource: text("enrichment_source"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -1,17 +1,9 @@
-/*
-  AuthPage - WORKING AUTHENTICATION IMPLEMENTATION
-  DO NOT REWRITE: This component uses inline styles to ensure cross-device compatibility
-  Uses simple HTML forms instead of complex form libraries to prevent rendering issues
-  See replit.md for maintenance guidelines and implementation details
-*/
-
 import { useState } from "react";
 import { Link } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -21,36 +13,17 @@ const authSchema = z.object({
 type AuthFormData = z.infer<typeof authSchema>;
 
 export default function AuthPage() {
-  console.log("AuthPage rendering");
-
   return (
-    <div style={{ width: "100%", minHeight: "300px" }}>
-      <div style={{ marginBottom: "24px" }}>
-        <h2
-          style={{
-            fontSize: "24px",
-            fontWeight: "600",
-            textAlign: "center",
-            color: "#111827",
-          }}
-        >
+    <div className="w-full min-h-[300px]">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-center text-gray-900">
           Sign in
         </h2>
       </div>
       <LoginForm />
-      <div
-        style={{
-          marginTop: "24px",
-          textAlign: "center",
-          fontSize: "14px",
-          color: "#6b7280",
-        }}
-      >
+      <div className="mt-6 text-center text-sm text-gray-500">
         Don't have an account?{" "}
-        <Link
-          href="/register"
-          style={{ color: "#C8944B", textDecoration: "underline" }}
-        >
+        <Link href="/register" className="text-primary underline">
           Sign up here
         </Link>
       </div>
@@ -65,8 +38,6 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  console.log("LoginForm rendering");
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -79,7 +50,6 @@ function LoginForm() {
           variant: "destructive",
         });
       } else {
-        // Login successful - trigger modal close
         window.dispatchEvent(new CustomEvent("closeAuthModal"));
       }
     } catch (error) {
@@ -94,21 +64,12 @@ function LoginForm() {
   };
 
   return (
-    <div style={{ backgroundColor: "white", width: "100%" }}>
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: "20px" }}
-      >
+    <div className="bg-white w-full">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
           <label
             htmlFor="email"
-            style={{
-              display: "block",
-              fontSize: "14px",
-              fontWeight: "500",
-              color: "#374151",
-              marginBottom: "8px",
-            }}
+            className="block text-sm font-medium text-gray-700 mb-2"
           >
             Email
           </label>
@@ -117,17 +78,7 @@ function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              border: "2px solid #d1d5db",
-              borderRadius: "6px",
-              backgroundColor: "white",
-              color: "#111827",
-              fontSize: "16px",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-md bg-white text-gray-900 text-base outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             placeholder="Enter your email"
             required
           />
@@ -135,13 +86,7 @@ function LoginForm() {
         <div>
           <label
             htmlFor="password"
-            style={{
-              display: "block",
-              fontSize: "14px",
-              fontWeight: "500",
-              color: "#374151",
-              marginBottom: "8px",
-            }}
+            className="block text-sm font-medium text-gray-700 mb-2"
           >
             Password
           </label>
@@ -150,17 +95,7 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              border: "2px solid #d1d5db",
-              borderRadius: "6px",
-              backgroundColor: "white",
-              color: "#111827",
-              fontSize: "16px",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-md bg-white text-gray-900 text-base outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             placeholder="Enter your password"
             required
           />
@@ -168,98 +103,12 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          style={{
-            width: "100%",
-            padding: "12px 16px",
-            borderRadius: "6px",
-            fontWeight: "500",
-            backgroundColor: "#C8944B",
-            color: "white",
-            border: "none",
-            fontSize: "16px",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            opacity: isLoading ? 0.7 : 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          className="w-full py-3 px-4 rounded-md font-medium bg-primary text-white text-base flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Sign In
         </button>
       </form>
     </div>
-  );
-}
-
-function RegisterForm() {
-  const { register } = useUser();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const form = useForm<AuthFormData>({
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  const onSubmit = async (data: AuthFormData) => {
-    setIsLoading(true);
-    try {
-      const result = await register(data);
-      if (!result.ok) {
-        toast({
-          title: "Error",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Register
-        </Button>
-      </form>
-    </Form>
   );
 }

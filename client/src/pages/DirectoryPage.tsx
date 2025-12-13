@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  useDesigners,
+  usePaginatedDesigners,
   useCreateDesigner,
   useUpdateDesigner,
   useDeleteDesigners,
 } from "@/hooks/use-designer";
-import { useLists, useCreateList, useAddDesignersToList } from "@/hooks/use-lists";
+import { useLists, useCreateList, useAddDesignersToList, useBulkAddDesignersToList } from "@/hooks/use-lists";
 import { useWorkspacePermissions } from "@/hooks/use-permissions";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,8 +63,11 @@ import {
   Edit,
   ChevronDown,
   Upload,
+  X,
+  Download,
 } from "lucide-react";
 import { slugify } from "@/lib/utils";
+import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
@@ -158,11 +161,36 @@ const designerSchema = z.object({
 
 export default function DirectoryPage() {
   const { workspaceSlug } = useParams();
-  const { data: designers, isLoading } = useDesigners();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  
+  // Debounce the search term for API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const { 
+    data: designersData, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = usePaginatedDesigners(debouncedSearch, 50);
+  
+  // Flatten all pages into a single array of designers
+  const designers = useMemo(() => {
+    return designersData?.pages.flatMap(page => page.designers) ?? [];
+  }, [designersData]);
+  
+  // Get pagination info from the last page
+  const pagination = designersData?.pages[designersData.pages.length - 1]?.pagination;
+  
   const updateDesigner = useUpdateDesigner();
   const deleteDesigners = useDeleteDesigners();
   const permissions = useWorkspacePermissions(workspaceSlug);
-  const [searchTerm, setSearchTerm] = useState("");
   const [designerToEdit, setDesignerToEdit] = useState<SelectDesigner | null>(
     null,
   );
@@ -342,26 +370,8 @@ export default function DirectoryPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const filteredDesigners =
-    designers?.filter((designer) => {
-      if (!searchTerm.trim()) return true;
-
-      const searchLower = searchTerm.toLowerCase();
-
-      // Search in name, title, and company
-      const matchesBasicInfo =
-        designer.name.toLowerCase().includes(searchLower) ||
-        designer.title.toLowerCase().includes(searchLower) ||
-        designer.company?.toLowerCase().includes(searchLower);
-
-      // Search in skills
-      const skills = processSkills(designer.skills);
-      const matchesSkills = skills.some((skill: string) =>
-        skill.toLowerCase().includes(searchLower),
-      );
-
-      return matchesBasicInfo || matchesSkills;
-    }) || [];
+  // Designers are already filtered server-side when using pagination
+  const filteredDesigners = designers;
 
   const handleDeleteSelected = async () => {
     try {
@@ -387,6 +397,18 @@ export default function DirectoryPage() {
         : [...prev, id],
     );
   };
+
+  const handleSelectAll = () => {
+    const allIds = filteredDesigners.map(d => d.id);
+    setSelectedIds(allIds);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const isAllSelected = filteredDesigners.length > 0 && selectedIds.length === filteredDesigners.length;
+  const isPartiallySelected = selectedIds.length > 0 && selectedIds.length < filteredDesigners.length;
 
   return (
     <div>
@@ -425,35 +447,28 @@ export default function DirectoryPage() {
                 </Button>
               </div>
 
-              {/* Divider when items are selected */}
-              {selectedIds.length > 0 && (
-                <div className="w-px h-8 bg-gray-300 mx-2" />
-              )}
-
-              {selectedIds.length > 0 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowAddToListDialog(true)}
-                    className="min-h-[36px]"
-                  >
-                    <ListPlus className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Add to list</span> (
-                    {selectedIds.length})
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteSelected}
-                    disabled={deleteDesigners.isPending}
-                    className="min-h-[36px]"
-                  >
-                    {deleteDesigners.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    <Trash className="mr-2 h-4 w-4" />
-                    ({selectedIds.length})
-                  </Button>
-                </>
+              {/* Select All checkbox */}
+              {filteredDesigners.length > 0 && (
+                <div className="flex items-center gap-2 ml-2">
+                  <Checkbox
+                    checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) {
+                        (el as any).indeterminate = isPartiallySelected;
+                      }
+                    }}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        handleSelectAll();
+                      } else {
+                        handleClearSelection();
+                      }
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground hidden sm:inline">
+                    Select all
+                  </span>
+                </div>
               )}
               
               {/* Search bar */}
@@ -466,6 +481,26 @@ export default function DirectoryPage() {
                 />
               </div>
               
+              {/* Export button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (filteredDesigners.length > 0) {
+                    exportToCSV(filteredDesigners, 'designers', designerExportColumns);
+                    toast({
+                      title: "Export complete",
+                      description: `Exported ${filteredDesigners.length} designers to CSV`,
+                    });
+                  }
+                }}
+                disabled={filteredDesigners.length === 0}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+
               {/* Add designer dropdown - pushed to the right */}
               <div className="flex-shrink-0">
                 <DropdownMenu>
@@ -554,6 +589,32 @@ export default function DirectoryPage() {
             onEditingValueChange={updateEditingValue}
           />
         )}
+        
+        {/* Pagination info and Load more button */}
+        {pagination && (
+          <div className="flex flex-col items-center gap-4 mt-8 mb-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredDesigners.length} of {pagination.total} designers
+            </p>
+            {hasNextPage && (
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="min-w-[200px]"
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  `Load more (${pagination.total - filteredDesigners.length} remaining)`
+                )}
+              </Button>
+            )}
+          </div>
+        )}
         </div>
 
         <Dialog
@@ -622,6 +683,45 @@ export default function DirectoryPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Floating Action Bar */}
+        {selectedIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-700">
+                {selectedIds.length} designer{selectedIds.length !== 1 ? 's' : ''} selected
+              </span>
+              <div className="w-px h-6 bg-gray-200" />
+              <Button
+                size="sm"
+                onClick={() => setShowAddToListDialog(true)}
+              >
+                <ListPlus className="mr-2 h-4 w-4" />
+                Add to list
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleDeleteSelected}
+                disabled={deleteDesigners.isPending}
+              >
+                {deleteDesigners.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash className="mr-2 h-4 w-4" />
+                )}
+                Delete
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleClearSelection}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1241,7 +1341,7 @@ function AddToListDialog({
 }: AddToListDialogProps) {
   const { data: lists } = useLists();
   const createList = useCreateList();
-  const addDesignersToList = useAddDesignersToList();
+  const bulkAddDesigners = useBulkAddDesignersToList();
   const { toast } = useToast();
   const [selectedListId, setSelectedListId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -1273,18 +1373,16 @@ function AddToListDialog({
 
     setIsProcessing(true);
     try {
-      await Promise.all(
-        designerIds.map((designerId) =>
-          addDesignersToList.mutateAsync({
-            listId: selectedListId,
-            designerId,
-          }),
-        ),
-      );
+      const result = await bulkAddDesigners.mutateAsync({
+        listId: selectedListId,
+        designerIds,
+      });
 
       toast({
         title: "Success",
-        description: `Added ${designerIds.length} designer${designerIds.length > 1 ? 's' : ''} to list`,
+        description: result.added > 0 
+          ? `Added ${result.added} designer${result.added !== 1 ? 's' : ''} to list${result.skipped > 0 ? ` (${result.skipped} already in list)` : ''}`
+          : "All designers are already in the list",
       });
       onOpenChange(false);
       onSuccess();
@@ -1304,18 +1402,14 @@ function AddToListDialog({
     try {
       const list = await createList.mutateAsync(values);
 
-      await Promise.all(
-        designerIds.map((designerId) =>
-          addDesignersToList.mutateAsync({
-            listId: list.id,
-            designerId,
-          }),
-        ),
-      );
+      const result = await bulkAddDesigners.mutateAsync({
+        listId: list.id,
+        designerIds,
+      });
 
       toast({
         title: "Success",
-        description: "List created and designers added successfully",
+        description: `List created and ${result.added} designer${result.added !== 1 ? 's' : ''} added successfully`,
       });
       form.reset();
       onOpenChange(false);

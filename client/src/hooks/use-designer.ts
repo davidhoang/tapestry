@@ -1,7 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import type { InsertDesigner, SelectDesigner } from "@db/schema";
+
+interface PaginatedDesignersResponse {
+  designers: SelectDesigner[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
 
 export function useDesigners() {
   const [location] = useLocation();
@@ -31,6 +42,49 @@ export function useDesigners() {
       return response.json();
     },
     enabled: !!workspaceSlug && workspaceSlug.length > 0, // Only enable query if we have a valid workspace slug
+  });
+}
+
+export function usePaginatedDesigners(search?: string, limit: number = 50) {
+  const [location] = useLocation();
+  
+  const pathParts = location.split('/');
+  const workspaceSlug = pathParts[1];
+
+  return useInfiniteQuery<PaginatedDesignersResponse>({
+    queryKey: ["/api/designers", "paginated", workspaceSlug, search, limit],
+    queryFn: async ({ pageParam = 1 }) => {
+      const headers: Record<string, string> = {};
+      
+      if (workspaceSlug && workspaceSlug.length > 0) {
+        headers['x-workspace-slug'] = workspaceSlug;
+      }
+      
+      const params = new URLSearchParams({
+        page: String(pageParam),
+        limit: String(limit),
+      });
+      
+      if (search) {
+        params.set('search', search);
+      }
+      
+      const response = await fetch(`/api/designers?${params.toString()}`, {
+        headers,
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch designers: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.pagination.hasMore) {
+        return lastPage.pagination.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+    enabled: !!workspaceSlug && workspaceSlug.length > 0,
   });
 }
 

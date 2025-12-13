@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { SelectDesigner } from "@db/schema";
 import DesignerCard from "@/components/DesignerCard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Download } from "lucide-react";
+import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { Badge } from "@/components/ui/badge";
 
 const processSkills = (skills: any): string[] => {
@@ -109,6 +110,19 @@ export default function SearchResultsPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to directory
             </Button>
+            {designers && designers.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  exportToCSV(designers, `designers-${filterType}-${filterValue}`, designerExportColumns);
+                }}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export results
+              </Button>
+            )}
           </div>
           
           <div className="flex items-center gap-3 mt-4">

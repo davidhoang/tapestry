@@ -461,7 +461,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get designers in user's workspace
+  // Get designers in user's workspace with optional pagination
   app.get("/api/designers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -508,19 +508,88 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Not authorized to access this workspace" });
       }
 
-      const allDesigners = await db.query.designers.findMany({
-        where: eq(designers.workspaceId, workspaceId),
-        orderBy: desc(designers.createdAt),
-      });
-      
-      // Filter out designers with incomplete basic information
-      const completeDesigners = allDesigners.filter(designer => 
-        designer.name && designer.name.trim()
-      );
-      
+      // Parse pagination parameters
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const search = (req.query.search as string)?.trim().toLowerCase() || '';
+      const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
 
-      
-      res.json(completeDesigners);
+      // Build the base query conditions
+      let whereConditions = eq(designers.workspaceId, workspaceId);
+
+      // Get total count first (for pagination metadata)
+      const allDesignersForCount = await db.query.designers.findMany({
+        where: whereConditions,
+        columns: { id: true, name: true, title: true, company: true, skills: true },
+      });
+
+      // Filter out incomplete designers and apply search filter
+      const filteredDesigners = allDesignersForCount.filter(designer => {
+        if (!designer.name || !designer.name.trim()) return false;
+        
+        if (search) {
+          const nameMatch = designer.name.toLowerCase().includes(search);
+          const titleMatch = designer.title?.toLowerCase().includes(search);
+          const companyMatch = designer.company?.toLowerCase().includes(search);
+          const skillsMatch = Array.isArray(designer.skills) && 
+            designer.skills.some((skill: string) => skill.toLowerCase().includes(search));
+          return nameMatch || titleMatch || companyMatch || skillsMatch;
+        }
+        return true;
+      });
+
+      const total = filteredDesigners.length;
+
+      if (usePagination) {
+        // Paginated response
+        const offset = (page - 1) * limit;
+        const totalPages = Math.ceil(total / limit);
+        const hasMore = page < totalPages;
+
+        // Get the IDs for this page from the filtered results
+        const pageIds = filteredDesigners.slice(offset, offset + limit).map(d => d.id);
+
+        // Fetch full designer data for this page
+        let designersPage: any[] = [];
+        if (pageIds.length > 0) {
+          designersPage = await db.query.designers.findMany({
+            where: and(
+              whereConditions,
+              inArray(designers.id, pageIds)
+            ),
+            orderBy: desc(designers.createdAt),
+          });
+          // Sort to maintain order from filtered list
+          designersPage.sort((a, b) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id));
+        }
+
+        res.json({
+          designers: designersPage,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasMore,
+          },
+        });
+      } else {
+        // Backward compatible response: return full list with safety cap of 500
+        const cappedIds = filteredDesigners.slice(0, 500).map(d => d.id);
+        
+        let allDesigners: any[] = [];
+        if (cappedIds.length > 0) {
+          allDesigners = await db.query.designers.findMany({
+            where: and(
+              whereConditions,
+              inArray(designers.id, cappedIds)
+            ),
+            orderBy: desc(designers.createdAt),
+          });
+        }
+        
+        res.json(allDesigners);
+      }
     } catch (err) {
       console.error('Error fetching designers:', err);
       res.status(500).json({ error: "Failed to fetch designers" });
@@ -1348,6 +1417,72 @@ export function registerRoutes(app: Express): Server {
     } catch (err) {
       console.error('Error adding designer to list:', err);
       res.status(500).json({ error: "Failed to add designer to list" });
+    }
+  }));
+
+  // Bulk add designers to list
+  app.post("/api/lists/:listId/designers/bulk", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const { designerIds } = req.body;
+
+      if (!Array.isArray(designerIds) || designerIds.length === 0) {
+        return res.status(400).json({ error: "designerIds must be a non-empty array" });
+      }
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Get existing entries to avoid duplicates
+      const existingEntries = await db.query.listDesigners.findMany({
+        where: and(
+          eq(listDesigners.listId, listId),
+          inArray(listDesigners.designerId, designerIds)
+        ),
+      });
+
+      const existingDesignerIds = new Set(existingEntries.map(e => e.designerId));
+      const newDesignerIds = designerIds.filter((id: number) => !existingDesignerIds.has(id));
+
+      if (newDesignerIds.length === 0) {
+        return res.json({ 
+          message: "All designers are already in the list", 
+          added: 0,
+          skipped: designerIds.length 
+        });
+      }
+
+      // Add all new designers to the list
+      const insertedEntries = await db
+        .insert(listDesigners)
+        .values(newDesignerIds.map((designerId: number) => ({
+          listId,
+          designerId,
+        })))
+        .returning();
+
+      res.json({ 
+        message: `Added ${insertedEntries.length} designer(s) to list`,
+        added: insertedEntries.length,
+        skipped: designerIds.length - insertedEntries.length
+      });
+    } catch (err) {
+      console.error('Error bulk adding designers to list:', err);
+      res.status(500).json({ error: "Failed to add designers to list" });
     }
   }));
 

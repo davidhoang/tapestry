@@ -174,3 +174,39 @@ export function useAddDesignersToList() {
     },
   });
 }
+
+export function useBulkAddDesignersToList() {
+  const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+
+  return useMutation({
+    mutationFn: async ({
+      listId,
+      designerIds,
+    }: {
+      listId: number;
+      designerIds: number[];
+    }) => {
+      const response = await fetch(`/api/lists/${listId}/designers/bulk`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ designerIds }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
+      queryClient.invalidateQueries({ queryKey: ["/api/designers"] });
+    },
+  });
+}

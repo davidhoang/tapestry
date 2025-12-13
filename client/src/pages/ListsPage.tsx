@@ -50,7 +50,8 @@ import {
 } from "@/components/ui/command";
 import { Command as CommandPrimitive } from "cmdk";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download } from "lucide-react";
+import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -223,6 +224,28 @@ export default function ListsPage() {
                       >
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit List
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (list.designers && list.designers.length > 0) {
+                            const designers = list.designers.map(d => d.designer);
+                            exportToCSV(designers, `${list.name}-designers`, designerExportColumns);
+                            toast({
+                              title: "Export complete",
+                              description: `Exported ${designers.length} designers to CSV`,
+                            });
+                          } else {
+                            toast({
+                              title: "No designers to export",
+                              description: "This list has no designers",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export to CSV
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"

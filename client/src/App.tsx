@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import Navigation from "./components/Navigation";
+import CommandPalette from "./components/CommandPalette";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
@@ -39,6 +40,27 @@ function PageLoader() {
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
+}
+
+// Command Palette wrapper that extracts workspace slug from URL
+function CommandPaletteWrapper() {
+  const [location] = useLocation();
+  const { user } = useUser();
+  
+  const { data: workspaces } = useQuery<Array<{ slug: string }>>({
+    queryKey: ["/api/workspaces"],
+    enabled: !!user,
+  });
+
+  if (!user || !workspaces?.length) return null;
+
+  const currentWorkspaceSlug = location.split('/')[1] || workspaces[0]?.slug;
+  const validWorkspace = workspaces.find((w) => w.slug === currentWorkspaceSlug);
+  const workspaceSlug = validWorkspace?.slug || workspaces[0]?.slug;
+
+  if (!workspaceSlug) return null;
+
+  return <CommandPalette workspaceSlug={workspaceSlug} />;
 }
 
 // Component to handle default route redirection based on user role
@@ -137,6 +159,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <OnboardingProvider>
+        <CommandPaletteWrapper />
         <div className="min-h-screen flex flex-col">
           <Navigation />
           <main className="flex-1">

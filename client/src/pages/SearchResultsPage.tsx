@@ -4,9 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import { SelectDesigner } from "@db/schema";
 import DesignerCard from "@/components/DesignerCard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Search, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Loader2, Search, Download, Bookmark } from "lucide-react";
 import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useCreateSavedSearch } from "@/hooks/use-saved-searches";
+import { useToast } from "@/hooks/use-toast";
 
 const processSkills = (skills: any): string[] => {
   if (Array.isArray(skills)) {
@@ -33,11 +43,46 @@ export default function SearchResultsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [location] = useLocation();
   const [, setLocation] = useLocation();
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [searchName, setSearchName] = useState("");
+  const createSavedSearch = useCreateSavedSearch();
+  const { toast } = useToast();
 
   // Parse query parameters
   const searchParams = new URLSearchParams(window.location.search);
   const filterType = searchParams.get('type') || 'skill';
   const filterValue = searchParams.get('value') || '';
+
+  const handleSaveSearch = async () => {
+    if (!searchName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a name for this search.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await createSavedSearch.mutateAsync({
+        name: searchName.trim(),
+        searchType: filterType,
+        searchValue: filterValue,
+      });
+      toast({
+        title: "Search saved",
+        description: "Your search has been saved successfully.",
+      });
+      setShowSaveDialog(false);
+      setSearchName("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save search. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch filtered designers
   const { data: designers, isLoading } = useQuery<SelectDesigner[]>({
@@ -110,19 +155,30 @@ export default function SearchResultsPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to directory
             </Button>
-            {designers && designers.length > 0 && (
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  exportToCSV(designers, `designers-${filterType}-${filterValue}`, designerExportColumns);
-                }}
+                onClick={() => setShowSaveDialog(true)}
                 className="gap-2"
               >
-                <Download className="h-4 w-4" />
-                Export results
+                <Bookmark className="h-4 w-4" />
+                Save this search
               </Button>
-            )}
+              {designers && designers.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    exportToCSV(designers, `designers-${filterType}-${filterValue}`, designerExportColumns);
+                  }}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export results
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-3 mt-4">
@@ -179,6 +235,54 @@ export default function SearchResultsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save this search</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Search name</label>
+              <Input
+                placeholder="e.g., Senior React developers in NYC"
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveSearch();
+                  }
+                }}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium">Search criteria:</span>{" "}
+              {filterType === 'skill' && 'Skill'}
+              {filterType === 'title' && 'Title'}
+              {filterType === 'location' && 'Location'}
+              {" "} = "{filterValue}"
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveSearch}
+              disabled={createSavedSearch.isPending}
+            >
+              {createSavedSearch.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save search"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -446,6 +446,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   jobs: many(jobs),
   aiSystemPrompts: many(aiSystemPrompts),
   inboxRecommendations: many(inboxRecommendations),
+  savedSearches: many(savedSearches),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -644,6 +645,31 @@ export const inboxRecommendationEventRelations = relations(inboxRecommendationEv
   }),
 }));
 
+export const savedSearches = pgTable("saved_searches", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  name: text("name").notNull(),
+  searchType: text("search_type").notNull(),
+  searchValue: text("search_value").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("saved_searches_workspace_id_idx").on(table.workspaceId),
+  userIdIdx: index("saved_searches_user_id_idx").on(table.userId),
+  uniqueSearch: uniqueIndex("saved_searches_unique_idx").on(table.workspaceId, table.userId, table.searchType, table.searchValue),
+}));
+
+export const savedSearchRelations = relations(savedSearches, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [savedSearches.workspaceId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [savedSearches.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -748,3 +774,8 @@ export const insertInboxRecommendationEventSchema = createInsertSchema(inboxReco
 export const selectInboxRecommendationEventSchema = createSelectSchema(inboxRecommendationEvents);
 export type InsertInboxRecommendationEvent = typeof inboxRecommendationEvents.$inferInsert;
 export type SelectInboxRecommendationEvent = typeof inboxRecommendationEvents.$inferSelect;
+
+export const insertSavedSearchSchema = createInsertSchema(savedSearches);
+export const selectSavedSearchSchema = createSelectSchema(savedSearches);
+export type InsertSavedSearch = typeof savedSearches.$inferInsert;
+export type SelectSavedSearch = typeof savedSearches.$inferSelect;

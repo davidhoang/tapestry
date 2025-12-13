@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -5323,6 +5323,168 @@ Analyze this role and recommend matching designers, considering feedback pattern
       }
       res.status(500).json({ error: "Failed to apply recommendation" });
     }
+  }));
+
+  // Saved Searches API
+
+  // GET /api/saved-searches - Get all saved searches for workspace
+  app.get("/api/saved-searches", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+
+    // If slug provided, verify workspace exists and user is a member FIRST
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspace.id)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const searches = await db.query.savedSearches.findMany({
+        where: and(
+          eq(savedSearches.workspaceId, workspace.id),
+          eq(savedSearches.userId, req.user.id)
+        ),
+        orderBy: desc(savedSearches.createdAt),
+      });
+
+      return res.json(searches);
+    }
+
+    // No slug provided - use user's default workspace
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const searches = await db.query.savedSearches.findMany({
+      where: and(
+        eq(savedSearches.workspaceId, userWorkspace.id),
+        eq(savedSearches.userId, req.user.id)
+      ),
+      orderBy: desc(savedSearches.createdAt),
+    });
+
+    res.json(searches);
+  }));
+
+  // POST /api/saved-searches - Create a saved search
+  app.post("/api/saved-searches", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { name, searchType, searchValue } = req.body;
+
+    if (!name || !searchType || !searchValue) {
+      return res.status(400).json({ error: "Name, searchType, and searchValue are required" });
+    }
+
+    if (!['skill', 'title', 'location'].includes(searchType)) {
+      return res.status(400).json({ error: "searchType must be 'skill', 'title', or 'location'" });
+    }
+
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+    let workspaceId: number;
+
+    // If slug provided, verify workspace exists and user is a member FIRST
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspace.id)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      workspaceId = workspace.id;
+    } else {
+      // No slug provided - use user's default workspace
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      workspaceId = userWorkspace.id;
+    }
+
+    const [savedSearch] = await db.insert(savedSearches).values({
+      workspaceId,
+      userId: req.user.id,
+      name: name.trim(),
+      searchType,
+      searchValue: searchValue.trim(),
+    }).returning();
+
+    res.json(savedSearch);
+  }));
+
+  // DELETE /api/saved-searches/:id - Delete a saved search
+  app.delete("/api/saved-searches/:id", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const searchId = parseInt(req.params.id);
+    if (isNaN(searchId)) {
+      return res.status(400).json({ error: "Invalid search ID" });
+    }
+
+    // First, fetch the saved search to verify ownership
+    const savedSearch = await db.query.savedSearches.findFirst({
+      where: eq(savedSearches.id, searchId),
+    });
+
+    if (!savedSearch) {
+      return res.status(404).json({ error: "Saved search not found" });
+    }
+
+    // Verify user is a member of the workspace this search belongs to
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, savedSearch.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this workspace" });
+    }
+
+    // Users can only delete their own saved searches
+    if (savedSearch.userId !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized to delete this saved search" });
+    }
+
+    await db.delete(savedSearches).where(eq(savedSearches.id, searchId));
+
+    res.json({ success: true });
   }));
 
   const httpServer = createServer(app);

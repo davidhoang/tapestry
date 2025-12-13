@@ -71,6 +71,7 @@ import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
+import SavedSearches from "@/components/SavedSearches";
 import { SelectDesigner } from "@db/schema";
 
 // Utility function to safely process skills
@@ -472,13 +473,14 @@ export default function DirectoryPage() {
               )}
               
               {/* Search bar */}
-              <div className="flex-1 mx-4">
+              <div className="flex-1 mx-4 flex items-center gap-2">
                 <Input
                   placeholder="Search designers by name, title, company, or skills..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  className="flex-1 bg-white border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20"
                 />
+                <SavedSearches />
               </div>
               
               {/* Export button */}

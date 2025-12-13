@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -263,6 +263,117 @@ export function registerRoutes(app: Express): Server {
     return userRole && requiredRoles.includes(userRole);
   };
 
+  // Helper function to log workspace activities
+  const logWorkspaceActivity = async (
+    workspaceId: number,
+    userId: number,
+    activityType: string,
+    entityType: string,
+    entityId?: number,
+    entityName?: string,
+    metadata?: Record<string, any>
+  ) => {
+    try {
+      await db.insert(workspaceActivities).values({
+        workspaceId,
+        userId,
+        activityType,
+        entityType,
+        entityId,
+        entityName,
+        metadata,
+      });
+    } catch (error) {
+      console.error('Failed to log workspace activity:', error);
+    }
+  };
+
+  // Get workspace activities
+  app.get("/api/activities", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      let workspaceId: number;
+      
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      // If slug provided, verify workspace exists and user is a member
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (!workspace) {
+          return res.status(404).json({ error: "Workspace not found" });
+        }
+        
+        // Check membership
+        const membership = await db.query.workspaceMembers.findFirst({
+          where: and(
+            eq(workspaceMembers.userId, req.user.id),
+            eq(workspaceMembers.workspaceId, workspace.id)
+          ),
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ error: "Not authorized to access this workspace" });
+        }
+        
+        workspaceId = workspace.id;
+      } else {
+        // No slug provided, use default workspace
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (!userWorkspace) {
+          return res.status(403).json({ error: "No workspace access" });
+        }
+        workspaceId = userWorkspace.id;
+      }
+
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : null;
+
+      // Build where condition
+      let whereCondition: any = eq(workspaceActivities.workspaceId, workspaceId);
+      if (cursor) {
+        // Get activities older than the cursor (lower IDs)
+        whereCondition = and(
+          eq(workspaceActivities.workspaceId, workspaceId),
+          sql`${workspaceActivities.id} < ${cursor}`
+        );
+      }
+
+      const activities = await db.query.workspaceActivities.findMany({
+        where: whereCondition,
+        orderBy: desc(workspaceActivities.id),
+        limit: limit,
+        with: {
+          user: {
+            columns: {
+              id: true,
+              email: true,
+              username: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+      });
+
+      // Return cursor for next page
+      const nextCursor = activities.length > 0 ? activities[activities.length - 1].id : null;
+
+      res.json({
+        activities,
+        nextCursor,
+        hasMore: activities.length >= limit,
+      });
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+      res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
+
   // Designer routes with workspace support
   app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -318,6 +429,15 @@ export function registerRoutes(app: Express): Server {
 
       return designer;
     });
+
+    await logWorkspaceActivity(
+      userWorkspace.id,
+      req.user.id,
+      'designer_added',
+      'designer',
+      result.id,
+      result.name
+    );
 
     res.json(result);
   }));
@@ -739,6 +859,15 @@ export function registerRoutes(app: Express): Server {
       .where(eq(designers.id, designerId))
       .returning();
 
+    await logWorkspaceActivity(
+      designer.workspaceId,
+      req.user.id,
+      'designer_updated',
+      'designer',
+      designer.id,
+      designer.name
+    );
+
     res.json(designer);
   }));
 
@@ -847,6 +976,15 @@ export function registerRoutes(app: Express): Server {
       .where(eq(designers.id, designerId))
       .returning();
 
+    await logWorkspaceActivity(
+      updatedDesigner.workspaceId,
+      req.user.id,
+      'designer_updated',
+      'designer',
+      updatedDesigner.id,
+      updatedDesigner.name
+    );
+
     res.json(updatedDesigner);
   }));
 
@@ -865,6 +1003,18 @@ export function registerRoutes(app: Express): Server {
         .delete(designers)
         .where(inArray(designers.id, ids))
         .returning();
+
+      // Log activity for each deleted designer
+      for (const deletedDesigner of result) {
+        await logWorkspaceActivity(
+          deletedDesigner.workspaceId,
+          req.user.id,
+          'designer_deleted',
+          'designer',
+          deletedDesigner.id,
+          deletedDesigner.name
+        );
+      }
 
       res.json(result);
     } catch (err) {
@@ -1163,6 +1313,15 @@ export function registerRoutes(app: Express): Server {
         return list;
       });
 
+      await logWorkspaceActivity(
+        workspaceContext.workspaceId,
+        req.user.id,
+        'list_created',
+        'list',
+        result.id,
+        result.name
+      );
+
       res.json(result);
     } catch (error: any) {
       console.error('Error creating list:', error);
@@ -1319,6 +1478,16 @@ export function registerRoutes(app: Express): Server {
         .where(eq(lists.id, listId))
         .returning();
 
+      // Log activity for list update
+      await logWorkspaceActivity(
+        updatedList.workspaceId,
+        req.user.id,
+        'list_updated',
+        'list',
+        updatedList.id,
+        updatedList.name
+      );
+
       res.json(updatedList);
     } catch (err) {
       console.error('Error updating list:', err);
@@ -1353,6 +1522,16 @@ export function registerRoutes(app: Express): Server {
         .delete(lists)
         .where(eq(lists.id, listId))
         .returning();
+
+      // Log activity for list deletion
+      await logWorkspaceActivity(
+        deletedList.workspaceId,
+        req.user.id,
+        'list_deleted',
+        'list',
+        deletedList.id,
+        deletedList.name
+      );
 
       res.json({ message: "List deleted successfully", list: deletedList });
     } catch (err) {
@@ -1412,6 +1591,16 @@ export function registerRoutes(app: Express): Server {
           designerId,
         })
         .returning();
+
+      await logWorkspaceActivity(
+        list.workspaceId,
+        req.user.id,
+        'designer_added_to_list',
+        'list',
+        listId,
+        list.name,
+        { designerId, designerName: designer.name }
+      );
 
       res.json(listDesigner);
     } catch (err) {
@@ -2834,6 +3023,10 @@ Please analyze this role and recommend the best matching designers.`
       return res.status(400).json({ error: "Cannot remove yourself from workspace" });
     }
 
+    const removedUser = await db.query.users.findFirst({
+      where: eq(users.id, targetMember.userId),
+    });
+
     await db
       .delete(workspaceMembers)
       .where(eq(workspaceMembers.id, parseInt(memberId)));
@@ -2846,6 +3039,21 @@ Please analyze this role and recommend the best matching designers.`
       resourceId: parseInt(memberId),
       metadata: { removedRole: targetMember.role },
     });
+
+    await logWorkspaceActivity(
+      parseInt(workspaceId),
+      context.userId,
+      'member_left',
+      'member',
+      targetMember.userId,
+      removedUser?.email || removedUser?.username || 'a member',
+      { 
+        removedBy: context.userId,
+        removedByEmail: req.user!.email,
+        role: targetMember.role,
+        removedUserId: targetMember.userId
+      }
+    );
 
     res.json({ success: true });
   }));
@@ -2891,6 +3099,16 @@ Please analyze this role and recommend the best matching designers.`
       resource: 'workspace_membership',
       metadata: { leftRole: membership.role },
     });
+
+    await logWorkspaceActivity(
+      workspaceId,
+      userId,
+      'member_left',
+      'member',
+      userId,
+      req.user!.username || req.user!.email,
+      { leftVoluntarily: true, role: membership.role }
+    );
 
     res.json({ success: true, message: "Successfully left workspace" });
   }));
@@ -3059,6 +3277,16 @@ Please analyze this role and recommend the best matching designers.`
         .where(eq(workspaceInvitations.id, invitation.id));
     });
 
+    await logWorkspaceActivity(
+      invitation.workspaceId,
+      req.user!.id,
+      'member_joined',
+      'member',
+      req.user!.id,
+      req.user!.username || req.user!.email,
+      { role: invitation.role, joinedVia: 'invitation' }
+    );
+
     res.json({ 
       success: true, 
       workspace: invitation.workspace,
@@ -3187,6 +3415,16 @@ The Tapestry Team`;
       console.error('Failed to send invitation email:', emailError);
       // Don't fail the request if email fails
     }
+
+    await logWorkspaceActivity(
+      parseInt(workspaceId),
+      req.user.id,
+      'invitation_sent',
+      'invitation',
+      invitation.id,
+      email,
+      { invitedEmail: email, role: invitation.role }
+    );
 
     res.json({ 
       success: true,
@@ -5442,6 +5680,16 @@ Analyze this role and recommend matching designers, considering feedback pattern
       searchValue: searchValue.trim(),
     }).returning();
 
+    // Log activity for saved search
+    await logWorkspaceActivity(
+      workspaceId,
+      req.user.id,
+      'search_saved',
+      'saved_search',
+      savedSearch.id,
+      savedSearch.name
+    );
+
     res.json(savedSearch);
   }));
 
@@ -5481,6 +5729,16 @@ Analyze this role and recommend matching designers, considering feedback pattern
     if (savedSearch.userId !== req.user.id) {
       return res.status(403).json({ error: "Not authorized to delete this saved search" });
     }
+
+    // Log activity before delete
+    await logWorkspaceActivity(
+      savedSearch.workspaceId,
+      req.user.id,
+      'search_deleted',
+      'search',
+      savedSearch.id,
+      savedSearch.name
+    );
 
     await db.delete(savedSearches).where(eq(savedSearches.id, searchId));
 

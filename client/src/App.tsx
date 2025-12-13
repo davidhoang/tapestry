@@ -32,6 +32,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
 const WorkspaceMembersPage = lazy(() => import("./pages/WorkspaceMembersPage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
+const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -190,6 +191,7 @@ function App() {
                     <Route path="/:workspaceSlug/inbox" component={InboxPage} />
                     <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
                     <Route path="/:workspaceSlug/hiring" component={HiringPage} />
+                    <Route path="/:workspaceSlug/activity" component={ActivityPage} />
                     <Route path="/:workspaceSlug/feedback-analytics" component={FeedbackAnalyticsPage} />
                   </>
                 ) : (

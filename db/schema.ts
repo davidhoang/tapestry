@@ -447,6 +447,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   aiSystemPrompts: many(aiSystemPrompts),
   inboxRecommendations: many(inboxRecommendations),
   savedSearches: many(savedSearches),
+  activities: many(workspaceActivities),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -670,6 +671,33 @@ export const savedSearchRelations = relations(savedSearches, ({ one }) => ({
   }),
 }));
 
+export const workspaceActivities = pgTable("workspace_activities", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  activityType: text("activity_type").notNull(),
+  entityType: text("entity_type"),
+  entityId: integer("entity_id"),
+  entityName: text("entity_name"),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("workspace_activities_workspace_id_idx").on(table.workspaceId),
+  createdAtIdx: index("workspace_activities_created_at_idx").on(table.createdAt),
+  workspaceIdCreatedAtIdx: index("workspace_activities_workspace_id_created_at_idx").on(table.workspaceId, table.createdAt),
+}));
+
+export const workspaceActivityRelations = relations(workspaceActivities, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceActivities.workspaceId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [workspaceActivities.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -779,3 +807,8 @@ export const insertSavedSearchSchema = createInsertSchema(savedSearches);
 export const selectSavedSearchSchema = createSelectSchema(savedSearches);
 export type InsertSavedSearch = typeof savedSearches.$inferInsert;
 export type SelectSavedSearch = typeof savedSearches.$inferSelect;
+
+export const insertWorkspaceActivitySchema = createInsertSchema(workspaceActivities);
+export const selectWorkspaceActivitySchema = createSelectSchema(workspaceActivities);
+export type InsertWorkspaceActivity = typeof workspaceActivities.$inferInsert;
+export type SelectWorkspaceActivity = typeof workspaceActivities.$inferSelect;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ interface SlimDesignerCardProps {
   showFeedback?: boolean;
 }
 
-export default function SlimDesignerCard({ 
+function SlimDesignerCard({ 
   match, 
   isSelected = false, 
   onSelectionChange, 
@@ -178,3 +178,5 @@ export default function SlimDesignerCard({
     </div>
   );
 }
+
+export default memo(SlimDesignerCard);

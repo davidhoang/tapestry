@@ -5,7 +5,7 @@ import { DesignerAvatar } from "./DesignerAvatar";
 import { SelectDesigner } from "@db/schema";
 import { Pencil, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation, useParams } from "wouter";
-import { useState } from "react";
+import { useState, memo } from "react";
 import { getDesignerCoverImage } from "@/utils/coverImages";
 import { slugify } from "@/utils/slugify";
 import { useWorkspacePermissions } from "@/hooks/use-permissions";
@@ -21,7 +21,7 @@ interface DesignerCardProps {
   onToggleSelect?: (id: number) => void;
 }
 
-export default function DesignerCard({ 
+function DesignerCard({ 
   designer, 
   onEdit, 
   onAdd, 
@@ -184,3 +184,5 @@ export default function DesignerCard({
     </>
   );
 }
+
+export default memo(DesignerCard);

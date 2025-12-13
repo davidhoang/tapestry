@@ -46,7 +46,10 @@ export const workspaceMembers = pgTable("workspace_members", {
   userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
   role: text("role").notNull().default("member"), // "owner", "admin", "member"
   joinedAt: timestamp("joined_at").defaultNow(),
-});
+}, (table) => ({
+  workspaceIdIdx: index("workspace_members_workspace_id_idx").on(table.workspaceId),
+  userIdIdx: index("workspace_members_user_id_idx").on(table.userId),
+}));
 
 export const workspaceInvitations = pgTable("workspace_invitations", {
   id: serial("id").primaryKey(),
@@ -81,7 +84,11 @@ export const designers = pgTable("designers", {
   enrichedAt: timestamp("enriched_at"),
   enrichmentSource: text("enrichment_source"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  workspaceIdIdx: index("designers_workspace_id_idx").on(table.workspaceId),
+  createdAtIdx: index("designers_created_at_idx").on(table.createdAt),
+  workspaceIdCreatedAtIdx: index("designers_workspace_id_created_at_idx").on(table.workspaceId, table.createdAt),
+}));
 
 export const lists = pgTable("lists", {
   id: serial("id").primaryKey(),
@@ -93,7 +100,9 @@ export const lists = pgTable("lists", {
   summary: text("summary"),
   isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  workspaceIdIdx: index("lists_workspace_id_idx").on(table.workspaceId),
+}));
 
 export const listDesigners = pgTable("list_designers", {
   id: serial("id").primaryKey(),
@@ -353,7 +362,13 @@ export const inboxRecommendations = pgTable("inbox_recommendations", {
     // Partial index for open items (high-frequency queries)
     openItemsIdx: index("inbox_recommendations_open_items_idx")
       .on(table.workspaceId, table.status, table.score.desc())
-      .where(sql`${table.status} IN ('new', 'snoozed')`)
+      .where(sql`${table.status} IN ('new', 'snoozed')`),
+    
+    // Individual indexes for common queries
+    workspaceIdIdx: index("inbox_recommendations_workspace_id_idx").on(table.workspaceId),
+    statusIdx: index("inbox_recommendations_status_idx").on(table.status),
+    workspaceIdStatusIdx: index("inbox_recommendations_workspace_id_status_idx").on(table.workspaceId, table.status),
+    scoreIdx: index("inbox_recommendations_score_idx").on(table.score),
   };
 });
 

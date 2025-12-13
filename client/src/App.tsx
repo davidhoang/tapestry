@@ -3,31 +3,43 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import Navigation from "./components/Navigation";
-import HomePage from "./pages/HomePage";
-import DirectoryPage from "./pages/DirectoryPage";
-import DesignerDetailsPage from "./pages/DesignerDetailsPage";
-import SearchResultsPage from "./pages/SearchResultsPage";
-import ListsPage from "./pages/ListsPage";
-import MatchmakerPage from "./pages/MatchmakerPage";
-import HiringPage from "./pages/HiringPage";
-import FeedbackAnalyticsPage from "./pages/FeedbackAnalyticsPage";
-import InboxPage from "./pages/InboxPage";
-
-import ComponentsPage from "./pages/ComponentsPage";
-import PublicListPage from "./pages/PublicListPage";
-import PublicPortfolioPage from "./pages/PublicPortfolioPage";
-import AdminPage from "./pages/AdminPage";
-import ProfilePage from "./pages/ProfilePage";
-import RegisterPage from "./pages/RegisterPage";
-import WorkspacePage from "./pages/WorkspacePage";
-import WorkspaceMembersPage from "./pages/WorkspaceMembersPage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
 import Footer from "./components/Footer";
 import OnboardingProvider from "./components/OnboardingProvider";
-import InvitePage from "./pages/InvitePage";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+
+// Eager-loaded pages (critical path)
+import HomePage from "./pages/HomePage";
+import RegisterPage from "./pages/RegisterPage";
+
+// Lazy-loaded pages for better initial bundle size
+const DirectoryPage = lazy(() => import("./pages/DirectoryPage"));
+const DesignerDetailsPage = lazy(() => import("./pages/DesignerDetailsPage"));
+const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage"));
+const ListsPage = lazy(() => import("./pages/ListsPage"));
+const MatchmakerPage = lazy(() => import("./pages/MatchmakerPage"));
+const HiringPage = lazy(() => import("./pages/HiringPage"));
+const FeedbackAnalyticsPage = lazy(() => import("./pages/FeedbackAnalyticsPage"));
+const InboxPage = lazy(() => import("./pages/InboxPage"));
+const ComponentsPage = lazy(() => import("./pages/ComponentsPage"));
+const PublicListPage = lazy(() => import("./pages/PublicListPage"));
+const PublicPortfolioPage = lazy(() => import("./pages/PublicPortfolioPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
+const WorkspaceMembersPage = lazy(() => import("./pages/WorkspaceMembersPage"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 // Component to handle default route redirection based on user role
 function DefaultRoute() {
@@ -84,12 +96,14 @@ function App() {
     if (slugOrId) {
       return (
         <QueryClientProvider client={queryClient}>
-          <div className="min-h-screen flex flex-col">
-            <div className="flex-1">
-              <PublicListPage params={{ slugOrId }} />
+          <Suspense fallback={<PageLoader />}>
+            <div className="min-h-screen flex flex-col">
+              <div className="flex-1">
+                <PublicListPage params={{ slugOrId }} />
+              </div>
+              <Footer />
             </div>
-            <Footer />
-          </div>
+          </Suspense>
           <Toaster />
         </QueryClientProvider>
       );
@@ -102,7 +116,9 @@ function App() {
     if (portfolioSlug) {
       return (
         <QueryClientProvider client={queryClient}>
-          <PublicPortfolioPage />
+          <Suspense fallback={<PageLoader />}>
+            <PublicPortfolioPage />
+          </Suspense>
           <Toaster />
         </QueryClientProvider>
       );
@@ -124,38 +140,40 @@ function App() {
         <div className="min-h-screen flex flex-col">
           <Navigation />
           <main className="flex-1">
-            <Switch>
-              {!user && <Route path="/" component={HomePage} />}
-              <Route path="/register" component={RegisterPage} />
-              <Route path="/invite/:token" component={InvitePage} />
-              {user ? (
-                <>
-                  <Route path="/" component={DefaultRoute} />
-                  <Route path="/profile" component={ProfilePage} />
-                  <Route path="/workspaces" component={WorkspacePage} />
-                  <Route path="/workspaces/members" component={WorkspaceMembersPage} />
-                  <Route path="/components" component={ComponentsPage} />
-                  {user.isAdmin && <Route path="/admin" component={AdminPage} />}
-                  
-                  {/* Legacy routes for backward compatibility */}
-                  <Route path="/designer/:slug" component={DesignerDetailsPage} />
-                  <Route path="/designers/:id" component={DesignerDetailsPage} />
-                  
-                  {/* Workspace-specific routes */}
-                  <Route path="/:workspaceSlug" component={DirectoryPage} />
-                  <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
-                  <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
-                  <Route path="/:workspaceSlug/search" component={SearchResultsPage} />
-                  <Route path="/:workspaceSlug/lists" component={ListsPage} />
-                  <Route path="/:workspaceSlug/inbox" component={InboxPage} />
-                  <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
-                  <Route path="/:workspaceSlug/hiring" component={HiringPage} />
-                  <Route path="/:workspaceSlug/feedback-analytics" component={FeedbackAnalyticsPage} />
-                </>
-              ) : (
-                <Route path="*" component={HomePage} />
-              )}
-            </Switch>
+            <Suspense fallback={<PageLoader />}>
+              <Switch>
+                {!user && <Route path="/" component={HomePage} />}
+                <Route path="/register" component={RegisterPage} />
+                <Route path="/invite/:token" component={InvitePage} />
+                {user ? (
+                  <>
+                    <Route path="/" component={DefaultRoute} />
+                    <Route path="/profile" component={ProfilePage} />
+                    <Route path="/workspaces" component={WorkspacePage} />
+                    <Route path="/workspaces/members" component={WorkspaceMembersPage} />
+                    <Route path="/components" component={ComponentsPage} />
+                    {user.isAdmin && <Route path="/admin" component={AdminPage} />}
+                    
+                    {/* Legacy routes for backward compatibility */}
+                    <Route path="/designer/:slug" component={DesignerDetailsPage} />
+                    <Route path="/designers/:id" component={DesignerDetailsPage} />
+                    
+                    {/* Workspace-specific routes */}
+                    <Route path="/:workspaceSlug" component={DirectoryPage} />
+                    <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
+                    <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
+                    <Route path="/:workspaceSlug/search" component={SearchResultsPage} />
+                    <Route path="/:workspaceSlug/lists" component={ListsPage} />
+                    <Route path="/:workspaceSlug/inbox" component={InboxPage} />
+                    <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
+                    <Route path="/:workspaceSlug/hiring" component={HiringPage} />
+                    <Route path="/:workspaceSlug/feedback-analytics" component={FeedbackAnalyticsPage} />
+                  </>
+                ) : (
+                  <Route path="*" component={HomePage} />
+                )}
+              </Switch>
+            </Suspense>
           </main>
           <Footer />
           <Toaster />

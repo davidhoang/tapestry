@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { DesignerAvatar } from "./DesignerAvatar";
 import { useParams, useLocation } from "wouter";
@@ -8,7 +9,7 @@ interface CompactDesignerCardProps {
   designer: SelectDesigner;
 }
 
-export default function CompactDesignerCard({ designer }: CompactDesignerCardProps) {
+function CompactDesignerCard({ designer }: CompactDesignerCardProps) {
   const { workspaceSlug } = useParams();
   const [, setLocation] = useLocation();
 
@@ -44,3 +45,5 @@ export default function CompactDesignerCard({ designer }: CompactDesignerCardPro
     </Card>
   );
 }
+
+export default memo(CompactDesignerCard);

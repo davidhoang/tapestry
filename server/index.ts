@@ -43,14 +43,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Set up authentication
-setupAuth(app);
-
 // JWT authentication middleware (allows Bearer token auth for mobile apps)
+// Must be before session auth so JWT can set req.user before routes run
 app.use(authenticateJWT);
 
-// Set up mobile auth endpoints
+// Set up mobile auth endpoints (before session auth to avoid conflicts)
 setupMobileAuth(app);
+
+// Set up session-based authentication (for web app)
+setupAuth(app);
 
 // Request logging middleware
 app.use((req, res, next) => {

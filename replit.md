@@ -132,23 +132,28 @@ All endpoints require `Authorization: Bearer <accessToken>` header.
 #### Designers
 
 **GET /api/designers**
-- Query params: `workspaceSlug` (optional), `skill`, `location`, `title`, `page`, `limit`
-- Headers: `x-workspace-slug: <workspaceSlug>` (to scope to specific workspace)
-- Returns: `{ designers: [...], total, page, limit, totalPages }`
+- Headers: `x-workspace-slug: <workspaceSlug>` (optional, defaults to user's primary workspace)
+- Query params: `page`, `limit`, `search` (all optional)
+- Returns without pagination: Array of designers
+- Returns with pagination (when `page` or `limit` provided): `{ designers: [...], pagination: { page, limit, total, totalPages, hasMore } }`
 
 **GET /api/designers/:id**
 - Returns: Single designer with full details
 
 **GET /api/designers/search**
-- Query params: `q` (search query), `workspaceSlug`, `skill`, `location`, `title`
+- Headers: `x-workspace-slug: <workspaceSlug>` (optional)
+- Query params: `type` (required: "skill", "title", or "location"), `value` (required: search value)
 - Returns: Array of matching designers
 
 **POST /api/designers**
-- Body: `{ name, title, location, bio, skills, portfolioUrl, linkedinUrl, ... }`
+- Content-Type: `multipart/form-data`
+- Body: `data` (JSON string with designer fields), `photo` (optional file)
+- Designer fields in data: `{ name, title, location, bio, skills, portfolioUrl, linkedinUrl, email, ... }`
 - Returns: Created designer object
 
 **PUT /api/designers/:id**
-- Body: Designer fields to update
+- Content-Type: `multipart/form-data`
+- Body: `data` (JSON string with fields to update), `photo` (optional file)
 - Returns: Updated designer object
 
 **DELETE /api/designers/batch**

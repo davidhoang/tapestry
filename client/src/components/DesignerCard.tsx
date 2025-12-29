@@ -113,7 +113,7 @@ function DesignerCard({
           )}
         </div>
         
-        <CardHeader className="space-y-1 pb-4">
+        <CardHeader className="space-y-1 pb-4 text-left">
           <div className="flex items-start gap-4 pt-4">
             <DesignerAvatar 
               imageUrl={profileImageUrl}
@@ -121,25 +121,25 @@ function DesignerCard({
               size="md"
               className="transition-transform duration-[3000ms] ease-out group-hover:scale-110"
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg designer-name font-semibold break-words line-clamp-2">{designer.name}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <h3 className="text-lg designer-name font-semibold break-words line-clamp-2 text-left">{designer.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 text-left">
                     {designer.title}{designer.company ? ` at ${designer.company}` : ''}
                   </p>
                   {designer.location && (
-                    <p className="text-sm text-muted-foreground line-clamp-1">{designer.location}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-1 text-left">{designer.location}</p>
                   )}
                 </div>
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 text-left">
           <div className="space-y-2">
             <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 justify-start">
                 {displayedSkills.map((skill: string, i: number) => (
                   <span 
                     key={i} 

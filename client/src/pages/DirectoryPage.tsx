@@ -72,6 +72,8 @@ import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
 import SavedSearches from "@/components/SavedSearches";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { DesignerCardSkeletonGrid } from "@/components/DesignerCardSkeleton";
 import { SelectDesigner } from "@db/schema";
 
 // Utility function to safely process skills
@@ -178,7 +180,8 @@ export default function DirectoryPage() {
     isLoading, 
     fetchNextPage, 
     hasNextPage, 
-    isFetchingNextPage 
+    isFetchingNextPage,
+    refetch
   } = usePaginatedDesigners(debouncedSearch, 50);
   
   // Flatten all pages into a single array of designers
@@ -412,212 +415,216 @@ export default function DirectoryPage() {
   const isPartiallySelected = selectedIds.length > 0 && selectedIds.length < filteredDesigners.length;
 
   return (
-    <div>
-      <Navigation />
-      
-      {/* Main container with adjusted padding for fixed nav */}
-      <div className="pt-16">
-        {/* Title section */}
-        <div className="container mx-auto px-4 sm:px-6 pt-6 pb-4">
-          <h1 className="text-2xl sm:text-3xl font-bold">Directory</h1>
-        </div>
+    <PullToRefresh 
+      onRefresh={async () => { await refetch(); }} 
+      isRefreshing={isLoading}
+    >
+      <div className="min-h-screen">
+        <Navigation />
         
-        {/* Sticky action bar */}
-        <div className={`sticky top-16 z-40 transition-all duration-300 ${
-          isScrolled ? 'bg-nav-cream border-b border-gray-200 shadow-sm' : ''
-        }`}>
-          <div className="container mx-auto px-4 sm:px-6 py-3">
-            <div className="flex flex-wrap gap-2 items-center">
-              {/* View Toggle */}
-              <div className="flex border rounded-lg bg-white">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                  className="rounded-r-none"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Select All checkbox */}
-              {filteredDesigners.length > 0 && (
-                <div className="flex items-center gap-2 ml-2">
-                  <Checkbox
-                    checked={isAllSelected}
-                    ref={(el) => {
-                      if (el) {
-                        (el as any).indeterminate = isPartiallySelected;
-                      }
-                    }}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        handleSelectAll();
-                      } else {
-                        handleClearSelection();
-                      }
-                    }}
-                  />
-                  <span className="text-sm text-muted-foreground hidden sm:inline">
-                    Select all
-                  </span>
+        {/* Main container with adjusted padding for fixed nav */}
+        <div className="pt-16">
+          {/* Title section */}
+          <div className="container mx-auto px-4 sm:px-6 pt-6 pb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold">Directory</h1>
+          </div>
+          
+          {/* Sticky action bar */}
+          <div className={`sticky top-16 z-40 transition-all duration-300 ${
+            isScrolled ? 'bg-nav-cream border-b border-gray-200 shadow-sm' : ''
+          }`}>
+            <div className="container mx-auto px-4 sm:px-6 py-3">
+              <div className="flex flex-wrap gap-2 items-center">
+                {/* View Toggle */}
+                <div className="flex border rounded-lg bg-white">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className="rounded-r-none"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="rounded-l-none"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-              
-              {/* Search bar */}
-              <div className="flex-1 mx-4 flex items-center gap-2">
-                <Input
-                  placeholder="Search designers by name, title, company, or skills..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 bg-white border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20"
-                />
-                <SavedSearches />
-              </div>
-              
-              {/* Export button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (filteredDesigners.length > 0) {
-                    exportToCSV(filteredDesigners, 'designers', designerExportColumns);
-                    toast({
-                      title: "Export complete",
-                      description: `Exported ${filteredDesigners.length} designers to CSV`,
-                    });
-                  }
-                }}
-                disabled={filteredDesigners.length === 0}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
 
-              {/* Add designer dropdown - pushed to the right */}
-              <div className="flex-shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="gap-2 min-h-[36px]">
-                      <Plus className="h-4 w-4" />
-                      <span className="hidden sm:inline">Add designer</span>
-                      <span className="sm:hidden">Add</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add designer
-                        </DropdownMenuItem>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
-                        <DialogHeader className="flex-shrink-0">
-                          <DialogTitle>Add new designer</DialogTitle>
-                        </DialogHeader>
-                        <div className="flex-1 overflow-y-auto pr-2">
-                          <AddDesignerDialog
-                            designer={null}
-                            onClose={() => {}}
-                            permissions={permissions}
-                          />
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    <DropdownMenuItem onClick={() => setShowLinkedInImport(true)}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import LinkedIn
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Select All checkbox */}
+                {filteredDesigners.length > 0 && (
+                  <div className="flex items-center gap-2 ml-2">
+                    <Checkbox
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) {
+                          (el as any).indeterminate = isPartiallySelected;
+                        }
+                      }}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          handleSelectAll();
+                        } else {
+                          handleClearSelection();
+                        }
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                      Select all
+                    </span>
+                  </div>
+                )}
+                
+                {/* Search bar */}
+                <div className="flex-1 mx-4 flex items-center gap-2">
+                  <Input
+                    placeholder="Search designers by name, title, company, or skills..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 bg-white border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  />
+                  <SavedSearches />
+                </div>
+                
+                {/* Export button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (filteredDesigners.length > 0) {
+                      exportToCSV(filteredDesigners, 'designers', designerExportColumns);
+                      toast({
+                        title: "Export complete",
+                        description: `Exported ${filteredDesigners.length} designers to CSV`,
+                      });
+                    }
+                  }}
+                  disabled={filteredDesigners.length === 0}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
+
+                {/* Add designer dropdown - pushed to the right */}
+                <div className="flex-shrink-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="gap-2 min-h-[36px]">
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Add designer</span>
+                        <span className="sm:hidden">Add</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add designer
+                          </DropdownMenuItem>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
+                          <DialogHeader className="flex-shrink-0">
+                            <DialogTitle>Add new designer</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex-1 overflow-y-auto pr-2">
+                            <AddDesignerDialog
+                              designer={null}
+                              onClose={() => {}}
+                              permissions={permissions}
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <DropdownMenuItem onClick={() => setShowLinkedInImport(true)}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Import LinkedIn
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Content section */}
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 pb-8 mt-6 max-w-full">
-          {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
-            {filteredDesigners.map((designer) => (
-              <DesignerCard
-                key={designer.id}
-                designer={designer}
+          {/* Content section */}
+          <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 pb-8 mt-6 max-w-full">
+            {isLoading ? (
+              <DesignerCardSkeletonGrid count={10} />
+            ) : viewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
+                {filteredDesigners.map((designer) => (
+                  <DesignerCard
+                    key={designer.id}
+                    designer={designer}
+                    onEdit={setDesignerToEdit}
+                    onEnrich={(designer) => {
+                      setEnrichmentDesigner(designer);
+                      setShowEnrichment(true);
+                    }}
+                    showCheckbox={true}
+                    isSelected={selectedIds.includes(designer.id)}
+                    onToggleSelect={toggleDesignerSelection}
+                  />
+                ))}
+              </div>
+            ) : (
+              <DesignerTable
+                designers={filteredDesigners}
+                workspaceSlug={workspaceSlug || ''}
                 onEdit={setDesignerToEdit}
                 onEnrich={(designer) => {
                   setEnrichmentDesigner(designer);
                   setShowEnrichment(true);
                 }}
-                showCheckbox={true}
-                isSelected={selectedIds.includes(designer.id)}
+                selectedIds={selectedIds}
                 onToggleSelect={toggleDesignerSelection}
+                columnWidths={columnWidths}
+                onResizeStart={handleResizeStart}
+                onDoubleClickResize={handleDoubleClickResize}
+                editingCell={editingCell}
+                onStartEdit={startEditing}
+                onSaveEdit={saveEdit}
+                onCancelEdit={cancelEditing}
+                editingValues={editingValues}
+                onEditingValueChange={updateEditingValue}
               />
-            ))}
-          </div>
-        ) : (
-          <DesignerTable
-            designers={filteredDesigners}
-            workspaceSlug={workspaceSlug || ''}
-            onEdit={setDesignerToEdit}
-            onEnrich={(designer) => {
-              setEnrichmentDesigner(designer);
-              setShowEnrichment(true);
-            }}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleDesignerSelection}
-            columnWidths={columnWidths}
-            onResizeStart={handleResizeStart}
-            onDoubleClickResize={handleDoubleClickResize}
-            editingCell={editingCell}
-            onStartEdit={startEditing}
-            onSaveEdit={saveEdit}
-            onCancelEdit={cancelEditing}
-            editingValues={editingValues}
-            onEditingValueChange={updateEditingValue}
-          />
-        )}
-        
-        {/* Pagination info and Load more button */}
-        {pagination && (
-          <div className="flex flex-col items-center gap-4 mt-8 mb-4">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredDesigners.length} of {pagination.total} designers
-            </p>
-            {hasNextPage && (
-              <Button
-                variant="outline"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="min-w-[200px]"
-              >
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  `Load more (${pagination.total - filteredDesigners.length} remaining)`
+            )}
+            
+            {/* Pagination info and Load more button */}
+            {pagination && (
+              <div className="flex flex-col items-center gap-4 mt-8 mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing {filteredDesigners.length} of {pagination.total} designers
+                </p>
+                {hasNextPage && (
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="min-w-[200px]"
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      `Load more (${pagination.total - filteredDesigners.length} remaining)`
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             )}
           </div>
-        )}
         </div>
+      </PullToRefresh>
 
         <Dialog
           open={!!designerToEdit}
@@ -725,7 +732,7 @@ export default function DirectoryPage() {
           </div>
         )}
       </div>
-    </div>
+    </PullToRefresh>
   );
 }
 

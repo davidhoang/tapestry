@@ -66,6 +66,7 @@ function DesignerCard({
           <img 
             src={coverImageUrl} 
             alt="Cover"
+            loading="lazy"
             className="w-full h-full object-cover transition-transform ease-out group-hover:scale-110"
             style={{ transitionDuration: '3s' }}
           />

@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import Navigation from "./components/Navigation";
+import MobileBottomNav from "./components/MobileBottomNav";
 import CommandPalette from "./components/CommandPalette";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
@@ -69,7 +70,7 @@ function DefaultRoute() {
   const [, setLocation] = useLocation();
   const [hasRedirected, setHasRedirected] = useState(false);
   
-  const { data: workspaces, isLoading } = useQuery({
+  const { data: workspaces, isLoading } = useQuery<Array<{ slug: string; role: string }>>({
     queryKey: ['/api/workspaces'],
   });
 
@@ -161,7 +162,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <OnboardingProvider>
         <CommandPaletteWrapper />
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col pb-16 md:pb-0">
           <Navigation />
           <main className="flex-1">
             <Suspense fallback={<PageLoader />}>
@@ -201,6 +202,7 @@ function App() {
             </Suspense>
           </main>
           <Footer />
+          {user && <MobileBottomNav />}
           <Toaster />
         </div>
       </OnboardingProvider>

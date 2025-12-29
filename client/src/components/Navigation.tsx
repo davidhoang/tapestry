@@ -234,131 +234,128 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile Menu - Only show hamburger when logged in */}
           <div className="md:hidden">
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-gray-100">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] bg-nav-cream border-gray-200">
-                <SheetHeader>
-                  <VisuallyHidden>
-                    <SheetTitle>Navigation Menu</SheetTitle>
-                  </VisuallyHidden>
-                </SheetHeader>
-                <div className="flex flex-col space-y-4 mt-6">
-                  {user ? (
-                    <>
-                      {/* Mobile Workspace Switcher */}
-                      <div className="px-4 pb-2 border-b border-gray-200">
-                        <WorkspaceSwitcher className="w-full" />
-                      </div>
-                      
-                      <Link
-                        to={`/${workspaceSlug}/matchmaker`}
-                        className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === `/${workspaceSlug}/matchmaker` || location === "/"
-                            ? "text-gray-900 bg-gray-100 font-bold" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Matchmaker
-                      </Link>
-                      <Link
-                        to={`/${workspaceSlug}/directory`}
-                        className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}`
-                            ? "text-gray-900 bg-gray-100 font-bold" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Directory
-                      </Link>
-                      {permissions.canViewLists && (
-                        <Link
-                          to={`/${workspaceSlug}/lists`}
-                          className={`text-lg py-2 px-4 rounded transition-colors ${
-                            location === `/${workspaceSlug}/lists`
-                              ? "text-gray-900 bg-gray-100 font-bold" 
-                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                          }`}
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Lists
-                        </Link>
-                      )}
-                      {permissions.canAccessHiring && (
-                        <Link
-                          to={`/${workspaceSlug}/hiring`}
-                          className={`text-lg py-2 px-4 rounded transition-colors ${
-                            location === `/${workspaceSlug}/hiring`
-                              ? "text-gray-900 bg-gray-100 font-bold" 
-                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                          }`}
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Hiring
-                        </Link>
-                      )}
-                      <Link
-                        to="/profile"
-                        className={`text-lg py-2 px-4 rounded transition-colors ${
-                          location === "/profile" 
-                            ? "text-gray-900 bg-gray-100 font-bold" 
-                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Profile
-                      </Link>
-                      {user.isAdmin && (
-                        <Link
-                          to="/components"
-                          className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Components
-                        </Link>
-                      )}
-                      {user.isAdmin && (
-                        <Link
-                          to="/admin"
-                          className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Database Admin
-                        </Link>
-                      )}
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => {
-                          logout();
-                          setMobileMenuOpen(false);
-                        }}
-                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-2 px-4 rounded transition-colors justify-start"
-                      >
-                        Logout
-                      </Button>
-                    </>
-                  ) : (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setShowAuthDialog(true);
-                        setMobileMenuOpen(false);
-                      }} 
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 border-none text-lg py-2 px-4 rounded justify-start transition-colors"
+            {user ? (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-gray-100">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] bg-nav-cream border-gray-200">
+                  <SheetHeader>
+                    <VisuallyHidden>
+                      <SheetTitle>Navigation Menu</SheetTitle>
+                    </VisuallyHidden>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-4 mt-6">
+                    {/* Mobile Workspace Switcher */}
+                    <div className="px-4 pb-2 border-b border-gray-200">
+                      <WorkspaceSwitcher className="w-full" />
+                    </div>
+                    
+                    <Link
+                      to={`/${workspaceSlug}/matchmaker`}
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === `/${workspaceSlug}/matchmaker` || location === "/"
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
                     >
-                      Sign in
+                      Matchmaker
+                    </Link>
+                    <Link
+                      to={`/${workspaceSlug}/directory`}
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}`
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Directory
+                    </Link>
+                    {permissions.canViewLists && (
+                      <Link
+                        to={`/${workspaceSlug}/lists`}
+                        className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                          location === `/${workspaceSlug}/lists`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Lists
+                      </Link>
+                    )}
+                    {permissions.canAccessHiring && (
+                      <Link
+                        to={`/${workspaceSlug}/hiring`}
+                        className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                          location === `/${workspaceSlug}/hiring`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Hiring
+                      </Link>
+                    )}
+                    <Link
+                      to="/profile"
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === "/profile" 
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    {user.isAdmin && (
+                      <Link
+                        to="/components"
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-3 px-4 rounded-lg transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Components
+                      </Link>
+                    )}
+                    {user.isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-3 px-4 rounded-lg transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Database Admin
+                      </Link>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => {
+                        logout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-3 px-4 rounded-lg transition-colors justify-start"
+                    >
+                      Logout
                     </Button>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            ) : (
+              /* Direct Sign in button on mobile - no hamburger needed */
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={() => setShowAuthDialog(true)} 
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base px-4 py-2"
+              >
+                Sign in
+              </Button>
+            )}
           </div>
         </div>
       </div>

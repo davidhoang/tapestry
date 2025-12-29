@@ -2,7 +2,7 @@
   "variant": "professional",
   "primary": "#C8944B",
   "appearance": "light",
-  "radius": 0.5,
+  "radius": 0.75,
   "customColors": {
     "warmNeutral": "#F5F2ED",
     "richBrown": "#8B5A2B",

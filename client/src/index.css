@@ -16,6 +16,36 @@
     min-height: 100vh;
   }
 
+  /* Mobile-first font scaling for better readability on iPhone */
+  @media (max-width: 640px) {
+    html {
+      font-size: 17px; /* Slightly larger base for mobile readability */
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+    }
+    
+    h2 {
+      font-size: 1.5rem;
+    }
+    
+    h3 {
+      font-size: 1.25rem;
+    }
+    
+    /* Only apply to prose content, not badges/status elements */
+    .prose p, .prose li, article p, article li {
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    
+    /* Ensure inputs don't zoom on iOS (minimum 16px) */
+    input, textarea, select {
+      font-size: 16px;
+    }
+  }
+
   body::before {
     content: '';
     position: fixed;

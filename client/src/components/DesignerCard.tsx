@@ -74,7 +74,7 @@ function DesignerCard({
             style={{ transitionDuration: '3s' }}
           />
           
-          {/* Top-left checkbox */}
+          {/* Top-left checkbox - larger touch target on mobile */}
           {showCheckbox && (
             <input
               type="checkbox"
@@ -86,7 +86,7 @@ function DesignerCard({
               onClick={(e) => {
                 e.stopPropagation();
               }}
-              className="absolute top-3 left-3 z-10 w-5 h-5 text-primary bg-white border-2 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer shadow-sm"
+              className="absolute top-3 left-3 z-10 w-6 h-6 sm:w-5 sm:h-5 text-primary bg-white border-2 border-gray-300 rounded-md focus:ring-primary focus:ring-2 cursor-pointer shadow-sm"
             />
           )}
           
@@ -143,7 +143,7 @@ function DesignerCard({
                 {displayedSkills.map((skill: string, i: number) => (
                   <span 
                     key={i} 
-                    className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    className="text-sm sm:text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors py-1"
                     onClick={(e) => {
                       e.stopPropagation();
                       onSkillClick?.(skill);

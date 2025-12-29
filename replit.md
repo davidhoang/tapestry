@@ -34,12 +34,18 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **Layout**: Softer border radius (0.75) with focus on typography and whitespace
 - **Mobile Optimization** (December 2025):
   - Target device: iPhone 17 (393pt width)
-  - 17px base font on mobile for better readability
+  - 18px base font on mobile for better readability
   - Softer card shadows (shadow-sm) with subtle borders (border-gray-100)
   - Direct "Sign in" button on mobile for logged-out users (no hamburger menu)
-  - Larger touch targets (44px+) for checkboxes and interactive elements
+  - All buttons have 44px minimum touch targets for accessibility
   - iOS input zoom prevention (16px minimum font size)
   - Typography overrides scoped to .prose/.article to preserve badge/status styling
+  - Bottom tab navigation (MobileBottomNav) for mobile-first navigation
+  - Full-screen modals on mobile for easier form input
+  - Skeleton loading states (DesignerCardSkeleton) for perceived performance
+  - Lazy loading on designer cover images
+  - Left-aligned text on cards and body content
+  - Utility components available: SwipeableCard (swipe gestures), PullToRefresh, haptics (vibration feedback)
 - **Modal Design System**: Comprehensive spacing and sizing standards for all dialog modals:
   - Base dialog: max-h-[calc(100vh-4rem)] with my-8 margins for proper viewport fitting
   - Form controls: h-11 height for all Input and SelectTrigger components

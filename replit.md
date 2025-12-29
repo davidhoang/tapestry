@@ -118,3 +118,98 @@ The JWT middleware sets up Passport compatibility, so all protected endpoints wo
 
 ### CORS
 CORS is enabled for all origins to support iOS app requests.
+
+### Key Mobile API Endpoints
+
+All endpoints require `Authorization: Bearer <accessToken>` header.
+
+#### Workspaces
+
+**GET /api/workspaces**
+- Returns: Array of workspaces the user belongs to
+- Response: `[{ id, name, slug, description, role, joinedAt, owner: { id, email } }]`
+
+#### Designers
+
+**GET /api/designers**
+- Query params: `workspaceSlug` (optional), `skill`, `location`, `title`, `page`, `limit`
+- Headers: `x-workspace-slug: <workspaceSlug>` (to scope to specific workspace)
+- Returns: `{ designers: [...], total, page, limit, totalPages }`
+
+**GET /api/designers/:id**
+- Returns: Single designer with full details
+
+**GET /api/designers/search**
+- Query params: `q` (search query), `workspaceSlug`, `skill`, `location`, `title`
+- Returns: Array of matching designers
+
+**POST /api/designers**
+- Body: `{ name, title, location, bio, skills, portfolioUrl, linkedinUrl, ... }`
+- Returns: Created designer object
+
+**PUT /api/designers/:id**
+- Body: Designer fields to update
+- Returns: Updated designer object
+
+**DELETE /api/designers/batch**
+- Body: `{ ids: [designerId1, designerId2, ...] }`
+- Deletes multiple designers
+
+#### Lists
+
+**GET /api/lists**
+- Returns: Array of lists in the user's workspace
+
+**POST /api/lists**
+- Body: `{ name, description?, isPublic? }`
+- Returns: Created list object
+
+**PUT /api/lists/:id**
+- Body: `{ name?, description?, isPublic? }`
+- Returns: Updated list object
+
+**DELETE /api/lists/:listId**
+- Deletes a list
+
+**POST /api/lists/:listId/designers**
+- Body: `{ designerId }`
+- Adds a designer to a list
+
+**POST /api/lists/:listId/designers/bulk**
+- Body: `{ designerIds: [...] }`
+- Adds multiple designers to a list
+
+**DELETE /api/lists/:listId/designers/:designerId**
+- Removes a designer from a list
+
+**GET /api/lists/:slugOrId/public**
+- Public endpoint - no auth required for public lists
+- Returns: List with designers for sharing
+
+#### Saved Searches
+
+**GET /api/saved-searches**
+- Returns: User's saved searches
+
+**POST /api/saved-searches**
+- Body: `{ name, filters: { skill?, location?, title? } }`
+- Returns: Created saved search
+
+**DELETE /api/saved-searches/:id**
+- Deletes a saved search
+
+### Error Handling
+
+All endpoints return consistent error format:
+```json
+{
+  "error": "Error message",
+  "details": "Additional context (optional)"
+}
+```
+
+Common HTTP status codes:
+- 401: Authentication required or invalid token
+- 403: Permission denied
+- 404: Resource not found
+- 400: Invalid request body

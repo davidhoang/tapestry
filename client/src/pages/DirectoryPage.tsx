@@ -72,7 +72,6 @@ import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
 import SavedSearches from "@/components/SavedSearches";
-import { PullToRefresh } from "@/components/PullToRefresh";
 import { DesignerCardSkeletonGrid } from "@/components/DesignerCardSkeleton";
 import { SelectDesigner } from "@db/schema";
 
@@ -415,10 +414,7 @@ export default function DirectoryPage() {
   const isPartiallySelected = selectedIds.length > 0 && selectedIds.length < filteredDesigners.length;
 
   return (
-    <PullToRefresh 
-      onRefresh={async () => { await refetch(); }} 
-      isRefreshing={isLoading}
-    >
+    <>
       <div className="min-h-screen">
         <Navigation />
         
@@ -624,7 +620,7 @@ export default function DirectoryPage() {
             )}
           </div>
         </div>
-      </PullToRefresh>
+      </div>
 
         <Dialog
           open={!!designerToEdit}
@@ -731,8 +727,7 @@ export default function DirectoryPage() {
             </div>
           </div>
         )}
-      </div>
-    </PullToRefresh>
+      </>
   );
 }
 

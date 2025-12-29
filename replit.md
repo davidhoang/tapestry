@@ -84,3 +84,37 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **TypeScript**: Type safety across frontend and backend.
 - **ESBuild**: Production build optimization.
 - **Drizzle Kit**: Database migrations and schema management.
+
+## Mobile API (iOS App Backend)
+
+The backend supports JWT authentication for native iOS/mobile apps alongside session-based auth for the web app.
+
+### Authentication Endpoints
+
+**POST /api/mobile/login**
+- Body: `{ "email": string, "password": string }`
+- Returns: `{ "accessToken": string, "refreshToken": string, "user": { id, email, isAdmin } }`
+
+**POST /api/mobile/refresh**
+- Body: `{ "refreshToken": string }`
+- Returns: `{ "accessToken": string, "refreshToken": string, "user": { id, email, isAdmin } }`
+
+**GET /api/mobile/user**
+- Headers: `Authorization: Bearer <accessToken>`
+- Returns: Current authenticated user
+
+### Using JWT with Existing Endpoints
+
+All existing `/api/*` endpoints accept Bearer token authentication:
+```
+Authorization: Bearer <accessToken>
+```
+
+The JWT middleware sets up Passport compatibility, so all protected endpoints work with both session (web) and JWT (mobile) auth.
+
+### Token Lifetimes
+- Access Token: 1 hour
+- Refresh Token: 30 days
+
+### CORS
+CORS is enabled for all origins to support iOS app requests.

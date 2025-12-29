@@ -2,7 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import helmet from "helmet";
+import cors from "cors";
 import { setupAuth } from "./auth";
+import { authenticateJWT, setupMobileAuth } from "./jwt-auth";
 
 const app = express();
 
@@ -25,6 +27,14 @@ if (app.get("env") === "production") {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// CORS configuration for mobile/iOS app access
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+}));
+
 // Cache control for static assets
 app.use((req, res, next) => {
   if (req.url.startsWith('/assets/')) {
@@ -35,6 +45,12 @@ app.use((req, res, next) => {
 
 // Set up authentication
 setupAuth(app);
+
+// JWT authentication middleware (allows Bearer token auth for mobile apps)
+app.use(authenticateJWT);
+
+// Set up mobile auth endpoints
+setupMobileAuth(app);
 
 // Request logging middleware
 app.use((req, res, next) => {

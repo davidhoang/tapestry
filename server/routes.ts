@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets } from "@db/schema";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -5741,6 +5741,191 @@ Analyze this role and recommend matching designers, considering feedback pattern
     );
 
     await db.delete(savedSearches).where(eq(savedSearches.id, searchId));
+
+    res.json({ success: true });
+  }));
+
+  // ============================================
+  // Capture Endpoints
+  // ============================================
+
+  // GET /api/capture - List capture entries for workspace (requires editor/admin role)
+  app.get("/api/capture", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    // Check if user has editor/admin role
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const entries = await db.query.captureEntries.findMany({
+      where: eq(captureEntries.workspaceId, workspaceContext.workspaceId),
+      orderBy: desc(captureEntries.createdAt),
+      with: {
+        assets: true,
+        creator: {
+          columns: {
+            id: true,
+            email: true,
+            username: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+    });
+
+    res.json(entries);
+  }));
+
+  // POST /api/capture - Create new capture entry (multipart form for file upload)
+  app.post("/api/capture", requireWorkspaceMembership(), upload.single('file'), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    // Check if user has editor/admin role
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const { content, contentType } = req.body;
+    
+    // Validate content type
+    const validContentTypes = ['text', 'email', 'upload'];
+    if (!contentType || !validContentTypes.includes(contentType)) {
+      return res.status(400).json({ error: "Invalid content type. Must be 'text', 'email', or 'upload'" });
+    }
+
+    // Validate that we have either content or file
+    if (!content && !req.file) {
+      return res.status(400).json({ error: "Either content or file is required" });
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // Create the capture entry
+      const [entry] = await tx.insert(captureEntries).values({
+        workspaceId: workspaceContext.workspaceId,
+        creatorId: req.user!.id,
+        contentType: contentType as 'text' | 'email' | 'upload',
+        contentRaw: content || null,
+        status: 'pending',
+      }).returning();
+
+      // If file was uploaded, process and store it
+      if (req.file) {
+        const filename = `captures/${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+        
+        // Process image
+        const processedBuffer = await sharp(req.file.buffer, {
+          failOnError: false,
+          limitInputPixels: 50000000
+        })
+          .resize(1200, 1200, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({ quality: 85 })
+          .toBuffer();
+
+        // Upload to Object Storage
+        const uploadResult = await objectStorage.uploadFromBytes(filename, processedBuffer);
+        if (uploadResult.error) {
+          throw new Error(`Upload failed: ${uploadResult.error.message}`);
+        }
+
+        // Create asset record
+        await tx.insert(captureAssets).values({
+          entryId: entry.id,
+          storageUrl: `/api/uploads/${filename}`,
+          originalFilename: req.file.originalname,
+          assetType: 'image',
+          mimeType: req.file.mimetype,
+          fileSize: processedBuffer.length,
+        });
+      }
+
+      // Fetch the entry with assets
+      const entryWithAssets = await tx.query.captureEntries.findFirst({
+        where: eq(captureEntries.id, entry.id),
+        with: {
+          assets: true,
+          creator: {
+            columns: {
+              id: true,
+              email: true,
+              username: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+      });
+
+      return entryWithAssets;
+    });
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      req.user!.id,
+      'capture_created',
+      'capture',
+      result!.id,
+      contentType === 'upload' ? 'File upload' : (content?.substring(0, 50) || 'Capture entry')
+    );
+
+    res.status(201).json(result);
+  }));
+
+  // DELETE /api/capture/:id - Delete a capture entry
+  app.delete("/api/capture/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    // Check if user has editor/admin role
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const entryId = parseInt(req.params.id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "Invalid entry ID" });
+    }
+
+    // Find the entry and verify it belongs to this workspace
+    const entry = await db.query.captureEntries.findFirst({
+      where: and(
+        eq(captureEntries.id, entryId),
+        eq(captureEntries.workspaceId, workspaceContext.workspaceId)
+      ),
+      with: {
+        assets: true,
+      },
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Capture entry not found" });
+    }
+
+    // Delete assets from object storage
+    for (const asset of entry.assets) {
+      try {
+        const key = asset.storageUrl.replace('/api/uploads/', '');
+        await objectStorage.delete(key);
+      } catch (err) {
+        console.error('Failed to delete asset from storage:', err);
+      }
+    }
+
+    // Delete the entry (cascades to assets)
+    await db.delete(captureEntries).where(eq(captureEntries.id, entryId));
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      req.user!.id,
+      'capture_deleted',
+      'capture',
+      entryId,
+      entry.contentRaw?.substring(0, 50) || 'Capture entry'
+    );
 
     res.json({ success: true });
   }));

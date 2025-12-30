@@ -6015,6 +6015,12 @@ Analyze this role and recommend matching designers, considering feedback pattern
             profilePhotoUrl: true,
           },
         },
+        list: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -6224,6 +6230,66 @@ Analyze this role and recommend matching designers, considering feedback pattern
     );
 
     res.json({ success: true });
+  }));
+
+  // POST /api/capture/:id/link - Link a capture entry to a list
+  app.post("/api/capture/:id/link", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const entryId = parseInt(req.params.id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "Invalid entry ID" });
+    }
+
+    const { listId } = req.body;
+    if (!listId || typeof listId !== 'number') {
+      return res.status(400).json({ error: "List ID is required" });
+    }
+
+    // Verify the capture entry exists and belongs to this workspace
+    const entry = await db.query.captureEntries.findFirst({
+      where: and(
+        eq(captureEntries.id, entryId),
+        eq(captureEntries.workspaceId, workspaceContext.workspaceId)
+      ),
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Capture entry not found" });
+    }
+
+    // Verify the list exists and belongs to this workspace
+    const list = await db.query.lists.findFirst({
+      where: and(
+        eq(lists.id, listId),
+        eq(lists.workspaceId, workspaceContext.workspaceId)
+      ),
+    });
+
+    if (!list) {
+      return res.status(404).json({ error: "List not found" });
+    }
+
+    // Update the capture entry with the list ID
+    await db.update(captureEntries)
+      .set({ listId, updatedAt: new Date() })
+      .where(eq(captureEntries.id, entryId));
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      req.user!.id,
+      'capture_linked',
+      'capture',
+      entryId,
+      `Linked to list: ${list.name}`
+    );
+
+    res.json({ success: true, listId });
   }));
 
   // POST /api/capture/:id/analyze - Trigger AI analysis for a capture entry

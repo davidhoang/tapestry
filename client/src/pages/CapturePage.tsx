@@ -27,12 +27,18 @@ import {
   FileText, 
   Image as ImageIcon,
   Link as LinkIcon,
-  Clock,
   CheckCircle,
   AlertCircle,
   Cog,
-  X
+  X,
+  ListPlus
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDistance } from "date-fns";
 
 interface CaptureAsset {
@@ -50,6 +56,7 @@ interface CaptureEntry {
   id: number;
   workspaceId: number;
   creatorId: number;
+  listId?: number | null;
   contentType: 'text' | 'email' | 'upload';
   contentRaw?: string;
   status: 'pending' | 'processing' | 'processed' | 'error';
@@ -63,6 +70,15 @@ interface CaptureEntry {
     username?: string;
     profilePhotoUrl?: string;
   };
+  list?: {
+    id: number;
+    name: string;
+  } | null;
+}
+
+interface ListItem {
+  id: number;
+  name: string;
 }
 
 function useCaptureEntries() {
@@ -165,26 +181,15 @@ function useDeleteCapture() {
 function getStatusBadge(status: CaptureEntry['status']) {
   switch (status) {
     case 'pending':
-      return (
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Pending
-        </Badge>
-      );
     case 'processing':
       return (
         <Badge variant="default" className="flex items-center gap-1 bg-blue-500">
           <Cog className="h-3 w-3 animate-spin" />
-          Processing
+          Analyzing
         </Badge>
       );
     case 'processed':
-      return (
-        <Badge variant="default" className="flex items-center gap-1 bg-green-500">
-          <CheckCircle className="h-3 w-3" />
-          Processed
-        </Badge>
-      );
+      return null;
     case 'error':
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
@@ -193,8 +198,57 @@ function getStatusBadge(status: CaptureEntry['status']) {
         </Badge>
       );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return null;
   }
+}
+
+function useLists() {
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+
+  return useQuery<ListItem[]>({
+    queryKey: ['/api/lists', workspaceSlug],
+    meta: {
+      headers: { 'x-workspace-slug': workspaceSlug },
+    },
+    select: (data: any[]) => data.map(list => ({ id: list.id, name: list.name })),
+  });
+}
+
+function useLinkToList() {
+  const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ captureId, listId }: { captureId: number; listId: number }) => {
+      return apiRequest(`/api/capture/${captureId}/link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-slug': workspaceSlug,
+        },
+        body: JSON.stringify({ listId }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/capture', workspaceSlug] });
+      toast({
+        title: "Success",
+        description: "Capture linked to list",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to link capture to list",
+        variant: "destructive",
+      });
+    },
+  });
 }
 
 function getContentTypeIcon(contentType: CaptureEntry['contentType']) {
@@ -213,10 +267,13 @@ function getContentTypeIcon(contentType: CaptureEntry['contentType']) {
 interface CaptureCardProps {
   entry: CaptureEntry;
   onDelete: (id: number) => void;
+  onLinkToList: (captureId: number, listId: number) => void;
+  lists: ListItem[];
   isDeleting: boolean;
+  isLinking: boolean;
 }
 
-function CaptureCard({ entry, onDelete, isDeleting }: CaptureCardProps) {
+function CaptureCard({ entry, onDelete, onLinkToList, lists, isDeleting, isLinking }: CaptureCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const contentPreview = entry.contentRaw 
@@ -247,6 +304,31 @@ function CaptureCard({ entry, onDelete, isDeleting }: CaptureCardProps) {
             </div>
             <div className="flex items-center gap-2">
               {getStatusBadge(entry.status)}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    disabled={isLinking || lists.length === 0}
+                    title={entry.list ? `Linked to: ${entry.list.name}` : "Link to list"}
+                  >
+                    <ListPlus className={`h-4 w-4 ${entry.listId ? 'text-primary' : ''}`} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {lists.map((list) => (
+                    <DropdownMenuItem
+                      key={list.id}
+                      onClick={() => onLinkToList(entry.id, list.id)}
+                      className={entry.listId === list.id ? 'bg-accent' : ''}
+                    >
+                      {list.name}
+                      {entry.listId === list.id && <CheckCircle className="h-3 w-3 ml-2" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="icon"
@@ -479,9 +561,12 @@ function CaptureSkeleton() {
 
 export default function CapturePage() {
   const { data: entries, isLoading, error } = useCaptureEntries();
+  const { data: lists = [] } = useLists();
   const createCapture = useCreateCapture();
   const deleteCapture = useDeleteCapture();
+  const linkToList = useLinkToList();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [linkingId, setLinkingId] = useState<number | null>(null);
 
   const handleCreate = useCallback((data: { content?: string; contentType: string; file?: File }) => {
     createCapture.mutate(data);
@@ -493,6 +578,13 @@ export default function CapturePage() {
       onSettled: () => setDeletingId(null),
     });
   }, [deleteCapture]);
+
+  const handleLinkToList = useCallback((captureId: number, listId: number) => {
+    setLinkingId(captureId);
+    linkToList.mutate({ captureId, listId }, {
+      onSettled: () => setLinkingId(null),
+    });
+  }, [linkToList]);
 
   if (error) {
     const errorMessage = error instanceof Error ? error.message : 'An error occurred';
@@ -552,7 +644,10 @@ export default function CapturePage() {
                   key={entry.id} 
                   entry={entry} 
                   onDelete={handleDelete}
+                  onLinkToList={handleLinkToList}
+                  lists={lists}
                   isDeleting={deletingId === entry.id}
+                  isLinking={linkingId === entry.id}
                 />
               ))}
             </div>

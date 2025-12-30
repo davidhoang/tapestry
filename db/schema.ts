@@ -719,6 +719,7 @@ export const captureEntries = pgTable("capture_entries", {
   id: serial("id").primaryKey(),
   workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
   creatorId: integer("creator_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  listId: integer("list_id").references(() => lists.id, { onDelete: 'set null' }),
   contentType: captureContentTypeEnum("content_type").notNull(),
   contentRaw: text("content_raw"),
   status: captureStatusEnum("status").default("pending"),
@@ -738,6 +739,7 @@ export const captureEntries = pgTable("capture_entries", {
 }, (table) => ({
   workspaceIdIdx: index("capture_entries_workspace_id_idx").on(table.workspaceId),
   creatorIdIdx: index("capture_entries_creator_id_idx").on(table.creatorId),
+  listIdIdx: index("capture_entries_list_id_idx").on(table.listId),
   statusIdx: index("capture_entries_status_idx").on(table.status),
   createdAtIdx: index("capture_entries_created_at_idx").on(table.createdAt),
 }));
@@ -803,6 +805,10 @@ export const captureEntryRelations = relations(captureEntries, ({ one, many }) =
   creator: one(users, {
     fields: [captureEntries.creatorId],
     references: [users.id],
+  }),
+  list: one(lists, {
+    fields: [captureEntries.listId],
+    references: [lists.id],
   }),
   assets: many(captureAssets),
   annotations: many(captureAnnotations),

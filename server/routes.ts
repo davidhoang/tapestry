@@ -6115,6 +6115,59 @@ Analyze this role and recommend matching designers, considering feedback pattern
       contentType === 'upload' ? 'File upload' : (content?.substring(0, 50) || 'Capture entry')
     );
 
+    // Auto-analyze the capture in the background (don't await to not block response)
+    (async () => {
+      try {
+        // Update status to processing
+        await db.update(captureEntries)
+          .set({ status: 'processing', updatedAt: new Date() })
+          .where(eq(captureEntries.id, result!.id));
+
+        // Run analysis
+        const analysisResult = await analyzeCapture(result!, result!.assets, workspaceContext.workspaceId);
+
+        const matchedDesignerId = analysisResult.entities.find(e => e.matchedDesignerId)?.matchedDesignerId || null;
+
+        await db.insert(captureAnnotations).values({
+          entryId: result!.id,
+          aiSummary: analysisResult.summary,
+          extractedEntities: analysisResult.extractedData,
+          suggestedActions: analysisResult.suggestedActions,
+          matchedDesignerId: matchedDesignerId,
+          processingModel: analysisResult.processingModel,
+          processingDuration: analysisResult.processingDuration,
+        });
+
+        await db.update(captureEntries)
+          .set({ 
+            status: 'processed', 
+            processedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(captureEntries.id, result!.id));
+
+        await logWorkspaceActivity(
+          workspaceContext.workspaceId,
+          req.user!.id,
+          'capture_analyzed',
+          'capture',
+          result!.id,
+          contentType === 'upload' ? 'File upload' : (content?.substring(0, 50) || 'Capture entry')
+        );
+
+        console.log(`Auto-analyzed capture ${result!.id} successfully`);
+      } catch (error) {
+        console.error('Auto-analysis failed:', error);
+        await db.update(captureEntries)
+          .set({ 
+            status: 'error', 
+            errorMessage: error instanceof Error ? error.message : 'Auto-analysis failed',
+            updatedAt: new Date()
+          })
+          .where(eq(captureEntries.id, result!.id));
+      }
+    })();
+
     res.status(201).json(result);
   }));
 

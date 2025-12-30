@@ -3777,6 +3777,53 @@ Please analyze this job and recommend the best matching designers.`
     res.json(workspacesWithDetails);
   }));
 
+  // Get user's workspace permissions
+  app.get("/api/workspaces/permissions", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const user = req.user as any;
+    let workspaceId: number | null = null;
+
+    // Try to get workspace from header
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+      if (workspace) {
+        workspaceId = workspace.id;
+      }
+    }
+
+    // Fall back to user's default workspace
+    if (!workspaceId) {
+      const userWorkspace = await getUserWorkspace(user.id);
+      if (userWorkspace) {
+        workspaceId = userWorkspace.id;
+      }
+    }
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: "No workspace found" });
+    }
+
+    // Get user's membership and role
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, user.id),
+        eq(workspaceMembers.workspaceId, workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not a member of this workspace" });
+    }
+
+    res.json({ role: membership.role, workspaceId });
+  }));
+
   // Auto-accept pending invitations after registration
   app.post("/api/invitations/auto-accept", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {

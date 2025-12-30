@@ -7,7 +7,22 @@ import type { InferSelectModel } from "drizzle-orm";
 export const recommendationTypeEnum = pgEnum('recommendation_type', [
   'add_to_list',
   'create_list', 
-  'update_profile'
+  'update_profile',
+  'capture_create_designer',
+  'capture_enrich_profile'
+]);
+
+export const captureContentTypeEnum = pgEnum('capture_content_type', [
+  'text',
+  'email',
+  'upload'
+]);
+
+export const captureStatusEnum = pgEnum('capture_status', [
+  'pending',
+  'processing',
+  'processed',
+  'error'
 ]);
 
 export const recommendationStatusEnum = pgEnum('recommendation_status', [
@@ -448,6 +463,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   inboxRecommendations: many(inboxRecommendations),
   savedSearches: many(savedSearches),
   activities: many(workspaceActivities),
+  captureEntries: many(captureEntries),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -698,6 +714,118 @@ export const workspaceActivityRelations = relations(workspaceActivities, ({ one 
   }),
 }));
 
+// Capture system tables
+export const captureEntries = pgTable("capture_entries", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  creatorId: integer("creator_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  contentType: captureContentTypeEnum("content_type").notNull(),
+  contentRaw: text("content_raw"),
+  status: captureStatusEnum("status").default("pending"),
+  processedAt: timestamp("processed_at"),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").$type<{
+    source?: string;
+    emailFrom?: string;
+    emailTo?: string;
+    emailSubject?: string;
+    emailReceivedAt?: string;
+    extractedUrls?: string[];
+    [key: string]: any;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("capture_entries_workspace_id_idx").on(table.workspaceId),
+  creatorIdIdx: index("capture_entries_creator_id_idx").on(table.creatorId),
+  statusIdx: index("capture_entries_status_idx").on(table.status),
+  createdAtIdx: index("capture_entries_created_at_idx").on(table.createdAt),
+}));
+
+export const captureAssets = pgTable("capture_assets", {
+  id: serial("id").primaryKey(),
+  entryId: integer("entry_id").references(() => captureEntries.id, { onDelete: 'cascade' }).notNull(),
+  storageUrl: text("storage_url").notNull(),
+  originalFilename: text("original_filename"),
+  assetType: text("asset_type").notNull(),
+  mimeType: text("mime_type"),
+  fileSize: integer("file_size"),
+  extractedText: text("extracted_text"),
+  metadata: jsonb("metadata").$type<{
+    width?: number;
+    height?: number;
+    ocrConfidence?: number;
+    [key: string]: any;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  entryIdIdx: index("capture_assets_entry_id_idx").on(table.entryId),
+}));
+
+export const captureAnnotations = pgTable("capture_annotations", {
+  id: serial("id").primaryKey(),
+  entryId: integer("entry_id").references(() => captureEntries.id, { onDelete: 'cascade' }).notNull(),
+  aiSummary: text("ai_summary"),
+  extractedEntities: jsonb("extracted_entities").$type<{
+    names?: Array<{ value: string; confidence: number }>;
+    companies?: Array<{ value: string; confidence: number }>;
+    skills?: Array<{ value: string; confidence: number }>;
+    emails?: string[];
+    linkedinUrls?: string[];
+    portfolioUrls?: string[];
+    locations?: string[];
+    titles?: string[];
+    [key: string]: any;
+  }>(),
+  suggestedActions: jsonb("suggested_actions").$type<Array<{
+    actionType: 'create_designer' | 'enrich_profile' | 'add_to_list';
+    confidence: number;
+    targetDesignerId?: number;
+    targetListId?: number;
+    reasoning: string;
+    extractedData?: Record<string, any>;
+  }>>(),
+  matchedDesignerId: integer("matched_designer_id").references(() => designers.id, { onDelete: 'set null' }),
+  processingModel: text("processing_model"),
+  processingDuration: integer("processing_duration"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  entryIdIdx: index("capture_annotations_entry_id_idx").on(table.entryId),
+  matchedDesignerIdIdx: index("capture_annotations_matched_designer_id_idx").on(table.matchedDesignerId),
+}));
+
+export const captureEntryRelations = relations(captureEntries, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [captureEntries.workspaceId],
+    references: [workspaces.id],
+  }),
+  creator: one(users, {
+    fields: [captureEntries.creatorId],
+    references: [users.id],
+  }),
+  assets: many(captureAssets),
+  annotations: many(captureAnnotations),
+}));
+
+export const captureAssetRelations = relations(captureAssets, ({ one }) => ({
+  entry: one(captureEntries, {
+    fields: [captureAssets.entryId],
+    references: [captureEntries.id],
+  }),
+}));
+
+export const captureAnnotationRelations = relations(captureAnnotations, ({ one }) => ({
+  entry: one(captureEntries, {
+    fields: [captureAnnotations.entryId],
+    references: [captureEntries.id],
+  }),
+  matchedDesigner: one(designers, {
+    fields: [captureAnnotations.matchedDesignerId],
+    references: [designers.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = typeof users.$inferInsert;
@@ -812,3 +940,18 @@ export const insertWorkspaceActivitySchema = createInsertSchema(workspaceActivit
 export const selectWorkspaceActivitySchema = createSelectSchema(workspaceActivities);
 export type InsertWorkspaceActivity = typeof workspaceActivities.$inferInsert;
 export type SelectWorkspaceActivity = typeof workspaceActivities.$inferSelect;
+
+export const insertCaptureEntrySchema = createInsertSchema(captureEntries);
+export const selectCaptureEntrySchema = createSelectSchema(captureEntries);
+export type InsertCaptureEntry = typeof captureEntries.$inferInsert;
+export type SelectCaptureEntry = typeof captureEntries.$inferSelect;
+
+export const insertCaptureAssetSchema = createInsertSchema(captureAssets);
+export const selectCaptureAssetSchema = createSelectSchema(captureAssets);
+export type InsertCaptureAsset = typeof captureAssets.$inferInsert;
+export type SelectCaptureAsset = typeof captureAssets.$inferSelect;
+
+export const insertCaptureAnnotationSchema = createInsertSchema(captureAnnotations);
+export const selectCaptureAnnotationSchema = createSelectSchema(captureAnnotations);
+export type InsertCaptureAnnotation = typeof captureAnnotations.$inferInsert;
+export type SelectCaptureAnnotation = typeof captureAnnotations.$inferSelect;

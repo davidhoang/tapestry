@@ -1,11 +1,48 @@
-import sgMail from "@sendgrid/mail";
+// Resend email integration (migrated from SendGrid)
+import { Resend } from 'resend';
 import type { SelectList } from "@db/schema";
 
-if (!process.env.SENDGRID_API_KEY) {
-  throw new Error("SENDGRID_API_KEY is required");
+let connectionSettings: any;
+
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
+
+  if (!xReplitToken) {
+    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  }
+
+  connectionSettings = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    }
+  ).then(res => res.json()).then(data => data.items?.[0]);
+
+  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
+    throw new Error('Resend not connected');
+  }
+  return {
+    apiKey: connectionSettings.settings.api_key, 
+    fromEmail: connectionSettings.settings.from_email
+  };
 }
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// Get a fresh Resend client (tokens can expire)
+async function getResendClient() {
+  const { apiKey, fromEmail } = await getCredentials();
+  return {
+    client: new Resend(apiKey),
+    fromEmail
+  };
+}
 
 interface EmailParams {
   to: string;
@@ -16,28 +53,27 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
-  const msg = {
-    to: params.to,
-    from: params.from,
-    subject: params.subject,
-    html: params.html || params.text,
-    text: params.text,
-  };
-
   try {
-    const [response] = await sgMail.send(msg);
-    console.log(`Email successfully sent to ${params.to}`);
-    console.log('SendGrid response:', {
-      statusCode: response.statusCode,
-      headers: response.headers,
-      messageId: response.headers['x-message-id']
+    const { client } = await getResendClient();
+    
+    const { data, error } = await client.emails.send({
+      to: params.to,
+      from: params.from,
+      subject: params.subject,
+      html: params.html || params.text || '',
+      text: params.text,
     });
+
+    if (error) {
+      console.error('Resend email error:', error);
+      throw new Error(error.message);
+    }
+
+    console.log(`Email successfully sent to ${params.to}`);
+    console.log('Resend response:', { id: data?.id });
     return true;
   } catch (error: any) {
-    console.error('SendGrid email error:', error);
-    if (error.response && error.response.body) {
-      console.error('SendGrid error details:', JSON.stringify(error.response.body, null, 2));
-    }
+    console.error('Resend email error:', error);
     throw error;
   }
 }
@@ -48,7 +84,6 @@ export async function sendListEmail(
   subject: string,
   summary: string,
 ) {
-  // Get the base URL from the environment or construct it from the request
   const baseUrl = process.env.BASE_URL || 'https://design-matchmaker.proofofconcept.pub';
 
   function getPhotoUrl(url: string | null): string | null {
@@ -56,7 +91,6 @@ export async function sendListEmail(
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    // Always use absolute URLs for email images
     const absoluteUrl = baseUrl + (url.startsWith('/') ? url : `/${url}`);
     return absoluteUrl;
   }
@@ -130,23 +164,24 @@ export async function sendListEmail(
     </html>
   `;
 
-  const msg = {
-    to: recipientEmail,
-    from: {
-      email: "david@davidhoang.com",
-      name: "Design Talent Match",
-    },
-    subject: subject,
-    html: html,
-  };
-
   try {
-    await sgMail.send(msg);
+    const { client, fromEmail } = await getResendClient();
+    
+    const { data, error } = await client.emails.send({
+      to: recipientEmail,
+      from: fromEmail || "david@davidhoang.com",
+      subject: subject,
+      html: html,
+    });
+
+    if (error) {
+      console.error('Resend email error:', error);
+      throw new Error(error.message);
+    }
+
+    console.log(`List email sent to ${recipientEmail}`, { id: data?.id });
   } catch (error: any) {
     console.error("Error sending email:", error);
-    if (error.response) {
-      throw new Error(error.response.body.errors[0].message);
-    }
     throw error;
   }
 }

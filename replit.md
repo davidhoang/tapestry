@@ -69,6 +69,15 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **Bulk Actions**: Multi-select designers in DirectoryPage with floating action bar. Bulk add to lists functionality.
 - **CSV Export**: Export designers from directory, lists, and search results to CSV format.
 - **Modal System**: Uses Radix UI Dialog with comprehensive design system for consistent, reliable centering and optimal usability across devices. All modals follow standardized spacing patterns (h-11 inputs, space-y-6 forms, space-y-2 field wrappers, resize-none textareas) with responsive grid layouts. The system provides excellent keyboard ergonomics with Escape dismissal and smooth tab navigation. Updated October 2025 with improved form field padding, optimized vertical space usage, and responsive width handling.
+- **Capture Feature** (December 2025): Free-form content capture system for collecting raw data (text, screenshots, emails) about potential designers. Available only to workspace admins and editors. Features:
+  - Text input and file upload on CapturePage (/:workspaceSlug/capture)
+  - AI-powered analysis using OpenAI gpt-4o to extract designer entities (names, companies, skills, URLs, emails)
+  - Automatic matching against existing designers in workspace
+  - Integration with Inbox recommendations via CaptureRecommendationGenerator
+  - Two recommendation types: `capture_create_designer` (new profiles) and `capture_enrich_profile` (update existing)
+  - Full RLHF event logging for continuous improvement
+  - Database tables: capture_entries, capture_assets, capture_annotations
+  - API endpoints: GET/POST/DELETE /api/capture, POST /api/capture/:id/analyze
 
 ## External Dependencies
 

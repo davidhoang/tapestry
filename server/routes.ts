@@ -5514,6 +5514,153 @@ Analyze this role and recommend matching designers, considering feedback pattern
               }
               break;
 
+            case 'capture_create_designer':
+              // Check permission to create designers
+              if (!permissions.canCreateDesigners) {
+                throw new Error("Permission denied: Cannot create designers");
+              }
+              
+              // Extract data from capture metadata
+              const createCaptureMetadata = recommendation.metadata as any;
+              const extractedData = createCaptureMetadata?.extractedData || {};
+              
+              if (!extractedData.name) {
+                throw new Error("Designer name is required to create a profile from capture");
+              }
+              
+              // Generate unique slug for the designer
+              let designerSlug = slugify(extractedData.name);
+              let slugCounter = 1;
+              while (true) {
+                const existingSlug = await tx.query.designers.findFirst({
+                  where: and(
+                    eq(designers.slug, designerSlug),
+                    eq(designers.workspaceId, workspaceId)
+                  ),
+                });
+                if (!existingSlug) break;
+                designerSlug = `${slugify(extractedData.name)}-${slugCounter}`;
+                slugCounter++;
+              }
+              
+              // Create new designer profile with required field defaults
+              const [newDesigner] = await tx.insert(designers).values({
+                workspaceId,
+                name: extractedData.name,
+                slug: designerSlug,
+                title: extractedData.title || 'Designer',
+                level: extractedData.level || 'Mid-level',
+                company: extractedData.company || null,
+                location: extractedData.location || null,
+                email: extractedData.email || null,
+                linkedIn: extractedData.linkedIn || null,
+                website: extractedData.website || null,
+                skills: extractedData.skills || [],
+                description: `Profile created from capture${createCaptureMetadata.source ? ': ' + createCaptureMetadata.source : ''}`,
+              }).returning();
+              
+              appliedResult = {
+                action: 'created_designer',
+                designerId: newDesigner.id,
+                designerName: newDesigner.name,
+                designerSlug: newDesigner.slug,
+                captureEntryId: createCaptureMetadata.captureEntryId,
+                annotationId: createCaptureMetadata.annotationId,
+                fieldsPopulated: Object.keys(extractedData).filter(k => extractedData[k]),
+              };
+              break;
+
+            case 'capture_enrich_profile':
+              // Check permission to edit designers
+              if (!permissions.canEditDesigners) {
+                throw new Error("Permission denied: Cannot edit designers");
+              }
+              
+              // Get designer ID from metadata or recommendation
+              const enrichCaptureMetadata = recommendation.metadata as any;
+              const targetDesignerId = enrichCaptureMetadata?.matchedDesignerId || recommendation.designerId;
+              
+              if (!targetDesignerId) {
+                throw new Error("Designer ID is required to enrich a profile from capture");
+              }
+              
+              // Find the existing designer
+              const existingDesigner = await tx.query.designers.findFirst({
+                where: and(
+                  eq(designers.id, targetDesignerId),
+                  eq(designers.workspaceId, workspaceId)
+                ),
+              });
+              
+              if (!existingDesigner) {
+                throw new Error("Designer not found or access denied");
+              }
+              
+              // Build update data - only update fields that are missing/empty on the designer
+              const enrichExtractedData = enrichCaptureMetadata?.extractedData || {};
+              const enrichUpdateData: any = {};
+              const fieldsUpdated: string[] = [];
+              
+              if (enrichExtractedData.title && !existingDesigner.title) {
+                enrichUpdateData.title = enrichExtractedData.title;
+                fieldsUpdated.push('title');
+              }
+              if (enrichExtractedData.company && !existingDesigner.company) {
+                enrichUpdateData.company = enrichExtractedData.company;
+                fieldsUpdated.push('company');
+              }
+              if (enrichExtractedData.location && !existingDesigner.location) {
+                enrichUpdateData.location = enrichExtractedData.location;
+                fieldsUpdated.push('location');
+              }
+              if (enrichExtractedData.email && !existingDesigner.email) {
+                enrichUpdateData.email = enrichExtractedData.email;
+                fieldsUpdated.push('email');
+              }
+              if (enrichExtractedData.linkedIn && !existingDesigner.linkedIn) {
+                enrichUpdateData.linkedIn = enrichExtractedData.linkedIn;
+                fieldsUpdated.push('linkedIn');
+              }
+              if (enrichExtractedData.website && !existingDesigner.website) {
+                enrichUpdateData.website = enrichExtractedData.website;
+                fieldsUpdated.push('website');
+              }
+              if (enrichExtractedData.skills?.length && (!existingDesigner.skills || existingDesigner.skills.length === 0)) {
+                enrichUpdateData.skills = enrichExtractedData.skills;
+                fieldsUpdated.push('skills');
+              }
+              
+              if (Object.keys(enrichUpdateData).length > 0) {
+                enrichUpdateData.updatedAt = new Date();
+                
+                const [enrichedDesigner] = await tx
+                  .update(designers)
+                  .set(enrichUpdateData)
+                  .where(eq(designers.id, targetDesignerId))
+                  .returning();
+                
+                appliedResult = {
+                  action: 'enriched_profile',
+                  designerId: targetDesignerId,
+                  designerName: enrichedDesigner.name,
+                  fieldsUpdated,
+                  captureEntryId: enrichCaptureMetadata.captureEntryId,
+                  annotationId: enrichCaptureMetadata.annotationId,
+                };
+              } else {
+                // No new fields to add - mark as applied anyway
+                appliedResult = {
+                  action: 'enriched_profile',
+                  designerId: targetDesignerId,
+                  designerName: existingDesigner.name,
+                  fieldsUpdated: [],
+                  note: 'No new fields to update - designer profile already complete',
+                  captureEntryId: enrichCaptureMetadata.captureEntryId,
+                  annotationId: enrichCaptureMetadata.annotationId,
+                };
+              }
+              break;
+
             default:
               throw new Error(`Unsupported recommendation type: ${recommendation.recommendationType}`);
           }

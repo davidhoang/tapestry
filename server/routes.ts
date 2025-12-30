@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations } from "@db/schema";
+import { analyzeCapture } from "./capture-analyzer";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
@@ -5928,6 +5929,101 @@ Analyze this role and recommend matching designers, considering feedback pattern
     );
 
     res.json({ success: true });
+  }));
+
+  // POST /api/capture/:id/analyze - Trigger AI analysis for a capture entry
+  app.post("/api/capture/:id/analyze", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture analysis requires editor or admin role" });
+    }
+
+    const entryId = parseInt(req.params.id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "Invalid entry ID" });
+    }
+
+    const entry = await db.query.captureEntries.findFirst({
+      where: and(
+        eq(captureEntries.id, entryId),
+        eq(captureEntries.workspaceId, workspaceContext.workspaceId)
+      ),
+      with: {
+        assets: true,
+      },
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Capture entry not found" });
+    }
+
+    if (entry.status === 'processing') {
+      return res.status(409).json({ error: "Analysis already in progress" });
+    }
+
+    await db.update(captureEntries)
+      .set({ status: 'processing', updatedAt: new Date() })
+      .where(eq(captureEntries.id, entryId));
+
+    try {
+      const analysisResult = await analyzeCapture(entry, entry.assets, workspaceContext.workspaceId);
+
+      const matchedDesignerId = analysisResult.entities.find(e => e.matchedDesignerId)?.matchedDesignerId || null;
+
+      const [annotation] = await db.insert(captureAnnotations).values({
+        entryId: entry.id,
+        aiSummary: analysisResult.summary,
+        extractedEntities: analysisResult.extractedData,
+        suggestedActions: analysisResult.suggestedActions,
+        matchedDesignerId: matchedDesignerId,
+        processingModel: analysisResult.processingModel,
+        processingDuration: analysisResult.processingDuration,
+      }).returning();
+
+      await db.update(captureEntries)
+        .set({ 
+          status: 'processed', 
+          processedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(captureEntries.id, entryId));
+
+      await logWorkspaceActivity(
+        workspaceContext.workspaceId,
+        req.user!.id,
+        'capture_analyzed',
+        'capture',
+        entryId,
+        entry.contentRaw?.substring(0, 50) || 'Capture entry'
+      );
+
+      res.json({
+        success: true,
+        annotation,
+        analysis: {
+          entities: analysisResult.entities,
+          summary: analysisResult.summary,
+          rawInsights: analysisResult.rawInsights,
+        },
+      });
+    } catch (error) {
+      console.error('Capture analysis failed:', error);
+
+      await db.update(captureEntries)
+        .set({ 
+          status: 'error', 
+          errorMessage: error instanceof Error ? error.message : 'Analysis failed',
+          updatedAt: new Date()
+        })
+        .where(eq(captureEntries.id, entryId));
+
+      res.status(500).json({ 
+        error: "Analysis failed",
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }));
 
   const httpServer = createServer(app);

@@ -1395,6 +1395,54 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Get single list by ID (for authenticated users)
+  app.get("/api/lists/:id", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const listId = parseInt(req.params.id);
+      
+      if (isNaN(listId)) {
+        return res.status(400).json({ error: "Invalid list ID" });
+      }
+
+      // First get the list to check workspace
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      // Check workspace membership
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, list.workspaceId)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not a member of this workspace" });
+      }
+
+      res.json(list);
+    } catch (error: any) {
+      console.error('Error fetching list:', error);
+      res.status(500).json({ error: "Failed to fetch list" });
+    }
+  }));
+
   // Update list route (modified to handle notes)
   app.put("/api/lists/:id", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {

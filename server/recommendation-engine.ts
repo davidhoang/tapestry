@@ -16,6 +16,7 @@ import crypto from "crypto";
 import { AddToListGenerator } from "./recommendation-generators/add-to-list-generator";
 import { CreateListGenerator } from "./recommendation-generators/create-list-generator";
 import { UpdateProfileGenerator } from "./recommendation-generators/update-profile-generator";
+import { CaptureRecommendationGenerator } from "./recommendation-generators/capture-recommendation-generator";
 import { 
   RecommendationUtils, 
   RecommendationResult, 
@@ -65,6 +66,7 @@ export class RecommendationEngine {
       new AddToListGenerator(),
       new CreateListGenerator(),
       new UpdateProfileGenerator(),
+      new CaptureRecommendationGenerator(),
     ];
 
     for (const generator of generators) {

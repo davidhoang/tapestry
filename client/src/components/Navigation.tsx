@@ -150,6 +150,14 @@ export default function Navigation() {
                   Hiring
                 </Link>
               )}
+              {permissions.canEditJobs && (
+                <Link
+                  to={`/${workspaceSlug}/capture`}
+                  className={location === `/${workspaceSlug}/capture` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                >
+                  Capture
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -301,6 +309,19 @@ export default function Navigation() {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Hiring
+                      </Link>
+                    )}
+                    {permissions.canEditJobs && (
+                      <Link
+                        to={`/${workspaceSlug}/capture`}
+                        className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                          location === `/${workspaceSlug}/capture`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Capture
                       </Link>
                     )}
                     <Link

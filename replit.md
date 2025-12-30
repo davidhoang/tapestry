@@ -59,7 +59,7 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **Designer Management**: CRUD operations, skills management, AI enrichment (OpenAI/Anthropic), bulk import, image upload.
 - **AI Matchmaking**: OpenAI-powered role analysis, iterative refinement, confidence scoring, skills matching. Includes a Reinforcement Learning from Human Feedback (RLHF) system for continuous improvement.
 - **Workspace System**: Multi-tenant architecture with isolation, comprehensive role-based permissions (Admin, Owner, Editor, Member), granular permissions (25+), server-side enforcement, audit logging, invitation system, slug-based routing. The system has robust workspace switching and management features.
-- **List Management**: Curated designer lists, sharing capabilities (public/private), email sharing (SendGrid), collaborative building.
+- **List Management**: Curated designer lists, sharing capabilities (public/private), email sharing (Resend), collaborative building.
 - **Hiring Feature**: Job posting, AI-powered designer matching, job management, status tracking.
 - **Recruiting Board**: Visual kanban board for tracking designers through recruitment pipeline. Features drag-and-drop functionality, customizable columns (default: Backlog, Outreach, Interviewing, Offer, Hired), bulk designer import from lists or directory, notes tracking. Built with @dnd-kit for smooth drag-and-drop experience.
 - **Inbox Feature**: AI-powered recommendation system for workspace maintenance. Provides intelligent suggestions for adding designers to lists based on skills/metadata, recommending new list creation, and identifying outdated designer profiles that need updating. Features quick approval workflows, filtering/sorting capabilities, and comprehensive audit trails. Built with modular generator architecture supporting three recommendation types (add_to_list, create_list, update_profile) with RLHF integration for continuous improvement.
@@ -82,7 +82,7 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 ## External Dependencies
 
 ### Third-Party Services
-- **SendGrid**: Email delivery for invitations and list sharing.
+- **Resend**: Email delivery for invitations and list sharing (migrated from SendGrid December 2025).
 - **OpenAI**: AI-powered matching and profile enrichment.
 - **Anthropic**: Alternative AI provider for enrichment.
 - **Replit Object Storage**: File and image storage.

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens } from "@db/schema";
 import { analyzeCapture } from "./capture-analyzer";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
@@ -6385,6 +6385,128 @@ Analyze this role and recommend matching designers, considering feedback pattern
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  }));
+
+  // =============================================
+  // API Token Management (for MCP/external API access)
+  // =============================================
+
+  // Generate a cryptographically secure token
+  function generateApiToken(): { token: string; hash: string; prefix: string } {
+    const rawToken = crypto.randomBytes(32).toString('base64url');
+    const prefix = rawToken.substring(0, 8);
+    const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    return { token: `tap_${rawToken}`, hash, prefix };
+  }
+
+  // List user's API tokens for a workspace
+  app.get("/api/workspaces/:workspaceSlug/api-tokens", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    const tokens = await db.query.apiTokens.findMany({
+      where: and(
+        eq(apiTokens.userId, workspaceContext.userId),
+        eq(apiTokens.workspaceId, workspaceContext.workspaceId)
+      ),
+      orderBy: desc(apiTokens.createdAt),
+    });
+
+    // Return tokens without the hash (security)
+    const safeTokens = tokens.map(t => ({
+      id: t.id,
+      name: t.name,
+      tokenPrefix: t.tokenPrefix,
+      role: t.role,
+      lastUsedAt: t.lastUsedAt,
+      expiresAt: t.expiresAt,
+      createdAt: t.createdAt,
+    }));
+
+    res.json(safeTokens);
+  }));
+
+  // Create a new API token
+  app.post("/api/workspaces/:workspaceSlug/api-tokens", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { name, expiresInDays } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ error: "Token name is required" });
+    }
+
+    const { token, hash, prefix } = generateApiToken();
+    
+    let expiresAt = null;
+    if (expiresInDays && typeof expiresInDays === 'number' && expiresInDays > 0) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    }
+
+    const [newToken] = await db.insert(apiTokens).values({
+      userId: workspaceContext.userId,
+      workspaceId: workspaceContext.workspaceId,
+      name: name.trim(),
+      tokenHash: hash,
+      tokenPrefix: prefix,
+      role: workspaceContext.role, // Inherit user's workspace role
+      expiresAt,
+    }).returning();
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      workspaceContext.userId,
+      'api_token_created',
+      'api_token',
+      newToken.id,
+      name.trim()
+    );
+
+    // Return the full token only once (on creation)
+    res.json({
+      id: newToken.id,
+      name: newToken.name,
+      token, // Full token - only shown once
+      tokenPrefix: newToken.tokenPrefix,
+      role: newToken.role,
+      expiresAt: newToken.expiresAt,
+      createdAt: newToken.createdAt,
+    });
+  }));
+
+  // Revoke (delete) an API token
+  app.delete("/api/workspaces/:workspaceSlug/api-tokens/:tokenId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const tokenId = parseInt(req.params.tokenId);
+
+    if (isNaN(tokenId)) {
+      return res.status(400).json({ error: "Invalid token ID" });
+    }
+
+    // Only allow users to delete their own tokens
+    const existingToken = await db.query.apiTokens.findFirst({
+      where: and(
+        eq(apiTokens.id, tokenId),
+        eq(apiTokens.userId, workspaceContext.userId),
+        eq(apiTokens.workspaceId, workspaceContext.workspaceId)
+      ),
+    });
+
+    if (!existingToken) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+
+    await db.delete(apiTokens).where(eq(apiTokens.id, tokenId));
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      workspaceContext.userId,
+      'api_token_revoked',
+      'api_token',
+      tokenId,
+      existingToken.name
+    );
+
+    res.json({ success: true });
   }));
 
   const httpServer = createServer(app);

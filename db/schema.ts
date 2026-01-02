@@ -961,3 +961,37 @@ export const insertCaptureAnnotationSchema = createInsertSchema(captureAnnotatio
 export const selectCaptureAnnotationSchema = createSelectSchema(captureAnnotations);
 export type InsertCaptureAnnotation = typeof captureAnnotations.$inferInsert;
 export type SelectCaptureAnnotation = typeof captureAnnotations.$inferSelect;
+
+// Personal Access Tokens for MCP/API authentication
+export const apiTokens = pgTable("api_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  tokenPrefix: text("token_prefix").notNull(),
+  role: text("role").notNull().default("editor"),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("api_tokens_user_id_idx").on(table.userId),
+  workspaceIdIdx: index("api_tokens_workspace_id_idx").on(table.workspaceId),
+  tokenHashIdx: index("api_tokens_token_hash_idx").on(table.tokenHash),
+}));
+
+export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [apiTokens.userId],
+    references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [apiTokens.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+export const insertApiTokenSchema = createInsertSchema(apiTokens);
+export const selectApiTokenSchema = createSelectSchema(apiTokens);
+export type InsertApiToken = typeof apiTokens.$inferInsert;
+export type SelectApiToken = typeof apiTokens.$inferSelect;

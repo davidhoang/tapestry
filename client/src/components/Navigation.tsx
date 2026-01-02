@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity, Key } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -203,6 +203,12 @@ export default function Navigation() {
                     <Link to={`/${workspaceSlug}/activity`} className="flex items-center w-full">
                       <Activity className="mr-2 h-4 w-4" />
                       Activity
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/${workspaceSlug}/api-tokens`} className="flex items-center w-full">
+                      <Key className="mr-2 h-4 w-4" />
+                      API tokens
                     </Link>
                   </DropdownMenuItem>
                   {permissions?.canViewMembersList && (

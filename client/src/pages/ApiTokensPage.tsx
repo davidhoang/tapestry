@@ -50,11 +50,11 @@ export default function ApiTokensPage() {
 
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
-      const res = await apiRequest(`/api/workspaces/${workspaceSlug}/api-tokens`, {
+      const data = await apiRequest(`/api/workspaces/${workspaceSlug}/api-tokens`, {
         method: "POST",
         body: { name }
       });
-      return res.json() as Promise<NewTokenResponse>;
+      return data as NewTokenResponse;
     },
     onSuccess: (data) => {
       setNewToken(data.token);

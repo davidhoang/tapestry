@@ -6,8 +6,9 @@ import {
   ListToolsRequestSchema,
   CallToolRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import { db } from "@db";
-import { designers, lists, listDesigners, workspaces, apiTokens } from "@db/schema";
+// Use relative imports for standalone execution outside Replit
+import { db } from "../../db/index.js";
+import { designers, lists, listDesigners, workspaces, apiTokens } from "../../db/schema.js";
 import { eq, and, desc, or, ilike } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";

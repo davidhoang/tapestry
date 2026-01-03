@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, User, Camera, Mail, UserPlus, Building2, LogOut, AlertTriangle } from "lucide-react";
+import { Upload, User, Camera, Mail, UserPlus, Building2, LogOut, AlertTriangle, Download } from "lucide-react";
+import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,6 +62,84 @@ async function uploadProfilePhoto(file: File) {
   }
 
   return response.json();
+}
+
+function ExportDataCard({ userWorkspace }: { userWorkspace: any }) {
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!userWorkspace?.slug) return;
+    
+    setIsExporting(true);
+    try {
+      const response = await fetch(`/api/designers?limit=10000`, {
+        headers: {
+          'x-workspace-slug': userWorkspace.slug,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch designers');
+      }
+      
+      const data = await response.json();
+      const designers = data.designers || [];
+      
+      if (designers.length > 0) {
+        exportToCSV(designers, 'designers', designerExportColumns);
+        toast({
+          title: "Export complete",
+          description: `Exported ${designers.length} designers to CSV`,
+        });
+      } else {
+        toast({
+          title: "No designers",
+          description: "There are no designers to export",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export designers. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Export Data</CardTitle>
+        <CardDescription>
+          Download your designer directory data
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center space-x-3">
+            <Download className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="font-medium">Export Designers</p>
+              <p className="text-sm text-muted-foreground">
+                Download all designer data as a CSV file
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || !userWorkspace?.slug}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {isExporting ? "Exporting..." : "Export CSV"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function ProfilePage() {
@@ -549,6 +628,9 @@ export default function ProfilePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Export Data Card */}
+          <ExportDataCard userWorkspace={userWorkspace} />
 
           {/* Save Button (only shows when photo is selected) */}
           {profilePhoto && (

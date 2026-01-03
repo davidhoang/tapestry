@@ -64,14 +64,11 @@ import {
   ChevronDown,
   Upload,
   X,
-  Download,
 } from "lucide-react";
 import { slugify } from "@/lib/utils";
-import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
-import SavedSearches from "@/components/SavedSearches";
 import { DesignerCardSkeletonGrid } from "@/components/DesignerCardSkeleton";
 import { SelectDesigner } from "@db/schema";
 
@@ -451,60 +448,15 @@ export default function DirectoryPage() {
                   </Button>
                 </div>
 
-                {/* Select All checkbox */}
-                {filteredDesigners.length > 0 && (
-                  <div className="flex items-center gap-2 ml-2">
-                    <Checkbox
-                      checked={isAllSelected}
-                      ref={(el) => {
-                        if (el) {
-                          (el as any).indeterminate = isPartiallySelected;
-                        }
-                      }}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          handleSelectAll();
-                        } else {
-                          handleClearSelection();
-                        }
-                      }}
-                    />
-                    <span className="text-sm text-muted-foreground hidden sm:inline">
-                      Select all
-                    </span>
-                  </div>
-                )}
-                
                 {/* Search bar */}
-                <div className="flex-1 mx-4 flex items-center gap-2">
+                <div className="flex-1 mx-4">
                   <Input
                     placeholder="Search designers by name, title, company, or skills..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 bg-white border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary/20"
                   />
-                  <SavedSearches />
                 </div>
-                
-                {/* Export button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (filteredDesigners.length > 0) {
-                      exportToCSV(filteredDesigners, 'designers', designerExportColumns);
-                      toast({
-                        title: "Export complete",
-                        description: `Exported ${filteredDesigners.length} designers to CSV`,
-                      });
-                    }
-                  }}
-                  disabled={filteredDesigners.length === 0}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
 
                 {/* Add designer dropdown - pushed to the right */}
                 <div className="flex-shrink-0">

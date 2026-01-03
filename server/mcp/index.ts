@@ -207,6 +207,60 @@ const TOOLS = [
       type: "object" as const,
       properties: {}
     }
+  },
+  {
+    name: "enrich_designer",
+    description: "Enrich a designer's profile using AI to find publicly available information about them. This will search for the designer and return suggested enrichments.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID to enrich" }
+      },
+      required: ["designerId"]
+    }
+  },
+  {
+    name: "enrich_designer_from_url",
+    description: "Enrich a designer's profile by extracting information from a URL (LinkedIn profile, portfolio website, Dribbble, Behance, etc.)",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID to enrich" },
+        url: { type: "string", description: "URL to extract information from (LinkedIn, portfolio site, Dribbble, Behance, etc.)" }
+      },
+      required: ["designerId", "url"]
+    }
+  },
+  {
+    name: "apply_enrichment",
+    description: "Apply enrichment suggestions to a designer's profile. Use after enrich_designer or enrich_designer_from_url to apply the suggested changes.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID to update" },
+        email: { type: "string", description: "Email address to set" },
+        phoneNumber: { type: "string", description: "Phone number to set" },
+        location: { type: "string", description: "Location to set" },
+        company: { type: "string", description: "Company to set" },
+        title: { type: "string", description: "Title to set" },
+        linkedIn: { type: "string", description: "LinkedIn URL to set" },
+        website: { type: "string", description: "Website URL to set" },
+        skills: { type: "array", items: { type: "string" }, description: "Skills to add (will merge with existing)" },
+        bio: { type: "string", description: "Bio/description to set" }
+      },
+      required: ["designerId"]
+    }
+  },
+  {
+    name: "bulk_enrich_designers",
+    description: "Enrich multiple designers at once. Returns enrichment suggestions for each designer.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerIds: { type: "array", items: { type: "number" }, description: "Array of designer IDs to enrich" }
+      },
+      required: ["designerIds"]
+    }
   }
 ];
 
@@ -598,6 +652,305 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
 - Total Designers: ${designerCount.length}
 - Total Lists: ${listCount.length}
           `.trim()
+        }]
+      };
+    }
+    
+    case "enrich_designer": {
+      const { designerId } = args as { designerId: number };
+      
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to enrich designers." }],
+          isError: true
+        };
+      }
+      
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+      
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${designerId} not found in your workspace.` }],
+          isError: true
+        };
+      }
+      
+      const { enrichDesignerProfile } = await import('../enrichment.js');
+      
+      try {
+        const enrichmentResult = await enrichDesignerProfile(designer.name, {
+          title: designer.title || undefined,
+          company: designer.company || undefined,
+          email: designer.email || undefined,
+          skills: designer.skills || undefined,
+        });
+        
+        if (!enrichmentResult.success) {
+          return {
+            content: [{ type: "text", text: `Failed to enrich designer: ${enrichmentResult.error || 'Unknown error'}` }],
+            isError: true
+          };
+        }
+        
+        const suggestions = enrichmentResult.data;
+        const formatted = `
+**Enrichment Suggestions for ${designer.name}** (ID: ${designerId})
+
+**Current Profile:**
+- Title: ${designer.title || 'N/A'}
+- Company: ${designer.company || 'N/A'}
+- Location: ${designer.location || 'N/A'}
+- Email: ${designer.email || 'N/A'}
+
+**Suggested Updates:**
+- Name: ${suggestions?.name || 'N/A'}
+- Title: ${suggestions?.title || 'N/A'}
+- Company: ${suggestions?.company || 'N/A'}
+- Location: ${suggestions?.location || 'N/A'}
+- Email: ${suggestions?.email || 'N/A'}
+- Bio: ${suggestions?.bio ? suggestions.bio.substring(0, 200) + '...' : 'N/A'}
+- Skills: ${suggestions?.skills?.join(', ') || 'N/A'}
+- Portfolio: ${suggestions?.portfolioUrl || 'N/A'}
+- LinkedIn: ${suggestions?.socialLinks?.linkedin || 'N/A'}
+- Twitter: ${suggestions?.socialLinks?.twitter || 'N/A'}
+- Dribbble: ${suggestions?.socialLinks?.dribbble || 'N/A'}
+
+**Confidence:** ${((enrichmentResult.confidence || 0) * 100).toFixed(0)}%
+
+Use the \`apply_enrichment\` tool to apply these suggestions to the designer's profile.
+        `.trim();
+        
+        return { content: [{ type: "text", text: formatted }] };
+      } catch (error) {
+        return {
+          content: [{ type: "text", text: `Error enriching designer: ${error instanceof Error ? error.message : 'Unknown error'}` }],
+          isError: true
+        };
+      }
+    }
+    
+    case "enrich_designer_from_url": {
+      const { designerId, url } = args as { designerId: number; url: string };
+      
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to enrich designers." }],
+          isError: true
+        };
+      }
+      
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+      
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${designerId} not found in your workspace.` }],
+          isError: true
+        };
+      }
+      
+      const { enrichFromUrl } = await import('../enrichment.js');
+      
+      try {
+        const enrichmentResult = await enrichFromUrl(url, designer.name);
+        
+        if (!enrichmentResult.success) {
+          return {
+            content: [{ type: "text", text: `Failed to enrich from URL: ${enrichmentResult.error || 'Unknown error'}` }],
+            isError: true
+          };
+        }
+        
+        const suggestions = enrichmentResult.data;
+        const confidence = enrichmentResult.confidence || 0;
+        const hasWarning = enrichmentResult.error && enrichmentResult.success;
+        
+        const formatted = `
+**Enrichment from URL for ${designer.name}** (ID: ${designerId})
+
+**Source URL:** ${url}
+${hasWarning ? `\n**Warning:** ${enrichmentResult.error}\n` : ''}
+**Extracted Information:**
+- Name: ${suggestions?.name || 'N/A'}
+- Title: ${suggestions?.title || 'N/A'}
+- Company: ${suggestions?.company || 'N/A'}
+- Location: ${suggestions?.location || 'N/A'}
+- Email: ${suggestions?.email || 'N/A'}
+- Bio: ${suggestions?.bio ? suggestions.bio.substring(0, 200) + '...' : 'N/A'}
+- Skills: ${suggestions?.skills?.join(', ') || 'N/A'}
+- Portfolio: ${suggestions?.portfolioUrl || 'N/A'}
+- LinkedIn: ${suggestions?.socialLinks?.linkedin || 'N/A'}
+
+**Confidence:** ${(confidence * 100).toFixed(0)}%${confidence < 0.5 ? ' (low - page content could not be fetched)' : ''}
+
+${confidence >= 0.5 ? 'Use the `apply_enrichment` tool to apply these suggestions to the designer\'s profile.' : 'Only URL metadata was extracted. Consider manually reviewing the profile or providing a different URL.'}
+        `.trim();
+        
+        return { content: [{ type: "text", text: formatted }] };
+      } catch (error) {
+        return {
+          content: [{ type: "text", text: `Error enriching from URL: ${error instanceof Error ? error.message : 'Unknown error'}` }],
+          isError: true
+        };
+      }
+    }
+    
+    case "apply_enrichment": {
+      const { designerId, ...updates } = args as { 
+        designerId: number; 
+        email?: string;
+        phoneNumber?: string;
+        location?: string;
+        company?: string;
+        title?: string;
+        linkedIn?: string;
+        website?: string;
+        skills?: string[];
+        bio?: string;
+      };
+      
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to update designers." }],
+          isError: true
+        };
+      }
+      
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+      
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${designerId} not found in your workspace.` }],
+          isError: true
+        };
+      }
+      
+      const updateData: any = {
+        enrichedAt: new Date(),
+        enrichmentSource: 'mcp'
+      };
+      
+      const appliedFields: string[] = [];
+      
+      if (updates.email) { updateData.email = updates.email; appliedFields.push('email'); }
+      if (updates.phoneNumber) { updateData.phoneNumber = updates.phoneNumber; appliedFields.push('phone'); }
+      if (updates.location) { updateData.location = updates.location; appliedFields.push('location'); }
+      if (updates.company) { updateData.company = updates.company; appliedFields.push('company'); }
+      if (updates.title) { updateData.title = updates.title; appliedFields.push('title'); }
+      if (updates.linkedIn) { updateData.linkedIn = updates.linkedIn; appliedFields.push('linkedIn'); }
+      if (updates.website) { updateData.website = updates.website; appliedFields.push('website'); }
+      if (updates.bio) { updateData.description = updates.bio; appliedFields.push('bio'); }
+      if (updates.skills && Array.isArray(updates.skills)) {
+        const existingSkills = designer.skills || [];
+        const skillSet = new Set([...existingSkills, ...updates.skills]);
+        updateData.skills = Array.from(skillSet);
+        appliedFields.push('skills');
+      }
+      
+      if (appliedFields.length === 0) {
+        return {
+          content: [{ type: "text", text: "No fields to update. Provide at least one field to apply." }],
+          isError: true
+        };
+      }
+      
+      const [updated] = await db.update(designers)
+        .set(updateData)
+        .where(eq(designers.id, designerId))
+        .returning();
+      
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Successfully applied enrichment to "${updated.name}" (ID: ${updated.id})\n\n**Updated fields:** ${appliedFields.join(', ')}`
+        }]
+      };
+    }
+    
+    case "bulk_enrich_designers": {
+      const { designerIds } = args as { designerIds: number[] };
+      
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to enrich designers." }],
+          isError: true
+        };
+      }
+      
+      if (!designerIds || designerIds.length === 0) {
+        return {
+          content: [{ type: "text", text: "Please provide at least one designer ID to enrich." }],
+          isError: true
+        };
+      }
+      
+      if (designerIds.length > 10) {
+        return {
+          content: [{ type: "text", text: "Maximum 10 designers can be enriched at once to avoid rate limits." }],
+          isError: true
+        };
+      }
+      
+      const { enrichDesignerProfile } = await import('../enrichment.js');
+      
+      const results: string[] = [];
+      
+      for (const designerId of designerIds) {
+        const designer = await db.query.designers.findFirst({
+          where: and(
+            eq(designers.id, designerId),
+            eq(designers.workspaceId, authContext.workspaceId)
+          )
+        });
+        
+        if (!designer) {
+          results.push(`- **ID ${designerId}**: Not found in workspace`);
+          continue;
+        }
+        
+        try {
+          const enrichmentResult = await enrichDesignerProfile(designer.name, {
+            title: designer.title || undefined,
+            company: designer.company || undefined,
+            email: designer.email || undefined,
+          });
+          
+          if (enrichmentResult.success && enrichmentResult.data) {
+            const data = enrichmentResult.data;
+            const newFields: string[] = [];
+            if (data.title && !designer.title) newFields.push('title');
+            if (data.company && !designer.company) newFields.push('company');
+            if (data.email && !designer.email) newFields.push('email');
+            if (data.location && !designer.location) newFields.push('location');
+            if (data.skills && data.skills.length > 0) newFields.push(`${data.skills.length} skills`);
+            
+            results.push(`- **${designer.name}** (ID: ${designerId}): Found ${newFields.length > 0 ? newFields.join(', ') : 'enrichment data'} - ${((enrichmentResult.confidence || 0) * 100).toFixed(0)}% confidence`);
+          } else {
+            results.push(`- **${designer.name}** (ID: ${designerId}): No enrichment data found`);
+          }
+        } catch (error) {
+          results.push(`- **${designer.name}** (ID: ${designerId}): Error - ${error instanceof Error ? error.message : 'Unknown'}`);
+        }
+      }
+      
+      return {
+        content: [{
+          type: "text",
+          text: `**Bulk Enrichment Results**\n\nProcessed ${designerIds.length} designer(s):\n\n${results.join('\n')}\n\nUse \`enrich_designer\` on individual designers to see full suggestions, then \`apply_enrichment\` to apply them.`
         }]
       };
     }

@@ -193,6 +193,176 @@ export interface PDLEnrichmentResult {
   likelihood?: number;
 }
 
+export async function enrichFromUrl(
+  url: string,
+  designerName?: string
+): Promise<EnrichmentResult> {
+  try {
+    // First, attempt to fetch the actual page content
+    let pageContent = '';
+    let fetchSucceeded = false;
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; TapestryBot/1.0; +https://tapestry.design)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const html = await response.text();
+        // Extract text content, removing scripts and styles
+        pageContent = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .substring(0, 15000); // Limit content size for API
+        fetchSucceeded = true;
+      }
+    } catch (fetchError) {
+      console.log('Could not fetch URL directly, will analyze URL pattern:', fetchError);
+      // Continue with URL-based analysis if fetch fails (common for LinkedIn, etc.)
+    }
+
+    const prompt = fetchSucceeded
+      ? `You are a professional researcher specializing in extracting information about designers and creative professionals.
+
+I have fetched the content from "${url}"${designerName ? ` for a designer named "${designerName}"` : ''}. Please extract professional information from this page content.
+
+PAGE CONTENT:
+${pageContent}
+
+Extract the following information if available:
+- Full name
+- Professional title and current role
+- Company/workplace
+- Professional bio
+- Skills and expertise
+- Location
+- Contact information
+- Social media profiles
+
+Only extract information that is ACTUALLY PRESENT in the content above. Do not guess or fabricate information.`
+      : `You are a professional researcher. The URL "${url}"${designerName ? ` for "${designerName}"` : ''} could not be fetched directly (this is common for LinkedIn and some portfolio sites that block bots).
+
+Based ONLY on the URL structure, identify:
+1. What type of profile this is (LinkedIn, Dribbble, Behance, GitHub, personal portfolio, etc.)
+2. Any username or identifier visible in the URL
+
+DO NOT fabricate profile details. Only report what can be definitively determined from the URL itself.`;
+
+    const systemPrompt = fetchSucceeded
+      ? "You are a professional researcher. Extract only information that is explicitly present in the provided page content. Never fabricate or guess information. If information is not clearly stated, return null for that field."
+      : "You are a professional researcher. Since the page content could not be fetched, only report URL metadata (type of site, username from URL). Set all profile fields to null since they cannot be verified without fetching the page.";
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt + `
+
+Respond with JSON in this exact format:
+{
+  "name": "Full professional name or null",
+  "title": "Current job title or null",
+  "company": "Current company or null", 
+  "bio": "Professional bio/summary or null",
+  "experience": "Years of experience and key highlights or null",
+  "skills": ["array", "of", "skills"] or null,
+  "portfolioUrl": "Portfolio website URL or null",
+  "email": "Professional email or null",
+  "phone": "Phone number or null", 
+  "location": "City, Country or null",
+  "availability": "Availability status or null",
+  "rate": "Hourly/project rate or null",
+  "socialLinks": {
+    "linkedin": "LinkedIn URL or null",
+    "twitter": "Twitter URL or null", 
+    "dribbble": "Dribbble URL or null",
+    "behance": "Behance URL or null",
+    "github": "GitHub URL or null"
+  },
+  "additionalInfo": "Any other relevant professional information or null",
+  "confidence": 0.0-1.0,
+  "sources": ["source description"],
+  "fetchedContent": ${fetchSucceeded}
+}` }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    // If we couldn't fetch the content, return limited info with low confidence
+    if (!fetchSucceeded) {
+      return {
+        success: true,
+        data: {
+          name: designerName || '',
+          socialLinks: {
+            linkedin: url.includes('linkedin') ? url : undefined,
+            dribbble: url.includes('dribbble') ? url : undefined,
+            behance: url.includes('behance') ? url : undefined,
+            github: url.includes('github') ? url : undefined,
+          },
+          portfolioUrl: !url.includes('linkedin') && !url.includes('dribbble') && !url.includes('behance') && !url.includes('github') ? url : undefined,
+        },
+        confidence: 0.2,
+        sources: [url],
+        error: 'Could not fetch page content. Only URL metadata extracted. The profile may require manual review.'
+      };
+    }
+    
+    const cleanedData: DesignerEnrichmentData = {
+      name: result.name || designerName || '',
+      title: result.title || undefined,
+      company: result.company || undefined,
+      bio: result.bio || undefined,
+      experience: result.experience || undefined,
+      skills: Array.isArray(result.skills) ? result.skills : undefined,
+      portfolioUrl: result.portfolioUrl || (url.includes('linkedin') ? undefined : url),
+      email: result.email || undefined,
+      phone: result.phone || undefined,
+      location: result.location || undefined,
+      availability: result.availability || undefined,
+      rate: result.rate || undefined,
+      socialLinks: {
+        linkedin: url.includes('linkedin') ? url : result.socialLinks?.linkedin,
+        twitter: result.socialLinks?.twitter,
+        dribbble: url.includes('dribbble') ? url : result.socialLinks?.dribbble,
+        behance: url.includes('behance') ? url : result.socialLinks?.behance,
+        github: url.includes('github') ? url : result.socialLinks?.github,
+      },
+      additionalInfo: result.additionalInfo || undefined
+    };
+
+    return {
+      success: true,
+      data: cleanedData,
+      confidence: Math.max(0, Math.min(1, result.confidence || 0.7)),
+      sources: [url]
+    };
+
+  } catch (error) {
+    console.error('URL enrichment error:', error);
+    return {
+      success: false,
+      confidence: 0,
+      error: error instanceof Error ? error.message : 'Failed to enrich from URL'
+    };
+  }
+}
+
 export async function enrichWithPeopleDataLabs(params: {
   name?: string;
   email?: string;

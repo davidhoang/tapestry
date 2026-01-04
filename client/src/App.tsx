@@ -35,6 +35,7 @@ const WorkspaceMembersPage = lazy(() => import("./pages/WorkspaceMembersPage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
 const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const ApiTokensPage = lazy(() => import("./pages/ApiTokensPage"));
+const RecommendationsPage = lazy(() => import("./pages/RecommendationsPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -88,9 +89,9 @@ function DefaultRoute() {
       const defaultWorkspace = sortedWorkspaces[0];
       const canEdit = ['owner', 'admin', 'editor'].includes(defaultWorkspace.role);
       
-      // Redirect to inbox for users who can edit, directory for view-only
+      // Redirect to home for users who can edit, directory for view-only
       const targetPath = canEdit 
-        ? `/${defaultWorkspace.slug}/inbox` 
+        ? `/${defaultWorkspace.slug}/home` 
         : `/${defaultWorkspace.slug}/directory`;
       
       setHasRedirected(true);
@@ -185,12 +186,13 @@ function App() {
                     <Route path="/designers/:id" component={DesignerDetailsPage} />
                     
                     {/* Workspace-specific routes */}
-                    <Route path="/:workspaceSlug" component={DirectoryPage} />
+                    <Route path="/:workspaceSlug" component={RecommendationsPage} />
                     <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
                     <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
                     <Route path="/:workspaceSlug/search" component={SearchResultsPage} />
                     <Route path="/:workspaceSlug/lists" component={ListsPage} />
                     <Route path="/:workspaceSlug/inbox" component={InboxPage} />
+                    <Route path="/:workspaceSlug/home" component={RecommendationsPage} />
                     <Route path="/:workspaceSlug/matchmaker" component={MatchmakerPage} />
                     <Route path="/:workspaceSlug/hiring" component={HiringPage} />
                     <Route path="/:workspaceSlug/activity" component={ActivityPage} />

@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity, Key } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity, Key, Home } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -119,14 +119,20 @@ export default function Navigation() {
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 mx-auto">
         {/* Left: Logo + Navigation Links */}
         <div className="flex items-center">
-          <Link to={user ? `/${workspaceSlug}/inbox` : "/"} className="mr-6 flex items-center space-x-2">
+          <Link to={user ? `/${workspaceSlug}/home` : "/"} className="mr-6 flex items-center space-x-2">
             <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
           </Link>
           {user && (
             <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
               <Link
+                to={`/${workspaceSlug}/home`}
+                className={location === `/${workspaceSlug}/home` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Home
+              </Link>
+              <Link
                 to={`/${workspaceSlug}/matchmaker`}
-                className={location === `/${workspaceSlug}/matchmaker` || location === "/" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                className={location === `/${workspaceSlug}/matchmaker` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
                 Matchmaker
               </Link>
@@ -262,9 +268,20 @@ export default function Navigation() {
                     </div>
                     
                     <Link
+                      to={`/${workspaceSlug}/home`}
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === `/${workspaceSlug}/home`
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Home
+                    </Link>
+                    <Link
                       to={`/${workspaceSlug}/matchmaker`}
                       className={`text-lg py-3 px-4 rounded-lg transition-colors ${
-                        location === `/${workspaceSlug}/matchmaker` || location === "/"
+                        location === `/${workspaceSlug}/matchmaker`
                           ? "text-gray-900 bg-gray-100 font-bold" 
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
                       }`}

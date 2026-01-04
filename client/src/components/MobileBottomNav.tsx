@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useUser } from "../hooks/use-user";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspacePermissions } from "../hooks/use-permissions";
-import { Inbox, Users, List, Briefcase, User } from "lucide-react";
+import { Home, Users, List, Briefcase, User } from "lucide-react";
 
 export default function MobileBottomNav() {
   const [location] = useLocation();
@@ -23,9 +23,9 @@ export default function MobileBottomNav() {
 
   const navItems = [
     {
-      label: "Inbox",
-      icon: Inbox,
-      path: `/${workspaceSlug}/inbox`,
+      label: "Home",
+      icon: Home,
+      path: `/${workspaceSlug}/home`,
       show: true,
     },
     {

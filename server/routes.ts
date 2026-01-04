@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota } from "@db/schema";
 import { analyzeCapture } from "./capture-analyzer";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
@@ -5623,26 +5623,10 @@ Analyze this role and recommend matching designers, considering feedback pattern
                 throw new Error("Designer name is required to create a profile from capture");
               }
               
-              // Generate unique slug for the designer
-              let designerSlug = slugify(extractedData.name);
-              let slugCounter = 1;
-              while (true) {
-                const existingSlug = await tx.query.designers.findFirst({
-                  where: and(
-                    eq(designers.slug, designerSlug),
-                    eq(designers.workspaceId, workspaceId)
-                  ),
-                });
-                if (!existingSlug) break;
-                designerSlug = `${slugify(extractedData.name)}-${slugCounter}`;
-                slugCounter++;
-              }
-              
               // Create new designer profile with required field defaults
               const [newDesigner] = await tx.insert(designers).values({
                 workspaceId,
                 name: extractedData.name,
-                slug: designerSlug,
                 title: extractedData.title || 'Designer',
                 level: extractedData.level || 'Mid-level',
                 company: extractedData.company || null,
@@ -5658,7 +5642,6 @@ Analyze this role and recommend matching designers, considering feedback pattern
                 action: 'created_designer',
                 designerId: newDesigner.id,
                 designerName: newDesigner.name,
-                designerSlug: newDesigner.slug,
                 captureEntryId: createCaptureMetadata.captureEntryId,
                 annotationId: createCaptureMetadata.annotationId,
                 fieldsPopulated: Object.keys(extractedData).filter(k => extractedData[k]),
@@ -5804,6 +5787,536 @@ Analyze this role and recommend matching designers, considering feedback pattern
       }
       res.status(500).json({ error: "Failed to apply recommendation" });
     }
+  }));
+
+  // Home Recommendations API - New recommendation types for home page
+
+  // GET /api/home/recommendations - Fetch recommendations with daily quota enforcement
+  app.get("/api/home/recommendations", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { workspaceId, userId } = workspaceContext;
+    const loadMore = req.query.loadMore === 'true';
+
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get or create daily quota record
+    let quotaRecord = await db.query.dailyRecommendationQuota.findFirst({
+      where: and(
+        eq(dailyRecommendationQuota.workspaceId, workspaceId),
+        eq(dailyRecommendationQuota.userId, userId),
+        eq(dailyRecommendationQuota.date, today)
+      ),
+    });
+
+    if (!quotaRecord) {
+      const [newQuota] = await db.insert(dailyRecommendationQuota).values({
+        workspaceId,
+        userId,
+        date: today,
+        recommendationsShown: 0,
+      }).returning();
+      quotaRecord = newQuota;
+    }
+
+    const currentShown = quotaRecord.recommendationsShown || 0;
+
+    // Check quota - if already shown 5 and not loading more, return empty
+    if (currentShown >= 5 && !loadMore) {
+      return res.json({
+        recommendations: [],
+        quota: {
+          shown: currentShown,
+          remaining: 0,
+          date: today,
+        },
+      });
+    }
+
+    // Generate recommendations filtered to new types only
+    const newTypes = ['recommend_designer', 'reach_out', 'update_profile'];
+    const recommendations = await recommendationEngine.generate({
+      workspaceId,
+      userId,
+      types: newTypes,
+      limit: 5,
+      forceRefresh: loadMore,
+    });
+
+    // Fetch full recommendation data from database
+    const recommendationIds = recommendations.map(r => r.id).filter((id): id is number => id !== undefined);
+    let fullRecommendations: any[] = [];
+
+    if (recommendationIds.length > 0) {
+      fullRecommendations = await db.query.inboxRecommendations.findMany({
+        where: and(
+          eq(inboxRecommendations.workspaceId, workspaceId),
+          inArray(inboxRecommendations.id, recommendationIds),
+          inArray(inboxRecommendations.recommendationType, newTypes as any)
+        ),
+        with: {
+          candidates: {
+            with: {
+              designer: true,
+            },
+            orderBy: [asc(inboxRecommendationCandidates.rank)],
+          },
+        },
+        orderBy: [desc(inboxRecommendations.score)],
+      });
+    }
+
+    // Update quota if we're showing new recommendations
+    if (fullRecommendations.length > 0) {
+      const newShown = currentShown + fullRecommendations.length;
+      await db.update(dailyRecommendationQuota)
+        .set({ recommendationsShown: newShown })
+        .where(eq(dailyRecommendationQuota.id, quotaRecord.id));
+
+      return res.json({
+        recommendations: fullRecommendations,
+        quota: {
+          shown: newShown,
+          remaining: Math.max(0, 5 - newShown),
+          date: today,
+        },
+      });
+    }
+
+    res.json({
+      recommendations: fullRecommendations,
+      quota: {
+        shown: currentShown,
+        remaining: Math.max(0, 5 - currentShown),
+        date: today,
+      },
+    });
+  }));
+
+  // POST /api/home/recommendations/:id/accept - Accept a recommendation and apply the action
+  app.post("/api/home/recommendations/:id/accept", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const permissions = (req as any).permissions;
+    const { workspaceId, userId } = workspaceContext;
+    const recommendationId = parseInt(req.params.id);
+    const { notes, targetListId } = req.body;
+
+    // Fetch and verify recommendation with candidates
+    const recommendation = await db.query.inboxRecommendations.findFirst({
+      where: and(
+        eq(inboxRecommendations.id, recommendationId),
+        eq(inboxRecommendations.workspaceId, workspaceId)
+      ),
+      with: {
+        candidates: {
+          with: {
+            designer: true,
+          },
+          orderBy: [asc(inboxRecommendationCandidates.rank)],
+        },
+      },
+    });
+
+    if (!recommendation) {
+      return res.status(404).json({ error: "Recommendation not found" });
+    }
+
+    if (recommendation.status === 'applied') {
+      return res.status(400).json({ error: "Recommendation is already applied" });
+    }
+
+    if (recommendation.status === 'dismissed') {
+      return res.status(400).json({ error: "Cannot apply dismissed recommendations" });
+    }
+
+    let appliedResult: any = null;
+
+    await db.transaction(async (tx) => {
+      switch (recommendation.recommendationType) {
+        case 'recommend_designer':
+          if (!permissions.canEditLists) {
+            throw new Error("Permission denied: Cannot edit lists");
+          }
+
+          const designerToAdd = recommendation.designerId || (recommendation.candidates.length > 0 ? recommendation.candidates[0].designerId : null);
+          if (!designerToAdd) {
+            throw new Error("No designer associated with this recommendation");
+          }
+
+          // Get designer info
+          const designer = await tx.query.designers.findFirst({
+            where: eq(designers.id, designerToAdd),
+          });
+
+          if (!designer) {
+            throw new Error("Designer not found");
+          }
+
+          // If targetListId provided, add to that list
+          if (targetListId) {
+            const list = await tx.query.lists.findFirst({
+              where: and(
+                eq(lists.id, targetListId),
+                eq(lists.workspaceId, workspaceId)
+              ),
+            });
+
+            if (!list) {
+              throw new Error("Target list not found");
+            }
+
+            // Check if designer already in list
+            const existing = await tx.query.listDesigners.findFirst({
+              where: and(
+                eq(listDesigners.listId, targetListId),
+                eq(listDesigners.designerId, designerToAdd)
+              ),
+            });
+
+            if (!existing) {
+              await tx.insert(listDesigners).values({
+                listId: targetListId,
+                designerId: designerToAdd,
+                notes: notes || 'Added via AI recommendation',
+              });
+            }
+
+            appliedResult = {
+              action: 'added_to_list',
+              designerId: designerToAdd,
+              designerName: designer.name,
+              listId: targetListId,
+              listName: list.name,
+            };
+          } else {
+            // Create a new list for the designer or add to default
+            const metadata = recommendation.metadata as any;
+            const listName = metadata?.suggestedListName || `${designer.name} - Recommended`;
+            let listSlug = slugify(listName);
+            let counter = 1;
+
+            while (true) {
+              const existingSlug = await tx.query.lists.findFirst({
+                where: and(
+                  eq(lists.slug, listSlug),
+                  eq(lists.workspaceId, workspaceId)
+                ),
+              });
+              if (!existingSlug) break;
+              listSlug = `${slugify(listName)}-${counter}`;
+              counter++;
+            }
+
+            const [newList] = await tx.insert(lists).values({
+              userId,
+              workspaceId,
+              name: listName,
+              slug: listSlug,
+              description: `Created from AI recommendation`,
+            }).returning();
+
+            await tx.insert(listDesigners).values({
+              listId: newList.id,
+              designerId: designerToAdd,
+              notes: notes || 'Added via AI recommendation',
+            });
+
+            appliedResult = {
+              action: 'created_list_with_designer',
+              designerId: designerToAdd,
+              designerName: designer.name,
+              listId: newList.id,
+              listName: newList.name,
+            };
+          }
+          break;
+
+        case 'reach_out':
+          const outreachDesignerId = recommendation.designerId || (recommendation.candidates.length > 0 ? recommendation.candidates[0].designerId : null);
+          if (!outreachDesignerId) {
+            throw new Error("No designer associated with this recommendation");
+          }
+
+          const outreachDesigner = await tx.query.designers.findFirst({
+            where: eq(designers.id, outreachDesignerId),
+          });
+
+          if (!outreachDesigner) {
+            throw new Error("Designer not found");
+          }
+
+          // Create designer outreach record
+          const [outreachRecord] = await tx.insert(designerOutreach).values({
+            workspaceId,
+            designerId: outreachDesignerId,
+            userId,
+            outreachType: 'recommendation',
+            notes: notes || 'Initiated via AI recommendation',
+          }).returning();
+
+          appliedResult = {
+            action: 'outreach_initiated',
+            designerId: outreachDesignerId,
+            designerName: outreachDesigner.name,
+            outreachId: outreachRecord.id,
+          };
+          break;
+
+        case 'update_profile':
+          if (!permissions.canEditDesigners) {
+            throw new Error("Permission denied: Cannot edit designers");
+          }
+
+          const updateMetadata = recommendation.metadata as any;
+          const profileDesignerId = recommendation.designerId;
+
+          if (!profileDesignerId) {
+            throw new Error("No designer associated with this recommendation");
+          }
+
+          const existingDesigner = await tx.query.designers.findFirst({
+            where: and(
+              eq(designers.id, profileDesignerId),
+              eq(designers.workspaceId, workspaceId)
+            ),
+          });
+
+          if (!existingDesigner) {
+            throw new Error("Designer not found or access denied");
+          }
+
+          // Apply suggested updates from metadata
+          const updates: any = {};
+          const fieldsUpdated: string[] = [];
+
+          if (updateMetadata?.suggestedUpdates) {
+            for (const [field, value] of Object.entries(updateMetadata.suggestedUpdates)) {
+              if (value && !(existingDesigner as any)[field]) {
+                updates[field] = value;
+                fieldsUpdated.push(field);
+              }
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            updates.updatedAt = new Date();
+            await tx.update(designers)
+              .set(updates)
+              .where(eq(designers.id, profileDesignerId));
+          }
+
+          appliedResult = {
+            action: 'profile_updated',
+            designerId: profileDesignerId,
+            designerName: existingDesigner.name,
+            fieldsUpdated,
+          };
+          break;
+
+        default:
+          throw new Error(`Unsupported recommendation type: ${recommendation.recommendationType}`);
+      }
+
+      // Update recommendation status
+      await tx.update(inboxRecommendations)
+        .set({
+          status: 'applied',
+          appliedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId));
+
+      // Log apply event
+      await tx.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'applied',
+        description: `Home recommendation accepted: ${appliedResult.action}`,
+        metadata: {
+          result: appliedResult,
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      } as any);
+    });
+
+    res.json({
+      success: true,
+      applied: true,
+      result: appliedResult,
+    });
+  }));
+
+  // POST /api/home/recommendations/:id/reject - Reject a recommendation with RLHF feedback
+  app.post("/api/home/recommendations/:id/reject", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { workspaceId, userId } = workspaceContext;
+    const recommendationId = parseInt(req.params.id);
+    const { reason, notes } = req.body;
+
+    // Validate reason
+    const validReasons = ['not_relevant', 'already_contacted', 'not_qualified', 'too_expensive', 'location_mismatch', 'other'];
+    if (!reason || !validReasons.includes(reason)) {
+      return res.status(400).json({ 
+        error: "Invalid reason",
+        validReasons,
+      });
+    }
+
+    // Fetch and verify recommendation
+    const recommendation = await db.query.inboxRecommendations.findFirst({
+      where: and(
+        eq(inboxRecommendations.id, recommendationId),
+        eq(inboxRecommendations.workspaceId, workspaceId)
+      ),
+    });
+
+    if (!recommendation) {
+      return res.status(404).json({ error: "Recommendation not found" });
+    }
+
+    if (recommendation.status === 'dismissed') {
+      return res.status(400).json({ error: "Recommendation is already dismissed" });
+    }
+
+    await db.transaction(async (tx) => {
+      // Create RLHF feedback record if designer is associated
+      if (recommendation.designerId) {
+        // Fetch designer for snapshot
+        const feedbackDesigner = await tx.query.designers.findFirst({
+          where: eq(designers.id, recommendation.designerId),
+        });
+
+        await tx.insert(recommendationFeedback).values({
+          userId,
+          workspaceId,
+          designerId: recommendation.designerId!,
+          matchScore: recommendation.score || 0,
+          feedbackType: reason,
+          comments: notes || null,
+          aiReasoning: recommendation.description || undefined,
+          designerSnapshot: feedbackDesigner ? {
+            name: feedbackDesigner.name,
+            title: feedbackDesigner.title,
+            skills: feedbackDesigner.skills,
+            level: feedbackDesigner.level,
+          } : undefined,
+        });
+      }
+
+      // Update recommendation status
+      await tx.update(inboxRecommendations)
+        .set({
+          status: 'dismissed',
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId));
+
+      // Log RLHF event
+      await tx.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'dismissed',
+        description: `Home recommendation rejected: ${reason}`,
+        metadata: {
+          reason,
+          notes: notes || null,
+          previousStatus: recommendation.status,
+          designerId: recommendation.designerId,
+          rlhfFeedbackRecorded: !!recommendation.designerId,
+        },
+      } as any);
+    });
+
+    res.json({
+      success: true,
+      dismissed: true,
+      reason,
+    });
+  }));
+
+  // POST /api/user/location - Save user's location with consent
+  app.post("/api/user/location", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const userId = (req as any).user.id;
+    const { latitude, longitude, city, country, consent } = req.body;
+
+    if (typeof consent !== 'boolean') {
+      return res.status(400).json({ error: "Consent field is required" });
+    }
+
+    // Check if user already has a location record
+    const existingLocation = await db.query.userLocations.findFirst({
+      where: eq(userLocations.userId, userId),
+    });
+
+    let savedLocation;
+
+    if (consent === false) {
+      // If consent is revoked, clear location data
+      if (existingLocation) {
+        [savedLocation] = await db.update(userLocations)
+          .set({
+            latitude: null,
+            longitude: null,
+            city: null,
+            country: null,
+            consentGranted: false,
+            lastUpdated: new Date(),
+          })
+          .where(eq(userLocations.userId, userId))
+          .returning();
+      } else {
+        [savedLocation] = await db.insert(userLocations).values({
+          userId,
+          consentGranted: false,
+        }).returning();
+      }
+    } else {
+      // Consent granted - save location data
+      if (!latitude || !longitude) {
+        return res.status(400).json({ error: "Latitude and longitude are required when consent is granted" });
+      }
+
+      if (existingLocation) {
+        [savedLocation] = await db.update(userLocations)
+          .set({
+            latitude,
+            longitude,
+            city: city || null,
+            country: country || null,
+            consentGranted: true,
+            lastUpdated: new Date(),
+          })
+          .where(eq(userLocations.userId, userId))
+          .returning();
+      } else {
+        [savedLocation] = await db.insert(userLocations).values({
+          userId,
+          latitude,
+          longitude,
+          city: city || null,
+          country: country || null,
+          consentGranted: true,
+        }).returning();
+      }
+    }
+
+    res.json(savedLocation);
+  }));
+
+  // GET /api/user/location - Get user's current location if consented
+  app.get("/api/user/location", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const userId = (req as any).user.id;
+
+    const location = await db.query.userLocations.findFirst({
+      where: eq(userLocations.userId, userId),
+    });
+
+    if (!location || !location.consentGranted) {
+      return res.json({ consentGranted: false });
+    }
+
+    res.json(location);
   }));
 
   // Saved Searches API

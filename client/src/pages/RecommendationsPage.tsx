@@ -29,9 +29,7 @@ import {
   Loader2,
   UserPlus,
   Mail,
-  Edit,
   MapPin,
-  ChevronDown,
   Inbox,
 } from "lucide-react";
 import { formatDistance } from "date-fns";
@@ -66,7 +64,7 @@ interface Recommendation {
   id: number;
   workspaceId: number;
   userId: number;
-  recommendationType: "recommend_designer" | "reach_out" | "update_profile";
+  recommendationType: "recommend_designer" | "reach_out";
   title: string;
   description?: string;
   priority: "low" | "medium" | "high" | "urgent";
@@ -180,17 +178,6 @@ function RecommendationCard({
           subtitle: contactedText,
           actionLabel: "Schedule outreach",
           icon: <Mail className="h-4 w-4 mr-2" />,
-        };
-      case "update_profile":
-        const issues = recommendation.metadata?.issues || [];
-        const updates = issues
-          .filter((i) => i.type !== "missing_field")
-          .map((i) => i.description);
-        return {
-          subtitle:
-            updates.length > 0 ? updates.join(", ") : "Profile updates available",
-          actionLabel: "Apply updates",
-          icon: <Edit className="h-4 w-4 mr-2" />,
         };
       default:
         return {
@@ -330,8 +317,7 @@ function EmptyState({ onLoadMore, isLoading }: EmptyStateProps) {
       </div>
       <h3 className="text-xl font-semibold mb-2">No recommendations for today</h3>
       <p className="text-muted-foreground max-w-md mb-6">
-        Check back later for new designer recommendations, outreach suggestions,
-        and profile updates.
+        Check back later for designer matches and people to stay in touch with.
       </p>
       <Button variant="outline" onClick={onLoadMore} disabled={isLoading}>
         {isLoading ? (

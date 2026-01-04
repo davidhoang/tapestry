@@ -5821,19 +5821,19 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
     const currentShown = quotaRecord.recommendationsShown || 0;
 
-    // Generate recommendations filtered to new types only
-    // This persists recommendations to the database (unless forceRefresh is true)
-    const newTypes = ['recommend_designer', 'reach_out', 'update_profile'];
+    // Generate recommendations filtered to actionable types only
+    // Focus on outreach and designer matches - not profile maintenance
+    const actionableTypes = ['recommend_designer', 'reach_out'];
     await recommendationEngine.generate({
       workspaceId,
       userId,
-      types: newTypes,
+      types: actionableTypes,
       limit: 10,
       forceRefresh: false, // Always persist so we can fetch from DB
     });
 
     // Fetch recommendations from database with full designer data
-    // Get 'new' status recommendations of the appropriate types
+    // Get 'new' status recommendations of the actionable types
     // Limit to 5 normally, or more if loading more
     const limit = loadMore ? currentShown + 5 : 5;
     const fullRecommendations = await db.query.inboxRecommendations.findMany({
@@ -5841,7 +5841,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
         eq(inboxRecommendations.workspaceId, workspaceId),
         eq(inboxRecommendations.userId, userId),
         eq(inboxRecommendations.status, 'new'),
-        inArray(inboxRecommendations.recommendationType, newTypes as any)
+        inArray(inboxRecommendations.recommendationType, actionableTypes as any)
       ),
       with: {
         candidates: {

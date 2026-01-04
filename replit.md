@@ -62,14 +62,14 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **List Management**: Curated designer lists, sharing capabilities (public/private), email sharing (Resend), collaborative building.
 - **Hiring Feature**: Job posting, AI-powered designer matching, job management, status tracking.
 - **Recruiting Board**: Visual kanban board for tracking designers through recruitment pipeline. Features drag-and-drop functionality, customizable columns (default: Backlog, Outreach, Interviewing, Offer, Hired), bulk designer import from lists or directory, notes tracking. Built with @dnd-kit for smooth drag-and-drop experience.
-- **Recommendations Home** (January 2026): Unified home experience that consolidates actionable daily suggestions. Features:
+- **Recommendations Home** (January 2026): Unified home experience for actionable daily suggestions focused on relationship-building. Features:
   - Daily quota system: 5 recommendations shown per day with "Load more" option
-  - Three recommendation types: recommend_designer (job matches), reach_out (outreach suggestions), update_profile (stale profiles)
+  - Two recommendation types: recommend_designer (job matches), reach_out (staying in touch)
   - RecommendDesignerGenerator: AI-powered matching using OpenAI to score designers against active job descriptions
   - ReachOutGenerator: Suggests outreach based on last contact date and location proximity
-  - Location-based suggestions: Users can optionally share location for "in town" recommendations via LocationConsentModal
+  - Location-based suggestions: Users can optionally share location for "in town" recommendations (emphasized more on mobile)
   - RLHF feedback loop: Rejection reasons are logged for continuous improvement
-  - Accept/Reject workflows with immediate actions (add to shortlist, schedule outreach, apply updates)
+  - Accept/Reject workflows with immediate actions (add to shortlist, schedule outreach)
   - API endpoints: GET /api/home/recommendations, POST /api/home/recommendations/:id/accept, POST /api/home/recommendations/:id/reject
   - Database tables: dailyRecommendationQuota, designerOutreach, userLocations
 - **Inbox Feature (Legacy)**: Previous recommendation system for workspace maintenance. Still available at /:workspaceSlug/inbox. Supports add_to_list, create_list, update_profile recommendation types.

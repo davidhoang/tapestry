@@ -9,7 +9,9 @@ export const recommendationTypeEnum = pgEnum('recommendation_type', [
   'create_list', 
   'update_profile',
   'capture_create_designer',
-  'capture_enrich_profile'
+  'capture_enrich_profile',
+  'recommend_designer',
+  'reach_out'
 ]);
 
 export const captureContentTypeEnum = pgEnum('capture_content_type', [
@@ -44,6 +46,18 @@ export const users = pgTable("users", {
   hasCompletedOnboarding: boolean("has_completed_onboarding").default(false),
   onboardingDebugMode: boolean("onboarding_debug_mode").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userLocations = pgTable("user_locations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
+  city: text("city"),
+  country: text("country"),
+  consentGranted: boolean("consent_granted").default(false),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const workspaces = pgTable("workspaces", {
@@ -126,6 +140,31 @@ export const listDesigners = pgTable("list_designers", {
   notes: text("notes"),
   addedAt: timestamp("added_at").defaultNow(),
 });
+
+export const designerOutreach = pgTable("designer_outreach", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  outreachType: text("outreach_type").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("designer_outreach_workspace_id_idx").on(table.workspaceId),
+  designerIdIdx: index("designer_outreach_designer_id_idx").on(table.designerId),
+  createdAtIdx: index("designer_outreach_created_at_idx").on(table.createdAt),
+}));
+
+export const dailyRecommendationQuota = pgTable("daily_recommendation_quota", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  date: text("date").notNull(),
+  recommendationsShown: integer("recommendations_shown").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueQuota: uniqueIndex("daily_recommendation_quota_unique_idx").on(table.workspaceId, table.userId, table.date),
+}));
 
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
@@ -448,6 +487,39 @@ export const inboxRecommendationEvents = pgTable("inbox_recommendation_events", 
 });
 
 
+export const userLocationRelations = relations(userLocations, ({ one }) => ({
+  user: one(users, {
+    fields: [userLocations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const designerOutreachRelations = relations(designerOutreach, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [designerOutreach.workspaceId],
+    references: [workspaces.id],
+  }),
+  designer: one(designers, {
+    fields: [designerOutreach.designerId],
+    references: [designers.id],
+  }),
+  user: one(users, {
+    fields: [designerOutreach.userId],
+    references: [users.id],
+  }),
+}));
+
+export const dailyRecommendationQuotaRelations = relations(dailyRecommendationQuota, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [dailyRecommendationQuota.workspaceId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [dailyRecommendationQuota.userId],
+    references: [users.id],
+  }),
+}));
+
 export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],
@@ -464,6 +536,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   savedSearches: many(savedSearches),
   activities: many(workspaceActivities),
   captureEntries: many(captureEntries),
+  designerOutreach: many(designerOutreach),
 }));
 
 export const workspaceMemberRelations = relations(workspaceMembers, ({ one }) => ({
@@ -995,3 +1068,18 @@ export const insertApiTokenSchema = createInsertSchema(apiTokens);
 export const selectApiTokenSchema = createSelectSchema(apiTokens);
 export type InsertApiToken = typeof apiTokens.$inferInsert;
 export type SelectApiToken = typeof apiTokens.$inferSelect;
+
+export const insertUserLocationSchema = createInsertSchema(userLocations);
+export const selectUserLocationSchema = createSelectSchema(userLocations);
+export type InsertUserLocation = typeof userLocations.$inferInsert;
+export type SelectUserLocation = typeof userLocations.$inferSelect;
+
+export const insertDesignerOutreachSchema = createInsertSchema(designerOutreach);
+export const selectDesignerOutreachSchema = createSelectSchema(designerOutreach);
+export type InsertDesignerOutreach = typeof designerOutreach.$inferInsert;
+export type SelectDesignerOutreach = typeof designerOutreach.$inferSelect;
+
+export const insertDailyRecommendationQuotaSchema = createInsertSchema(dailyRecommendationQuota);
+export const selectDailyRecommendationQuotaSchema = createSelectSchema(dailyRecommendationQuota);
+export type InsertDailyRecommendationQuota = typeof dailyRecommendationQuota.$inferInsert;
+export type SelectDailyRecommendationQuota = typeof dailyRecommendationQuota.$inferSelect;

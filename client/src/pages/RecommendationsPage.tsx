@@ -486,6 +486,9 @@ export default function RecommendationsPage() {
   // Fetch lists for the lists section
   const { data: listsData, isLoading: isLoadingLists } = useQuery<any[]>({
     queryKey: ["/api/lists", workspaceSlug],
+    queryFn: async () => {
+      return apiRequest("/api/lists", { workspaceSlug });
+    },
     enabled: !!workspaceSlug,
   });
 

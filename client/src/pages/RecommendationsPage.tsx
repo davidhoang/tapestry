@@ -317,17 +317,28 @@ function RecommendationCard({
   );
 }
 
-function EmptyState() {
+interface EmptyStateProps {
+  onLoadMore: () => void;
+  isLoading: boolean;
+}
+
+function EmptyState({ onLoadMore, isLoading }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="rounded-full bg-muted p-6 mb-6">
         <Inbox className="h-12 w-12 text-muted-foreground" />
       </div>
       <h3 className="text-xl font-semibold mb-2">No recommendations for today</h3>
-      <p className="text-muted-foreground max-w-md">
+      <p className="text-muted-foreground max-w-md mb-6">
         Check back later for new designer recommendations, outreach suggestions,
         and profile updates.
       </p>
+      <Button variant="outline" onClick={onLoadMore} disabled={isLoading}>
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : null}
+        Load more recommendations
+      </Button>
     </div>
   );
 }
@@ -497,11 +508,6 @@ export default function RecommendationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Today's recommendations</h1>
-            {quota && (
-              <p className="text-muted-foreground mt-1">
-                {quota.shown} of 5 recommendations shown
-              </p>
-            )}
           </div>
         </div>
 
@@ -516,7 +522,7 @@ export default function RecommendationsPage() {
             <RecommendationCardSkeleton />
           </div>
         ) : recommendations.length === 0 ? (
-          <EmptyState />
+          <EmptyState onLoadMore={handleLoadMore} isLoading={loadMoreMutation.isPending} />
         ) : (
           <div className="space-y-4">
             {recommendations

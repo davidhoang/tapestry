@@ -5821,18 +5821,6 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
     const currentShown = quotaRecord.recommendationsShown || 0;
 
-    // Check quota - if already shown 5 and not loading more, return empty
-    if (currentShown >= 5 && !loadMore) {
-      return res.json({
-        recommendations: [],
-        quota: {
-          shown: currentShown,
-          remaining: 0,
-          date: today,
-        },
-      });
-    }
-
     // Generate recommendations filtered to new types only
     // This persists recommendations to the database (unless forceRefresh is true)
     const newTypes = ['recommend_designer', 'reach_out', 'update_profile'];
@@ -5846,6 +5834,8 @@ Analyze this role and recommend matching designers, considering feedback pattern
 
     // Fetch recommendations from database with full designer data
     // Get 'new' status recommendations of the appropriate types
+    // Limit to 5 normally, or more if loading more
+    const limit = loadMore ? currentShown + 5 : 5;
     const fullRecommendations = await db.query.inboxRecommendations.findMany({
       where: and(
         eq(inboxRecommendations.workspaceId, workspaceId),
@@ -5862,31 +5852,21 @@ Analyze this role and recommend matching designers, considering feedback pattern
         },
       },
       orderBy: [desc(inboxRecommendations.score)],
-      limit: loadMore ? currentShown + 5 : 5,
+      limit,
     });
 
-    // Update quota if we're showing new recommendations
-    if (fullRecommendations.length > 0) {
-      const newShown = currentShown + fullRecommendations.length;
+    // Only update quota when explicitly loading more (not on refetch)
+    if (loadMore && fullRecommendations.length > currentShown) {
       await db.update(dailyRecommendationQuota)
-        .set({ recommendationsShown: newShown })
+        .set({ recommendationsShown: fullRecommendations.length })
         .where(eq(dailyRecommendationQuota.id, quotaRecord.id));
-
-      return res.json({
-        recommendations: fullRecommendations,
-        quota: {
-          shown: newShown,
-          remaining: Math.max(0, 5 - newShown),
-          date: today,
-        },
-      });
     }
 
     res.json({
       recommendations: fullRecommendations,
       quota: {
-        shown: currentShown,
-        remaining: Math.max(0, 5 - currentShown),
+        shown: fullRecommendations.length,
+        remaining: Math.max(0, 10 - fullRecommendations.length), // Allow up to 10 total
         date: today,
       },
     });

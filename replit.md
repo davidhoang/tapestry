@@ -62,7 +62,17 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **List Management**: Curated designer lists, sharing capabilities (public/private), email sharing (Resend), collaborative building.
 - **Hiring Feature**: Job posting, AI-powered designer matching, job management, status tracking.
 - **Recruiting Board**: Visual kanban board for tracking designers through recruitment pipeline. Features drag-and-drop functionality, customizable columns (default: Backlog, Outreach, Interviewing, Offer, Hired), bulk designer import from lists or directory, notes tracking. Built with @dnd-kit for smooth drag-and-drop experience.
-- **Inbox Feature**: AI-powered recommendation system for workspace maintenance. Provides intelligent suggestions for adding designers to lists based on skills/metadata, recommending new list creation, and identifying outdated designer profiles that need updating. Features quick approval workflows, filtering/sorting capabilities, and comprehensive audit trails. Built with modular generator architecture supporting three recommendation types (add_to_list, create_list, update_profile) with RLHF integration for continuous improvement.
+- **Recommendations Home** (January 2026): Unified home experience that consolidates actionable daily suggestions. Features:
+  - Daily quota system: 5 recommendations shown per day with "Load more" option
+  - Three recommendation types: recommend_designer (job matches), reach_out (outreach suggestions), update_profile (stale profiles)
+  - RecommendDesignerGenerator: AI-powered matching using OpenAI to score designers against active job descriptions
+  - ReachOutGenerator: Suggests outreach based on last contact date and location proximity
+  - Location-based suggestions: Users can optionally share location for "in town" recommendations via LocationConsentModal
+  - RLHF feedback loop: Rejection reasons are logged for continuous improvement
+  - Accept/Reject workflows with immediate actions (add to shortlist, schedule outreach, apply updates)
+  - API endpoints: GET /api/home/recommendations, POST /api/home/recommendations/:id/accept, POST /api/home/recommendations/:id/reject
+  - Database tables: dailyRecommendationQuota, designerOutreach, userLocations
+- **Inbox Feature (Legacy)**: Previous recommendation system for workspace maintenance. Still available at /:workspaceSlug/inbox. Supports add_to_list, create_list, update_profile recommendation types.
 - **Saved Searches**: Users can save search filters (skill, title, location) and quickly reuse them. Per-user isolation ensures privacy within workspaces. Integrated in DirectoryPage and SearchResultsPage.
 - **Activity Feed**: Workspace activity tracking with cursor-based pagination. Logs designer CRUD, list management, member join/leave, saved search actions. Accessible via /:workspaceSlug/activity route. Includes actor metadata for auditing.
 - **Command Palette**: Keyboard-accessible navigation (CMD+K / Ctrl+K) for quick access to pages and actions within the current workspace.

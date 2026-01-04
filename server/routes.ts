@@ -5834,37 +5834,36 @@ Analyze this role and recommend matching designers, considering feedback pattern
     }
 
     // Generate recommendations filtered to new types only
+    // This persists recommendations to the database (unless forceRefresh is true)
     const newTypes = ['recommend_designer', 'reach_out', 'update_profile'];
-    const recommendations = await recommendationEngine.generate({
+    await recommendationEngine.generate({
       workspaceId,
       userId,
       types: newTypes,
-      limit: 5,
-      forceRefresh: loadMore,
+      limit: 10,
+      forceRefresh: false, // Always persist so we can fetch from DB
     });
 
-    // Fetch full recommendation data from database
-    const recommendationIds = recommendations.map(r => r.id).filter((id): id is number => id !== undefined);
-    let fullRecommendations: any[] = [];
-
-    if (recommendationIds.length > 0) {
-      fullRecommendations = await db.query.inboxRecommendations.findMany({
-        where: and(
-          eq(inboxRecommendations.workspaceId, workspaceId),
-          inArray(inboxRecommendations.id, recommendationIds),
-          inArray(inboxRecommendations.recommendationType, newTypes as any)
-        ),
-        with: {
-          candidates: {
-            with: {
-              designer: true,
-            },
-            orderBy: [asc(inboxRecommendationCandidates.rank)],
+    // Fetch recommendations from database with full designer data
+    // Get 'new' status recommendations of the appropriate types
+    const fullRecommendations = await db.query.inboxRecommendations.findMany({
+      where: and(
+        eq(inboxRecommendations.workspaceId, workspaceId),
+        eq(inboxRecommendations.userId, userId),
+        eq(inboxRecommendations.status, 'new'),
+        inArray(inboxRecommendations.recommendationType, newTypes as any)
+      ),
+      with: {
+        candidates: {
+          with: {
+            designer: true,
           },
+          orderBy: [asc(inboxRecommendationCandidates.rank)],
         },
-        orderBy: [desc(inboxRecommendations.score)],
-      });
-    }
+      },
+      orderBy: [desc(inboxRecommendations.score)],
+      limit: loadMore ? currentShown + 5 : 5,
+    });
 
     // Update quota if we're showing new recommendations
     if (fullRecommendations.length > 0) {

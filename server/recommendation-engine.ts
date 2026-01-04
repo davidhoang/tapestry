@@ -17,6 +17,8 @@ import { AddToListGenerator } from "./recommendation-generators/add-to-list-gene
 import { CreateListGenerator } from "./recommendation-generators/create-list-generator";
 import { UpdateProfileGenerator } from "./recommendation-generators/update-profile-generator";
 import { CaptureRecommendationGenerator } from "./recommendation-generators/capture-recommendation-generator";
+import { RecommendDesignerGenerator } from "./recommendation-generators/recommend-designer-generator";
+import { ReachOutGenerator } from "./recommendation-generators/reach-out-generator";
 import { 
   RecommendationUtils, 
   RecommendationResult, 
@@ -67,6 +69,8 @@ export class RecommendationEngine {
       new CreateListGenerator(),
       new UpdateProfileGenerator(),
       new CaptureRecommendationGenerator(),
+      new RecommendDesignerGenerator(),
+      new ReachOutGenerator(),
     ];
 
     for (const generator of generators) {

@@ -131,12 +131,6 @@ export default function Navigation() {
                 Home
               </Link>
               <Link
-                to={`/${workspaceSlug}/matchmaker`}
-                className={location === `/${workspaceSlug}/matchmaker` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-              >
-                Matchmaker
-              </Link>
-              <Link
                 to={`/${workspaceSlug}/directory`}
                 className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
               >
@@ -277,17 +271,6 @@ export default function Navigation() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Home
-                    </Link>
-                    <Link
-                      to={`/${workspaceSlug}/matchmaker`}
-                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
-                        location === `/${workspaceSlug}/matchmaker`
-                          ? "text-gray-900 bg-gray-100 font-bold" 
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
-                      }`}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Matchmaker
                     </Link>
                     <Link
                       to={`/${workspaceSlug}/directory`}

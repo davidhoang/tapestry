@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
+import IntelligentMatch from "@/components/IntelligentMatch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -17,13 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import LocationConsentModal from "@/components/LocationConsentModal";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Check,
   X,
   Loader2,
@@ -31,6 +25,8 @@ import {
   Mail,
   MapPin,
   Inbox,
+  ChevronRight,
+  List,
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 
@@ -487,59 +483,121 @@ export default function RecommendationsPage() {
     !isLoadingLocation && locationData && !locationData.consentGranted;
   const canLoadMore = quota && quota.remaining > 0;
 
+  // Fetch lists for the lists section
+  const { data: listsData, isLoading: isLoadingLists } = useQuery<any[]>({
+    queryKey: ["/api/lists", workspaceSlug],
+    enabled: !!workspaceSlug,
+  });
+
+  const lists = listsData || [];
+
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-6 max-w-2xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Today's recommendations</h1>
-          </div>
+      <div className="container mx-auto px-4 pt-20 pb-8 space-y-10 max-w-2xl">
+        {/* Intelligent Match Section */}
+        <IntelligentMatch />
+
+        {/* Recommendations Section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Today's recommendations</h2>
+
+          {showLocationBanner && (
+            <LocationConsentBanner onEnableLocation={handleEnableLocation} />
+          )}
+
+          {isLoadingRecommendations ? (
+            <div className="space-y-4">
+              <RecommendationCardSkeleton />
+              <RecommendationCardSkeleton />
+              <RecommendationCardSkeleton />
+            </div>
+          ) : recommendations.length === 0 ? (
+            <EmptyState onLoadMore={handleLoadMore} isLoading={loadMoreMutation.isPending} />
+          ) : (
+            <div className="space-y-4">
+              {recommendations
+                .filter((r) => r.status === "new")
+                .map((recommendation) => (
+                  <RecommendationCard
+                    key={recommendation.id}
+                    recommendation={recommendation}
+                    onAccept={handleAccept}
+                    onReject={handleReject}
+                    isAccepting={acceptingId === recommendation.id}
+                    isRejecting={rejectingId === recommendation.id}
+                  />
+                ))}
+            </div>
+          )}
+
+          {canLoadMore && recommendations.length > 0 && (
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={handleLoadMore}
+                disabled={loadMoreMutation.isPending}
+              >
+                {loadMoreMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                Load more
+              </Button>
+            </div>
+          )}
         </div>
 
-        {showLocationBanner && (
-          <LocationConsentBanner onEnableLocation={handleEnableLocation} />
-        )}
-
-        {isLoadingRecommendations ? (
-          <div className="space-y-4">
-            <RecommendationCardSkeleton />
-            <RecommendationCardSkeleton />
-            <RecommendationCardSkeleton />
+        {/* Lists Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Your lists</h2>
+            <Link to={`/${workspaceSlug}/lists`}>
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                View all lists
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
           </div>
-        ) : recommendations.length === 0 ? (
-          <EmptyState onLoadMore={handleLoadMore} isLoading={loadMoreMutation.isPending} />
-        ) : (
-          <div className="space-y-4">
-            {recommendations
-              .filter((r) => r.status === "new")
-              .map((recommendation) => (
-                <RecommendationCard
-                  key={recommendation.id}
-                  recommendation={recommendation}
-                  onAccept={handleAccept}
-                  onReject={handleReject}
-                  isAccepting={acceptingId === recommendation.id}
-                  isRejecting={rejectingId === recommendation.id}
-                />
+
+          {isLoadingLists ? (
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : lists.length === 0 ? (
+            <div className="bg-muted/50 rounded-lg p-6 text-center">
+              <List className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">No lists yet</p>
+              <Link to={`/${workspaceSlug}/lists`}>
+                <Button variant="link" size="sm" className="mt-2">
+                  Create your first list
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {lists.slice(0, 5).map((list: any) => (
+                <Link key={list.id} to={`/${workspaceSlug}/lists/${list.id}`}>
+                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border hover:border-primary/50 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <List className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{list.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {list.designerCount || 0} designers
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </Link>
               ))}
-          </div>
-        )}
-
-        {canLoadMore && recommendations.length > 0 && (
-          <div className="flex justify-center pt-4">
-            <Button
-              variant="outline"
-              onClick={handleLoadMore}
-              disabled={loadMoreMutation.isPending}
-            >
-              {loadMoreMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Load more
-            </Button>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         <LocationConsentModal
           open={showLocationDialog}

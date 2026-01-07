@@ -90,6 +90,8 @@ export default function DesignerTimeline({ designerId }: DesignerTimelineProps) 
   const [filter, setFilter] = useState<'all' | 'notes' | 'activity'>('all');
   const [newNote, setNewNote] = useState("");
   const [deleteNoteId, setDeleteNoteId] = useState<number | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [editingContent, setEditingContent] = useState("");
   const { toast } = useToast();
 
   const { data, isLoading, error } = useDesignerTimeline(designerId, filter);
@@ -142,6 +144,41 @@ export default function DesignerTimeline({ designerId }: DesignerTimelineProps) 
     }
   };
 
+  const handleStartEdit = (noteId: number, content: string) => {
+    setEditingNoteId(noteId);
+    setEditingContent(content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
+    setEditingContent("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingNoteId || !editingContent.trim()) return;
+
+    try {
+      await updateNote.mutateAsync({
+        designerId,
+        noteId: editingNoteId,
+        content: editingContent.trim(),
+        contentPlain: editingContent.trim(),
+      });
+      toast({
+        title: "Note updated",
+        description: "Your note has been saved.",
+      });
+      setEditingNoteId(null);
+      setEditingContent("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update note",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteNote = async () => {
     if (!deleteNoteId) return;
 
@@ -173,6 +210,10 @@ export default function DesignerTimeline({ designerId }: DesignerTimelineProps) 
 
   const renderTimelineItem = (item: TimelineItem) => {
     if (item.type === 'note') {
+      const isEditing = editingNoteId === item.noteId;
+      const wasEdited = item.updatedAt && item.createdAt && 
+        new Date(item.updatedAt).getTime() - new Date(item.createdAt).getTime() > 1000;
+
       return (
         <Card key={item.id} className={`${item.isPinned ? 'border-primary/50 bg-primary/5' : ''}`}>
           <CardContent className="p-4">
@@ -201,42 +242,86 @@ export default function DesignerTimeline({ designerId }: DesignerTimelineProps) 
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                      {wasEdited && (
+                        <span className="ml-1 italic">(edited)</span>
+                      )}
                     </span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleTogglePin(item.noteId, item.isPinned)}>
-                          {item.isPinned ? (
-                            <>
-                              <PinOff className="h-4 w-4 mr-2" />
-                              Unpin note
-                            </>
-                          ) : (
-                            <>
-                              <Pin className="h-4 w-4 mr-2" />
-                              Pin note
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => setDeleteNoteId(item.noteId)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete note
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {!isEditing && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleStartEdit(item.noteId, item.contentPlain || item.content)}>
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit note
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleTogglePin(item.noteId, item.isPinned)}>
+                            {item.isPinned ? (
+                              <>
+                                <PinOff className="h-4 w-4 mr-2" />
+                                Unpin note
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="h-4 w-4 mr-2" />
+                                Pin note
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => setDeleteNoteId(item.noteId)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete note
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
                 
-                <p className="text-sm text-foreground whitespace-pre-wrap">
-                  {item.contentPlain || item.content}
-                </p>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      className="min-h-[80px] resize-none"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          handleSaveEdit();
+                        }
+                        if (e.key === 'Escape') {
+                          handleCancelEdit();
+                        }
+                      }}
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveEdit}
+                        disabled={!editingContent.trim() || updateNote.isPending}
+                      >
+                        {updateNote.isPending ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                    {item.contentPlain || item.content}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>

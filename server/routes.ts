@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota, designerNotes, designerEvents } from "@db/schema";
 import { analyzeCapture } from "./capture-analyzer";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
@@ -1258,6 +1258,311 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to fetch similar designers" });
     }
   });
+
+  // Designer Timeline Routes (Notes + Activity Log)
+  app.get("/api/designers/:id/timeline", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const filter = req.query.filter as string || 'all'; // 'all', 'notes', 'activity'
+
+    // Verify designer exists and user has access
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Fetch notes and events based on filter
+    let notes: any[] = [];
+    let events: any[] = [];
+
+    if (filter === 'all' || filter === 'notes') {
+      notes = await db.query.designerNotes.findMany({
+        where: and(
+          eq(designerNotes.designerId, designerId),
+          eq(designerNotes.workspaceId, designer.workspaceId)
+        ),
+        with: {
+          author: {
+            columns: {
+              id: true,
+              username: true,
+              email: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+        orderBy: [desc(designerNotes.createdAt)],
+      });
+    }
+
+    if (filter === 'all' || filter === 'activity') {
+      events = await db.query.designerEvents.findMany({
+        where: and(
+          eq(designerEvents.designerId, designerId),
+          eq(designerEvents.workspaceId, designer.workspaceId)
+        ),
+        with: {
+          actor: {
+            columns: {
+              id: true,
+              username: true,
+              email: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+        orderBy: [desc(designerEvents.createdAt)],
+      });
+    }
+
+    // Combine and sort by date
+    const timeline = [
+      ...notes.map(note => ({
+        id: `note-${note.id}`,
+        type: 'note' as const,
+        content: note.content,
+        contentPlain: note.contentPlain,
+        isPinned: note.isPinned,
+        author: note.author,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        noteId: note.id,
+      })),
+      ...events.map(event => ({
+        id: `event-${event.id}`,
+        type: 'event' as const,
+        eventType: event.eventType,
+        source: event.source,
+        summary: event.summary,
+        details: event.details,
+        actor: event.actor,
+        createdAt: event.createdAt,
+        eventId: event.id,
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+
+    // Get total counts
+    const totalNotes = notes.length;
+    const totalEvents = events.length;
+
+    res.json({
+      timeline,
+      pagination: {
+        total: totalNotes + totalEvents,
+        totalNotes,
+        totalEvents,
+        limit,
+        offset,
+      },
+    });
+  }));
+
+  // Create a note for a designer
+  app.post("/api/designers/:id/notes", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const { content, contentPlain } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: "Content is required" });
+    }
+
+    // Verify designer exists and user has access
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Create the note
+    const [newNote] = await db.insert(designerNotes).values({
+      workspaceId: designer.workspaceId,
+      designerId,
+      authorUserId: req.user!.id,
+      content: content.trim(),
+      contentPlain: contentPlain?.trim() || null,
+    }).returning();
+
+    // Also create an event for the activity log
+    await db.insert(designerEvents).values({
+      workspaceId: designer.workspaceId,
+      designerId,
+      eventType: 'note_added',
+      source: 'web',
+      actorUserId: req.user!.id,
+      summary: 'Added a note',
+      details: { noteId: newNote.id },
+    });
+
+    // Fetch the note with author info
+    const noteWithAuthor = await db.query.designerNotes.findFirst({
+      where: eq(designerNotes.id, newNote.id),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            username: true,
+            email: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json(noteWithAuthor);
+  }));
+
+  // Update a note
+  app.patch("/api/designers/:id/notes/:noteId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const noteId = parseInt(req.params.noteId);
+    const { content, contentPlain, isPinned } = req.body;
+
+    // Verify designer exists
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify note exists and belongs to this designer and workspace
+    const existingNote = await db.query.designerNotes.findFirst({
+      where: and(
+        eq(designerNotes.id, noteId),
+        eq(designerNotes.designerId, designerId),
+        eq(designerNotes.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!existingNote) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Build update object
+    const updateData: any = { updatedAt: new Date() };
+    if (content !== undefined) {
+      updateData.content = content.trim();
+    }
+    if (contentPlain !== undefined) {
+      updateData.contentPlain = contentPlain?.trim() || null;
+    }
+    if (isPinned !== undefined) {
+      updateData.isPinned = isPinned;
+    }
+
+    // Update the note
+    const [updatedNote] = await db.update(designerNotes)
+      .set(updateData)
+      .where(eq(designerNotes.id, noteId))
+      .returning();
+
+    // Fetch with author info
+    const noteWithAuthor = await db.query.designerNotes.findFirst({
+      where: eq(designerNotes.id, updatedNote.id),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            username: true,
+            email: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+    });
+
+    res.json(noteWithAuthor);
+  }));
+
+  // Delete a note
+  app.delete("/api/designers/:id/notes/:noteId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const noteId = parseInt(req.params.noteId);
+
+    // Verify designer exists
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify note exists and belongs to this designer and workspace
+    const existingNote = await db.query.designerNotes.findFirst({
+      where: and(
+        eq(designerNotes.id, noteId),
+        eq(designerNotes.designerId, designerId),
+        eq(designerNotes.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!existingNote) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Delete the note
+    await db.delete(designerNotes).where(eq(designerNotes.id, noteId));
+
+    res.json({ success: true, message: "Note deleted" });
+  }));
 
   // List routes with workspace support
   app.post("/api/lists", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {

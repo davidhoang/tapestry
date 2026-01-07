@@ -119,6 +119,60 @@ export const designers = pgTable("designers", {
   workspaceIdCreatedAtIdx: index("designers_workspace_id_created_at_idx").on(table.workspaceId, table.createdAt),
 }));
 
+export const designerNotes = pgTable("designer_notes", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  authorUserId: integer("author_user_id").references(() => users.id, { onDelete: 'set null' }),
+  content: text("content").notNull(),
+  contentPlain: text("content_plain"),
+  isPinned: boolean("is_pinned").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("designer_notes_workspace_id_idx").on(table.workspaceId),
+  designerIdIdx: index("designer_notes_designer_id_idx").on(table.designerId),
+  createdAtIdx: index("designer_notes_created_at_idx").on(table.createdAt),
+}));
+
+export const designerEventTypeEnum = pgEnum('designer_event_type', [
+  'profile_created',
+  'profile_updated',
+  'enrichment_applied',
+  'added_to_list',
+  'removed_from_list',
+  'outreach_sent',
+  'availability_changed',
+  'skills_updated',
+  'note_added',
+  'photo_updated'
+]);
+
+export const designerEvents = pgTable("designer_events", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  eventType: designerEventTypeEnum("event_type").notNull(),
+  source: text("source").notNull(),
+  actorUserId: integer("actor_user_id").references(() => users.id, { onDelete: 'set null' }),
+  summary: text("summary").notNull(),
+  details: jsonb("details").$type<{
+    changedFields?: string[];
+    previousValues?: Record<string, any>;
+    newValues?: Record<string, any>;
+    listId?: number;
+    listName?: string;
+    enrichmentSource?: string;
+    [key: string]: any;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("designer_events_workspace_id_idx").on(table.workspaceId),
+  designerIdIdx: index("designer_events_designer_id_idx").on(table.designerId),
+  createdAtIdx: index("designer_events_created_at_idx").on(table.createdAt),
+  eventTypeIdx: index("designer_events_event_type_idx").on(table.eventType),
+}));
+
 export const lists = pgTable("lists", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
@@ -571,6 +625,38 @@ export const designerRelations = relations(designers, ({ one, many }) => ({
     references: [workspaces.id],
   }),
   portfolios: many(portfolios),
+  notes: many(designerNotes),
+  events: many(designerEvents),
+}));
+
+export const designerNoteRelations = relations(designerNotes, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [designerNotes.workspaceId],
+    references: [workspaces.id],
+  }),
+  designer: one(designers, {
+    fields: [designerNotes.designerId],
+    references: [designers.id],
+  }),
+  author: one(users, {
+    fields: [designerNotes.authorUserId],
+    references: [users.id],
+  }),
+}));
+
+export const designerEventRelations = relations(designerEvents, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [designerEvents.workspaceId],
+    references: [workspaces.id],
+  }),
+  designer: one(designers, {
+    fields: [designerEvents.designerId],
+    references: [designers.id],
+  }),
+  actor: one(users, {
+    fields: [designerEvents.actorUserId],
+    references: [users.id],
+  }),
 }));
 
 export const listRelations = relations(lists, ({ one, many }) => ({
@@ -1083,3 +1169,13 @@ export const insertDailyRecommendationQuotaSchema = createInsertSchema(dailyReco
 export const selectDailyRecommendationQuotaSchema = createSelectSchema(dailyRecommendationQuota);
 export type InsertDailyRecommendationQuota = typeof dailyRecommendationQuota.$inferInsert;
 export type SelectDailyRecommendationQuota = typeof dailyRecommendationQuota.$inferSelect;
+
+export const insertDesignerNoteSchema = createInsertSchema(designerNotes);
+export const selectDesignerNoteSchema = createSelectSchema(designerNotes);
+export type InsertDesignerNote = typeof designerNotes.$inferInsert;
+export type SelectDesignerNote = typeof designerNotes.$inferSelect;
+
+export const insertDesignerEventSchema = createInsertSchema(designerEvents);
+export const selectDesignerEventSchema = createSelectSchema(designerEvents);
+export type InsertDesignerEvent = typeof designerEvents.$inferInsert;
+export type SelectDesignerEvent = typeof designerEvents.$inferSelect;

@@ -46,6 +46,7 @@ import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-list
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import SimilarDesigners from "@/components/SimilarDesigners";
 import { EnrichmentModal } from "@/components/EnrichmentModal";
+import DesignerTimeline from "@/components/DesignerTimeline";
 
 const EXPERIENCE_LEVELS = [
   "Mid-level",
@@ -486,24 +487,6 @@ export default function DesignerDetailsPage() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <RichTextEditor
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                          placeholder="Additional information about the designer..."
-                          height={200}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
@@ -620,15 +603,10 @@ export default function DesignerDetailsPage() {
                 </div>
               </div>
 
-              {/* Notes Section */}
-              {designer.notes && (
-                <div className="space-y-6 pb-12 border-b">
-                  <h2 className="text-3xl font-bold">Notes</h2>
-                  <div className="prose prose-lg max-w-none prose-headings:font-bold prose-p:text-lg prose-p:leading-relaxed designer-profile-text">
-                    <RichTextPreview source={designer.notes} />
-                  </div>
-                </div>
-              )}
+              {/* Timeline Section (Notes + Activity) */}
+              <div className="space-y-6 pb-12 border-b">
+                <DesignerTimeline designerId={designer.id} />
+              </div>
 
               {/* Skills Section */}
               <div className="space-y-6 pb-12 border-b">

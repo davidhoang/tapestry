@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 // Use relative imports for standalone execution outside Replit
 import { db } from "../../db/index.js";
-import { designers, lists, listDesigners, workspaces, apiTokens } from "../../db/schema.js";
+import { designers, lists, listDesigners, workspaces, apiTokens, designerEvents } from "../../db/schema.js";
 import { eq, and, desc, or, ilike } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -872,6 +872,30 @@ ${confidence >= 0.5 ? 'Use the `apply_enrichment` tool to apply these suggestion
         .set(updateData)
         .where(eq(designers.id, designerId))
         .returning();
+      
+      await db.insert(designerEvents).values({
+        workspaceId: authContext.workspaceId,
+        designerId: designerId,
+        eventType: 'enrichment_applied',
+        source: 'mcp',
+        actorUserId: authContext.userId,
+        summary: `Profile enriched via MCP: ${appliedFields.join(', ')}`,
+        details: {
+          changedFields: appliedFields,
+          previousValues: {
+            email: designer.email,
+            phoneNumber: designer.phoneNumber,
+            location: designer.location,
+            company: designer.company,
+            title: designer.title,
+            linkedIn: designer.linkedIn,
+            website: designer.website,
+            skills: designer.skills,
+          },
+          newValues: updates,
+          enrichmentSource: 'mcp',
+        },
+      });
       
       return {
         content: [{ 

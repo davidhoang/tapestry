@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import { db } from "@db";
-import { users } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { users, workspaceMembers, workspaces, designers } from "@db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
@@ -228,6 +228,114 @@ export function setupMobileAuth(app: any) {
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
+  // Get user's workspaces
+  app.get("/api/mobile/workspaces", async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authorization header required" });
+    }
+
+    const token = authHeader.substring(7);
+    const payload = verifyToken(token);
+
+    if (!payload || payload.type !== "access") {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    try {
+      const memberships = await db.query.workspaceMembers.findMany({
+        where: eq(workspaceMembers.userId, payload.userId),
+        with: {
+          workspace: true,
+        },
+      });
+
+      const userWorkspaces = memberships.map((m) => ({
+        id: m.workspace.id,
+        name: m.workspace.name,
+        slug: m.workspace.slug,
+        role: m.role,
+        isDefault: memberships.length === 1 || m.role === 'owner',
+      }));
+
+      res.json({ workspaces: userWorkspaces });
+    } catch (error) {
+      console.error("Get workspaces error:", error);
+      res.status(500).json({ error: "Failed to get workspaces" });
+    }
+  });
+
+  // Get recommendations for mobile (uses user's default workspace)
+  app.get("/api/mobile/recommendations", async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authorization header required" });
+    }
+
+    const token = authHeader.substring(7);
+    const payload = verifyToken(token);
+
+    if (!payload || payload.type !== "access") {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    try {
+      // Get user's default workspace (first one they own, or first one they're a member of)
+      const memberships = await db.query.workspaceMembers.findMany({
+        where: eq(workspaceMembers.userId, payload.userId),
+        with: {
+          workspace: true,
+        },
+      });
+
+      if (memberships.length === 0) {
+        return res.status(404).json({ error: "No workspace found for user" });
+      }
+
+      // Prefer workspace where user is owner, otherwise use first one
+      const defaultMembership = memberships.find(m => m.role === 'owner') || memberships[0];
+      const workspaceId = defaultMembership.workspace.id;
+
+      // Get designers from the workspace
+      const workspaceDesigners = await db.query.designers.findMany({
+        where: eq(designers.workspaceId, workspaceId),
+        orderBy: desc(designers.createdAt),
+        limit: 20,
+      });
+
+      // Format recommendations for mobile
+      const recommendations = workspaceDesigners.map((designer) => ({
+        id: designer.id,
+        name: designer.name,
+        title: designer.title,
+        company: designer.company,
+        location: designer.location,
+        email: designer.email,
+        linkedIn: designer.linkedIn,
+        website: designer.website,
+        photoUrl: designer.photoUrl,
+        skills: designer.skills || [],
+        description: designer.description,
+        createdAt: designer.createdAt,
+      }));
+
+      res.json({
+        workspace: {
+          id: defaultMembership.workspace.id,
+          name: defaultMembership.workspace.name,
+          slug: defaultMembership.workspace.slug,
+        },
+        recommendations,
+        total: recommendations.length,
+      });
+    } catch (error) {
+      console.error("Get mobile recommendations error:", error);
+      res.status(500).json({ error: "Failed to get recommendations" });
     }
   });
 }

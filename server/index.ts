@@ -5,6 +5,7 @@ import helmet from "helmet";
 import cors from "cors";
 import { setupAuth } from "./auth";
 import { authenticateJWT, setupMobileAuth } from "./jwt-auth";
+import { setupMcpRoutes } from "./mcp-http";
 
 const app = express();
 
@@ -49,6 +50,9 @@ app.use(authenticateJWT);
 
 // Set up mobile auth endpoints (before session auth to avoid conflicts)
 setupMobileAuth(app);
+
+// Set up MCP HTTP routes for Claude Desktop integration
+setupMcpRoutes(app);
 
 // Set up session-based authentication (for web app)
 setupAuth(app);

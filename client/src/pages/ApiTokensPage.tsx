@@ -130,10 +130,19 @@ export default function ApiTokensPage() {
                       Store this token securely. It provides access to your workspace data.
                     </AlertDescription>
                   </Alert>
-                  <div className="flex items-center space-x-2">
-                    <Input value={newToken} readOnly className="font-mono text-sm" />
-                    <Button variant="outline" size="icon" onClick={handleCopy}>
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <textarea
+                        value={newToken}
+                        readOnly
+                        rows={3}
+                        className="w-full p-3 font-mono text-sm bg-muted border rounded-md resize-none break-all"
+                        onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                      />
+                    </div>
+                    <Button className="w-full" onClick={handleCopy}>
+                      {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                      {copied ? "Copied" : "Copy token"}
                     </Button>
                   </div>
                 </div>

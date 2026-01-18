@@ -5,3 +5,10 @@ server/public
 vite.config.ts.*
 *.tar.gz
 attached_assets
+
+# Agent screenshots and test images
+after_*.png
+before_*.png
+screenshot*.png
+debug*.png
+generated-icon.png

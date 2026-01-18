@@ -1,96 +1,132 @@
 # Tapestry: Intelligent Design Matchmaking
 
-Tapestry is a  [Proof of Concept](http://www.proofofconcept.pub) experiment.
+Tapestry is a [Proof of Concept](http://www.proofofconcept.pub) experiment.
 
 Problem statement: I get reached out by a lot of people in my network asking for recommendations of designers. Though I'd like to help, this is time consuming and often results in me needing to manually go through a repository of talent.
 
-<img width="540" alt="Screenshot 2025-06-19 at 10 43 00 PM" src="https://github.com/user-attachments/assets/3f773bfa-6313-4df8-9538-ff113fad6e9b" />
+<img width="540" alt="Screenshot 2025-06-19 at 10 43 00 PM" src="https://github.com/user-attachments/assets/3f773bfa-6313-4df8-9538-ff113fad6e9b" />
 
 
 ## Tech stack
 - Replit for vibe coding - [Use my referral](https://replit.com/refer/dh-design)
-- SendGrid for email
-- Backend: Flask (Python)`
+- Resend for email
+- Backend: Express.js (TypeScript)
 - Frontend: React with Tailwind CSS
 - Database: PostgreSQL (Replit's built-in)
+- AI: OpenAI for recommendations and matching
 
-## Initial prompt
+## Features
 
+- User authentication and workspace management
+- AI-powered designer recommendation system
+- Designer directory with profiles, skills, and availability tracking
+- CRM-style timeline with notes and activity logging
+- Curated designer lists with sharing capabilities
+- Recruiting board with drag-and-drop pipeline management
+- Mobile API with JWT authentication
+- MCP server for Claude Desktop integration
+
+## API Documentation
+
+Tapestry provides two API interfaces for external integrations:
+
+### Mobile API
+
+REST endpoints with JWT authentication for mobile apps.
+
+#### Authentication
+
+```bash
+# Login
+curl -X POST https://tapestry-dh-design.replit.app/api/mobile/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "your-password"}'
+
+# Use the returned accessToken for authenticated requests
+curl https://tapestry-dh-design.replit.app/api/mobile/workspaces \
+  -H "Authorization: Bearer <accessToken>"
 ```
-Design Matchmaker: A web application for creating and sharing curated listsDesign Matchmaker: A web application for creating and sharing curated lists of recommended designers.
 
-Core features:
+#### Available Endpoints
 
-User authentication and profile management
-AI-powered designer recommendation system
-Directory page for adding and managing talent profiles
-Ability to create and share designer lists via email or private link
-Autocomplete functionality for skills tags
-Option to add custom fields when entering talent information
-Technical requirements:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/mobile/login` | POST | Authenticate and receive JWT tokens |
+| `/api/mobile/refresh` | POST | Refresh expired access token |
+| `/api/mobile/user` | GET | Get current user info |
+| `/api/mobile/workspaces` | GET | List user's workspaces |
+| `/api/mobile/recommendations` | GET | Get designer recommendations |
 
-Backend: Flask (Python)
-Frontend: React with Tailwind CSS
-Database: PostgreSQL (Replit's built-in)
-External services: SendGrid for email delivery, OpenAI for AI recommendations
-Pages:
+### MCP Server (Claude Desktop)
 
-Marketing homepage (logged-out state)
-AI Matchmaker page
-Directory page for talent management
-Directory data fields:
+The MCP (Model Context Protocol) server allows AI assistants like Claude Desktop to interact with Tapestry through natural language.
 
-Personal info (name, title, location, company)
-Professional details (level, website, LinkedIn, email)
-Skills (multi-item tags with autocomplete)
-Availability status
-Description (markdown-enabled)
-UI/Style:
+#### Setup
 
-Modern, professional design with a focus on typography and whitespace
-Intuitive form layouts with smooth transitions and helpful tooltips
-Color palette inspired by design tools: muted grays, vibrant accents, and a dash of creativity
-Use Replit's built-in Postgres database.
+1. Generate an API token in Tapestry (Settings > API Tokens)
+2. Add the MCP server to your Claude Desktop configuration:
 
-Add AI features using OpenAI. of recommended designers.
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-Core features:
-
-User authentication and profile management
-AI-powered designer recommendation system
-Directory page for adding and managing talent profiles
-Ability to create and share designer lists via email or private link
-Autocomplete functionality for skills tags
-Option to add custom fields when entering talent information
-Technical requirements:
-
-Backend: Flask (Python)
-Frontend: React with Tailwind CSS
-Database: PostgreSQL (Replit's built-in)
-External services: SendGrid for email delivery, OpenAI for AI recommendations
-Pages:
-
-Marketing homepage (logged-out state)
-AI Matchmaker page
-Directory page for talent management
-Directory data fields:
-
-Personal info (name, title, location, company)
-Professional details (level, website, LinkedIn, email)
-Skills (multi-item tags with autocomplete)
-Availability status
-Description (markdown-enabled)
-UI/Style:
-
-Modern, professional design with a focus on typography and whitespace
-Intuitive form layouts with smooth transitions and helpful tooltips
-Color palette inspired by design tools: muted grays, vibrant accents, and a dash of creativity
-Use Replit's built-in Postgres database.
-
-Add AI features using OpenAI.
-
-
+```json
+{
+  "mcpServers": {
+    "tapestry": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://tapestry-dh-design.replit.app/mcp"
+      ]
+    }
+  }
+}
 ```
+
+3. Restart Claude Desktop
+4. Use the `authenticate` tool with your API token
+
+#### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `authenticate` | Authenticate with your API token (required first) |
+| `search_designers` | Search designers by name, title, skills, or location |
+| `get_designer` | Get detailed designer information |
+| `create_designer` | Create a new designer profile |
+| `update_designer` | Update an existing designer |
+| `list_lists` | List all designer lists |
+| `get_list_designers` | Get designers in a specific list |
+| `create_list` | Create a new designer list |
+| `add_designer_to_list` | Add a designer to a list |
+| `remove_designer_from_list` | Remove a designer from a list |
+| `workspace_info` | Get current workspace info |
+| `enrich_designer` | AI-enrich a designer's profile |
+| `enrich_designer_from_url` | Enrich profile from a URL |
+| `apply_enrichment` | Apply enrichment suggestions |
+| `bulk_enrich_designers` | Enrich multiple designers |
+
+#### Example Usage in Claude
+
+After authenticating, you can use natural language:
+
+- "Search for product designers in San Francisco"
+- "Show me designers with Figma skills"
+- "Create a new designer profile for John Smith, Senior UX Designer at Apple"
+- "Add designer #42 to the 'Potential Hires' list"
+- "Enrich the profile for designer #15"
+
+### Token Management
+
+1. Log into Tapestry
+2. Navigate to Settings > API Tokens
+3. Click "Create token"
+4. Copy the token immediately (it won't be shown again)
+
+Tokens have the format: `tap_xxxxxxxxxxxx`
+
+For detailed API documentation, see [API.md](./API.md).
 
 ## Product screenshots
 

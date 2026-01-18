@@ -288,7 +288,8 @@ export function setupMcpRoutes(app: Express) {
     console.log("MCP SSE connection request received");
     
     const sessionId = crypto.randomUUID();
-    const transport = new SSEServerTransport("/mcp/message", res);
+    // Include sessionId in the endpoint URL so the client includes it when POSTing
+    const transport = new SSEServerTransport(`/mcp/message?sessionId=${sessionId}`, res);
     
     sessions.set(sessionId, { transport, authContext: null });
     

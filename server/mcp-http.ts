@@ -279,6 +279,11 @@ function createMcpServer(sessionId: string) {
 }
 
 export function setupMcpRoutes(app: Express) {
+  // Simple health check endpoint to verify routing works
+  app.get("/mcp/health", (_req: Request, res: Response) => {
+    res.json({ status: "ok", service: "tapestry-mcp" });
+  });
+
   app.get("/mcp", async (req: Request, res: Response) => {
     console.log("MCP SSE connection request received");
     

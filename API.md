@@ -2,8 +2,8 @@
 
 Tapestry provides two API interfaces for external integrations:
 
-1. **Mobile API** - REST endpoints with JWT authentication for mobile apps
-2. **MCP Server** - Model Context Protocol server for AI assistants like Claude
+1. **Mobile API** - REST endpoints with JWT authentication for mobile apps (Expo, React Native)
+2. **MCP Server** - Model Context Protocol server for AI assistants like Claude Desktop and Claude Code
 
 ## Mobile API
 
@@ -57,19 +57,6 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "isAdmin": false
-  }
-}
-```
-
 ### Authenticated Endpoints
 
 All authenticated endpoints require the `Authorization` header:
@@ -82,7 +69,6 @@ Authorization: Bearer <accessToken>
 
 ```http
 GET /api/mobile/user
-Authorization: Bearer <accessToken>
 ```
 
 **Response:**
@@ -101,7 +87,6 @@ Returns all workspaces the authenticated user belongs to.
 
 ```http
 GET /api/mobile/workspaces
-Authorization: Bearer <accessToken>
 ```
 
 **Response:**
@@ -119,13 +104,14 @@ Authorization: Bearer <accessToken>
 }
 ```
 
+**Cache:** 5 minutes (300 seconds)
+
 #### Get Recommendations
 
-Returns designer recommendations from the user's default workspace (the workspace where they are an owner, or their first workspace).
+Returns designer recommendations from the user's default workspace.
 
 ```http
 GET /api/mobile/recommendations
-Authorization: Bearer <accessToken>
 ```
 
 **Response:**
@@ -136,7 +122,40 @@ Authorization: Bearer <accessToken>
     "name": "My Workspace",
     "slug": "my-workspace"
   },
-  "recommendations": [
+  "recommendations": [...],
+  "total": 20
+}
+```
+
+**Cache:** 1 minute (60 seconds)
+
+---
+
+### Designer Endpoints
+
+All designer endpoints require `workspaceId` as a query parameter.
+
+#### Search/List Designers
+
+Search designers with filtering and pagination.
+
+```http
+GET /api/mobile/designers?workspaceId=1&query=product&skill=Figma&limit=20&offset=0
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `workspaceId` | number | Yes | Workspace ID |
+| `query` | string | No | Search term (matches name, title, company, email) |
+| `skill` | string | No | Filter by skill |
+| `location` | string | No | Filter by location |
+| `limit` | number | No | Max results (default 20, max 100) |
+| `offset` | number | No | Skip results for pagination (default 0) |
+
+**Response:**
+```json
+{
+  "designers": [
     {
       "id": 1,
       "name": "Jane Designer",
@@ -147,13 +166,150 @@ Authorization: Bearer <accessToken>
       "linkedIn": "https://linkedin.com/in/jane",
       "website": "https://jane.design",
       "photoUrl": "https://...",
-      "skills": ["Figma", "Product Design", "Design Systems"],
-      "description": "Experienced product designer...",
+      "skills": ["Figma", "Product Design"],
+      "description": "...",
+      "available": true,
       "createdAt": "2025-01-01T00:00:00.000Z"
     }
   ],
-  "total": 1
+  "total": 45,
+  "hasMore": true,
+  "offset": 0
 }
+```
+
+**Cache:** 1 minute (60 seconds)
+
+#### Get Designer Details
+
+```http
+GET /api/mobile/designers/:id?workspaceId=1
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "Jane Designer",
+  "title": "Senior Product Designer",
+  "company": "Design Co",
+  "location": "San Francisco, CA",
+  "email": "jane@example.com",
+  "linkedIn": "https://linkedin.com/in/jane",
+  "website": "https://jane.design",
+  "photoUrl": "https://...",
+  "skills": ["Figma", "Product Design"],
+  "description": "...",
+  "available": true,
+  "createdAt": "2025-01-01T00:00:00.000Z",
+  "timelineEventCount": 5
+}
+```
+
+**Cache:** 2 minutes (120 seconds)
+
+#### Get Designer Timeline
+
+Get timeline events (notes, activities) for a designer.
+
+```http
+GET /api/mobile/designers/:id/timeline?workspaceId=1&limit=20&offset=0
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `workspaceId` | number | Yes | Workspace ID |
+| `limit` | number | No | Max results (default 20) |
+| `offset` | number | No | Skip results for pagination (default 0) |
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": 1,
+      "eventType": "note_added",
+      "content": "Great initial interview",
+      "source": "web",
+      "createdAt": "2025-01-15T10:30:00.000Z"
+    },
+    {
+      "id": 2,
+      "eventType": "status_change",
+      "content": "Marked as available",
+      "source": "system",
+      "createdAt": "2025-01-14T09:00:00.000Z"
+    }
+  ],
+  "total": 12,
+  "hasMore": false
+}
+```
+
+**Cache:** 30 seconds
+
+---
+
+### List Endpoints
+
+#### Get All Lists
+
+```http
+GET /api/mobile/lists?workspaceId=1
+```
+
+**Response:**
+```json
+{
+  "lists": [
+    {
+      "id": 1,
+      "name": "Potential Hires",
+      "description": "Candidates for Q1 hiring",
+      "isPublic": false,
+      "designerCount": 12,
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Cache:** 1 minute (60 seconds)
+
+#### Get List Designers
+
+```http
+GET /api/mobile/lists/:id/designers?workspaceId=1
+```
+
+**Response:**
+```json
+{
+  "list": {
+    "id": 1,
+    "name": "Potential Hires"
+  },
+  "designers": [...],
+  "total": 12
+}
+```
+
+**Cache:** 1 minute (60 seconds)
+
+---
+
+### Caching
+
+All GET endpoints support HTTP caching with ETag headers. Clients should:
+
+1. Store the `ETag` header from responses
+2. Send `If-None-Match` header with the stored ETag on subsequent requests
+3. Handle `304 Not Modified` responses to use cached data
+
+Example:
+```http
+GET /api/mobile/designers?workspaceId=1
+If-None-Match: "abc123def456"
 ```
 
 ### Error Responses
@@ -167,8 +323,10 @@ All endpoints return consistent error responses:
 ```
 
 Common HTTP status codes:
+- `304` - Not Modified (use cached data)
 - `400` - Bad request (missing required fields)
 - `401` - Unauthorized (invalid or expired token)
+- `403` - Forbidden (no access to workspace)
 - `404` - Not found
 - `500` - Server error
 
@@ -176,7 +334,7 @@ Common HTTP status codes:
 
 ## MCP Server
 
-The MCP (Model Context Protocol) server allows AI assistants like Claude Desktop to interact with Tapestry through natural language.
+The MCP (Model Context Protocol) server allows AI assistants like Claude Desktop and Claude Code to interact with Tapestry through natural language.
 
 ### Setup
 
@@ -204,6 +362,19 @@ The MCP (Model Context Protocol) server allows AI assistants like Claude Desktop
 3. Restart Claude Desktop
 4. Use the `authenticate` tool with your API token
 
+### Health Check
+
+Verify the MCP server is accessible:
+
+```bash
+curl https://tapestry-dh-design.replit.app/mcp/health
+```
+
+**Response:**
+```json
+{"status": "ok", "service": "tapestry-mcp"}
+```
+
 ### Available Tools
 
 #### authenticate
@@ -216,14 +387,28 @@ Authenticate with your Tapestry API token. Required before using other tools.
 
 #### search_designers
 
-Search for designers in your workspace by name, title, skills, or location.
+Search for designers with filtering and pagination.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `query` | string | No | Search term to match against name, title, or skills |
+| `query` | string | No | Search term (case-insensitive) |
 | `skill` | string | No | Filter by specific skill |
 | `location` | string | No | Filter by location |
-| `limit` | number | No | Maximum results to return |
+| `limit` | number | No | Max results (default 20, max 50) |
+| `offset` | number | No | Skip results for pagination |
+
+**Returns:** List of designers with `count`, `offset`, and `hasMore` for pagination.
+
+#### quick_search
+
+Lightweight search returning only essential fields for faster responses.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Search term (matches name or title) |
+| `limit` | number | No | Max results (default 10, max 25) |
+
+**Returns:** List of `{ id, name, title }` objects.
 
 #### get_designer
 
@@ -233,43 +418,23 @@ Retrieve detailed information about a specific designer.
 |-----------|------|----------|-------------|
 | `designerId` | number | Yes | The designer's ID |
 
-#### create_designer
+#### get_designer_timeline
 
-Create a new designer profile.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `name` | string | Yes | Designer's full name |
-| `title` | string | Yes | Job title |
-| `level` | string | Yes | Experience level |
-| `skills` | string[] | No | List of skills |
-| `location` | string | No | Location |
-| `company` | string | No | Current company |
-| `email` | string | No | Email address |
-| `linkedIn` | string | No | LinkedIn URL |
-| `website` | string | No | Portfolio website |
-| `description` | string | No | Bio or description |
-| `notes` | string | No | Private notes |
-
-#### update_designer
-
-Update an existing designer's profile.
+Get timeline entries (notes, activities) for a designer.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `designerId` | number | Yes | The designer's ID |
-| `name` | string | No | Designer's full name |
-| `title` | string | No | Job title |
-| `level` | string | No | Experience level |
-| `skills` | string[] | No | List of skills |
-| `location` | string | No | Location |
-| `company` | string | No | Current company |
-| `email` | string | No | Email address |
-| `linkedIn` | string | No | LinkedIn URL |
-| `website` | string | No | Portfolio website |
-| `description` | string | No | Bio or description |
-| `notes` | string | No | Private notes |
-| `available` | boolean | No | Availability status |
+| `limit` | number | No | Max entries (default 20, max 100) |
+
+#### add_note
+
+Add a note to a designer's timeline.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `designerId` | number | Yes | The designer's ID |
+| `content` | string | Yes | The note content/text |
 
 #### list_lists
 
@@ -326,7 +491,7 @@ Enrich a designer's profile using AI to find additional information.
 
 #### enrich_designer_from_url
 
-Enrich a designer's profile by extracting information from a URL (LinkedIn, portfolio, etc.).
+Enrich a designer's profile by extracting information from a URL.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -363,11 +528,13 @@ Enrich multiple designers at once.
 After authenticating, you can use natural language:
 
 - "Search for product designers in San Francisco"
-- "Show me designers with Figma skills"
-- "Create a new designer profile for John Smith, Senior UX Designer at Apple"
-- "Add designer #42 to the 'Potential Hires' list"
-- "Enrich the profile for designer #15"
+- "Quick search for John"
+- "Show me the timeline for designer #15"
+- "Add a note to designer #42: Great portfolio, strong systems thinking"
+- "Create a list called 'Q1 Candidates'"
+- "Add designer #15 to the Q1 Candidates list"
 - "What lists do I have?"
+- "Enrich the profile for designer #15"
 
 ---
 
@@ -388,3 +555,13 @@ Tokens have the format: `tap_xxxxxxxxxxxx`
 - Store tokens securely (environment variables, secrets managers)
 - Revoke tokens immediately if compromised
 - Each token tracks last usage for auditing
+
+---
+
+## Rate Limits
+
+Currently, there are no enforced rate limits. Please use the API responsibly. Excessive requests may result in temporary throttling.
+
+## Support
+
+For issues or feature requests, please contact the Tapestry team or open an issue on GitHub.

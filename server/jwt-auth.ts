@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { db } from "@db";
 import { users, workspaceMembers, workspaces, designers, lists, listDesigners, designerEvents } from "@db/schema";
 import { eq, and, desc, ilike, or, sql, count } from "drizzle-orm";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
@@ -41,6 +41,25 @@ const crypto = {
     return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
   },
 };
+
+function generateETag(data: any): string {
+  return createHash('md5').update(JSON.stringify(data)).digest('hex');
+}
+
+function setCacheHeaders(req: Request, res: Response, data: any, maxAge: number = 60): boolean {
+  const etag = generateETag(data);
+  const ifNoneMatch = req.headers['if-none-match'];
+
+  res.setHeader('ETag', etag);
+  res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
+
+  if (ifNoneMatch === etag) {
+    res.status(304).end();
+    return true;
+  }
+
+  return false;
+}
 
 export function generateAccessToken(userId: number, email: string): string {
   return jwt.sign(
@@ -262,7 +281,9 @@ export function setupMobileAuth(app: any) {
         isDefault: memberships.length === 1 || m.role === 'owner',
       }));
 
-      res.json({ workspaces: userWorkspaces });
+      const responseData = { workspaces: userWorkspaces };
+      if (setCacheHeaders(req, res, responseData, 300)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get workspaces error:", error);
       res.status(500).json({ error: "Failed to get workspaces" });
@@ -324,7 +345,7 @@ export function setupMobileAuth(app: any) {
         createdAt: designer.createdAt,
       }));
 
-      res.json({
+      const responseData = {
         workspace: {
           id: defaultMembership.workspace.id,
           name: defaultMembership.workspace.name,
@@ -332,7 +353,9 @@ export function setupMobileAuth(app: any) {
         },
         recommendations,
         total: recommendations.length,
-      });
+      };
+      if (setCacheHeaders(req, res, responseData, 60)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get mobile recommendations error:", error);
       res.status(500).json({ error: "Failed to get recommendations" });
@@ -457,12 +480,14 @@ export function setupMobileAuth(app: any) {
         createdAt: designer.createdAt,
       }));
 
-      res.json({
+      const responseData = {
         designers: formattedDesigners,
         total,
         hasMore: offset + designersList.length < total,
         offset,
-      });
+      };
+      if (setCacheHeaders(req, res, responseData, 60)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get mobile designers error:", error);
       res.status(500).json({ error: "Failed to get designers" });
@@ -502,7 +527,7 @@ export function setupMobileAuth(app: any) {
           eq(designerEvents.workspaceId, workspaceId)
         ));
 
-      res.json({
+      const responseData = {
         id: designer.id,
         name: designer.name,
         title: designer.title,
@@ -522,7 +547,9 @@ export function setupMobileAuth(app: any) {
         enrichmentSource: designer.enrichmentSource,
         createdAt: designer.createdAt,
         timelineEventCount: eventCountResult?.count || 0,
-      });
+      };
+      if (setCacheHeaders(req, res, responseData, 120)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get mobile designer error:", error);
       res.status(500).json({ error: "Failed to get designer" });
@@ -588,11 +615,13 @@ export function setupMobileAuth(app: any) {
         createdAt: event.createdAt,
       }));
 
-      res.json({
+      const responseData = {
         events: formattedEvents,
         total,
         hasMore: offset + events.length < total,
-      });
+      };
+      if (setCacheHeaders(req, res, responseData, 30)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get designer timeline error:", error);
       res.status(500).json({ error: "Failed to get timeline" });
@@ -635,7 +664,9 @@ export function setupMobileAuth(app: any) {
         })
       );
 
-      res.json({ lists: listsWithCounts });
+      const responseData = { lists: listsWithCounts };
+      if (setCacheHeaders(req, res, responseData, 60)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get mobile lists error:", error);
       res.status(500).json({ error: "Failed to get lists" });
@@ -697,14 +728,16 @@ export function setupMobileAuth(app: any) {
         listNotes: item.notes,
       }));
 
-      res.json({
+      const responseData = {
         list: {
           id: list.id,
           name: list.name,
         },
         designers: formattedDesigners,
         total: formattedDesigners.length,
-      });
+      };
+      if (setCacheHeaders(req, res, responseData, 60)) return;
+      res.json(responseData);
     } catch (error) {
       console.error("Get list designers error:", error);
       res.status(500).json({ error: "Failed to get list designers" });

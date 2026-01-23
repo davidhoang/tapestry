@@ -397,7 +397,12 @@ Search for designers with filtering and pagination.
 | `limit` | number | No | Max results (default 20, max 50) |
 | `offset` | number | No | Skip results for pagination |
 
-**Returns:** List of designers with `count`, `offset`, and `hasMore` for pagination.
+**Returns:** JSON object with:
+- `results`: Array of designer objects (id, name, title, company, location, skills, email)
+- `total`: Total number of matching designers
+- `count`: Number of results in this response
+- `offset`: Current offset
+- `hasMore`: Boolean indicating if more results are available
 
 #### quick_search
 

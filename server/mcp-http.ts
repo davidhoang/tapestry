@@ -235,11 +235,23 @@ function createMcpServer(sessionId: string) {
             conditions.push(ilike(designers.location, `%${location}%`));
           }
           
+          const whereClause = and(...conditions);
+          const actualLimit = Math.min(limit, 50);
+          const actualOffset = Math.max(0, offset);
+          
+          // Get total count for proper pagination
+          const [countResult] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(designers)
+            .where(whereClause);
+          
+          const total = Number(countResult?.count || 0);
+          
           const results = await db.query.designers.findMany({
-            where: and(...conditions),
+            where: whereClause,
             orderBy: desc(designers.createdAt),
-            limit: Math.min(limit, 50),
-            offset: Math.max(0, offset),
+            limit: actualLimit,
+            offset: actualOffset,
           });
 
           return {
@@ -255,9 +267,10 @@ function createMcpServer(sessionId: string) {
                   skills: d.skills,
                   email: d.email,
                 })),
+                total,
                 count: results.length,
-                offset,
-                hasMore: results.length === Math.min(limit, 50)
+                offset: actualOffset,
+                hasMore: actualOffset + results.length < total
               }, null, 2)
             }]
           };

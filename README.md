@@ -32,7 +32,13 @@ Tapestry provides two API interfaces for external integrations:
 
 ### Mobile API
 
-REST endpoints with JWT authentication for mobile apps.
+REST endpoints with JWT authentication for mobile apps (Expo, React Native).
+
+**Features:**
+- Search designers with filtering and pagination
+- Get designer details and timeline events
+- Manage lists and list membership
+- HTTP caching with ETag support for efficient data synchronization
 
 #### Authentication
 
@@ -102,6 +108,9 @@ The MCP (Model Context Protocol) server allows AI assistants like Claude Desktop
 | `add_designer_to_list` | Add a designer to a list |
 | `remove_designer_from_list` | Remove a designer from a list |
 | `workspace_info` | Get current workspace info |
+| `quick_search` | Fast search returning only id, name, title |
+| `get_designer_timeline` | Get timeline events for a designer |
+| `add_note` | Add a note to a designer's timeline |
 | `enrich_designer` | AI-enrich a designer's profile |
 | `enrich_designer_from_url` | Enrich profile from a URL |
 | `apply_enrichment` | Apply enrichment suggestions |

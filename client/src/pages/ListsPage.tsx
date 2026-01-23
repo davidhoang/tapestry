@@ -117,7 +117,7 @@ function DesignerSelect({
               className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <CommandList className="max-h-[300px]">
+          <CommandList className="max-h-[300px] overflow-y-auto">
             <CommandEmpty>No designers found.</CommandEmpty>
             <CommandGroup>
               {availableDesigners.map((designer) => (

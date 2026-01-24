@@ -121,7 +121,7 @@ export default function HomePage() {
                   className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-500 ease-out"
                   style={{
                     transform: isCardStackHovered 
-                      ? `rotate(0deg) translate(${designer.spreadX}px, ${designer.spreadY}px)`
+                      ? `rotate(${designer.rotation}deg) translateY(${designer.spreadY}px)`
                       : `rotate(${designer.rotation}deg)`,
                     zIndex: 10 + index,
                     boxShadow: isCardStackHovered ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : undefined,

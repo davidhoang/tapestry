@@ -145,6 +145,9 @@ export default function HomePage() {
 
             {/* CTA Content */}
             <div className="w-full md:w-1/2 text-center md:text-left">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                High touch talent management in the intelligence era
+              </h2>
               <p className="text-lg text-gray-700 leading-relaxed mb-8">
                 Tapestry exists to ensure recruiters can focus on what's most important. The relationship with designers. We use intelligence to automate the boring administrative CRM work, not the one-to-one connection.
               </p>

@@ -190,6 +190,7 @@ function App() {
                     <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
                     <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
                     <Route path="/:workspaceSlug/search" component={SearchResultsPage} />
+                    <Route path="/:workspaceSlug/lists/:listSlug" component={ListsPage} />
                     <Route path="/:workspaceSlug/lists" component={ListsPage} />
                     <Route path="/:workspaceSlug/inbox" component={InboxPage} />
                     <Route path="/:workspaceSlug/home" component={RecommendationsPage} />

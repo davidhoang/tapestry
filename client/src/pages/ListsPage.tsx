@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useLists,
   useCreateList,
@@ -8,7 +8,7 @@ import {
 } from "@/hooks/use-lists";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designer";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { slugify } from "@/utils/slugify";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -162,6 +162,35 @@ export default function ListsPage() {
   const [listToDelete, setListToDelete] = useState<SelectList | null>(null);
   const { toast } = useToast();
   const deleteList = useDeleteList();
+  const [location, setLocation] = useLocation();
+  const params = useParams<{ listSlug?: string }>();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+
+  useEffect(() => {
+    if (params.listSlug && lists) {
+      const list = lists.find(l => l.slug === params.listSlug || String(l.id) === params.listSlug);
+      if (list) {
+        setSelectedList(list);
+      } else {
+        setLocation(`/${workspaceSlug}/lists`);
+      }
+    } else if (!params.listSlug) {
+      setSelectedList(null);
+    }
+  }, [params.listSlug, lists, workspaceSlug, setLocation]);
+
+  const handleListClick = (list: SelectList) => {
+    const listIdentifier = list.slug || String(list.id);
+    setLocation(`/${workspaceSlug}/lists/${listIdentifier}`);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setSelectedList(null);
+      setLocation(`/${workspaceSlug}/lists`);
+    }
+  };
 
   const handleDeleteList = async () => {
     if (!listToDelete) return;
@@ -201,7 +230,7 @@ export default function ListsPage() {
             <Card
               key={list.id}
               className="group cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setSelectedList(list)}
+              onClick={() => handleListClick(list)}
             >
               <CardHeader className="relative">
                 <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -297,7 +326,7 @@ export default function ListsPage() {
         <ViewListDialog
           list={selectedList}
           open={Boolean(selectedList)}
-          onOpenChange={(open) => !open && setSelectedList(null)}
+          onOpenChange={handleDialogClose}
         />
       )}
 

@@ -60,7 +60,11 @@ export default function ApiTokensPage() {
     onSuccess: (data) => {
       setNewToken(data.token);
       setTokenName("");
-      queryClient.invalidateQueries({ queryKey: ["/api/workspaces", workspaceSlug, "api-tokens"] });
+      // Optimistically add the new token to the cache
+      queryClient.setQueryData<ApiToken[]>(
+        ["/api/workspaces", workspaceSlug, "api-tokens"],
+        (old) => old ? [...old, data] : [data]
+      );
       toast({ title: "Token created", description: "Make sure to copy your token now. You won't be able to see it again." });
     },
     onError: () => {
@@ -71,12 +75,31 @@ export default function ApiTokensPage() {
   const revokeMutation = useMutation({
     mutationFn: async (tokenId: number) => {
       await apiRequest(`/api/workspaces/${workspaceSlug}/api-tokens/${tokenId}`, { method: "DELETE" });
+      return tokenId;
+    },
+    onMutate: async (tokenId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/workspaces", workspaceSlug, "api-tokens"] });
+      
+      // Snapshot the previous value
+      const previousTokens = queryClient.getQueryData<ApiToken[]>(["/api/workspaces", workspaceSlug, "api-tokens"]);
+      
+      // Optimistically remove the token from the list
+      queryClient.setQueryData<ApiToken[]>(
+        ["/api/workspaces", workspaceSlug, "api-tokens"],
+        (old) => old?.filter(t => t.id !== tokenId) ?? []
+      );
+      
+      return { previousTokens };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/workspaces", workspaceSlug, "api-tokens"] });
       toast({ title: "Token revoked", description: "The token has been revoked and can no longer be used." });
     },
-    onError: () => {
+    onError: (_err, _tokenId, context) => {
+      // Rollback on error
+      if (context?.previousTokens) {
+        queryClient.setQueryData(["/api/workspaces", workspaceSlug, "api-tokens"], context.previousTokens);
+      }
       toast({ title: "Error", description: "Failed to revoke token", variant: "destructive" });
     },
   });

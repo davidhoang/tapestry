@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { HalftoneCmyk } from "@paper-design/shaders-react";
+import { HalftoneDots } from "@paper-design/shaders-react";
 import {
   useLists,
   useCreateList,
@@ -467,20 +467,23 @@ function ViewListDialog({
           <div className="relative">
             {firstDesignerPhoto && (
               <div className="absolute inset-0 h-32 overflow-hidden">
-                <HalftoneCmyk
+                <HalftoneDots
                   width="100%"
                   height={128}
                   image={firstDesignerPhoto}
-                  colorBack="#fbfaf4"
-                  colorC="#00b3ff"
-                  colorM="#fc4f9d"
-                  colorY="#ffd900"
-                  colorK="#231f20"
-                  size={0.15}
-                  gridNoise={0.1}
-                  type="ink"
-                  softness={0.8}
-                  contrast={1.2}
+                  colorBack="#f2f1e8"
+                  colorFront="#2b2b2b"
+                  originalColors={false}
+                  type="gooey"
+                  grid="hex"
+                  inverted={false}
+                  size={0.67}
+                  radius={1.25}
+                  contrast={0.4}
+                  grainMixer={0.2}
+                  grainOverlay={0.2}
+                  grainSize={0.5}
+                  scale={1}
                   fit="cover"
                 />
               </div>

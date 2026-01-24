@@ -12,11 +12,11 @@ export default function HomePage() {
   const [isCardStackHovered, setIsCardStackHovered] = useState(false);
   
   const mockDesigners = [
-    { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -8, spreadX: -160, spreadY: 80 },
-    { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -4, spreadX: -80, spreadY: 40 },
+    { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -6, spreadX: 0, spreadY: -80 },
+    { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -3, spreadX: 0, spreadY: -40 },
     { name: "Elena Rodriguez", title: "Staff Designer", company: "Stripe", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop", rotation: 0, spreadX: 0, spreadY: 0 },
-    { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 4, spreadX: 80, spreadY: -40 },
-    { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 8, spreadX: 160, spreadY: -80 },
+    { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 3, spreadX: 0, spreadY: 40 },
+    { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 6, spreadX: 0, spreadY: 80 },
   ];
 
   return (
@@ -146,8 +146,7 @@ export default function HomePage() {
             {/* CTA Content */}
             <div className="w-full md:w-1/2 text-center md:text-left">
               <p className="text-lg text-gray-700 leading-relaxed mb-8">
-                Tapestry is an intelligent platform that revolutionizes how you discover and connect with design talent. 
-                Our comprehensive database and AI-powered matching system helps you find the perfect designer for any project.
+                Tapestry exists to ensure recruiters can focus on what's most important. The relationship with designers. We use intelligence to automate the boring administrative CRM work, not the one-to-one connection.
               </p>
               <Button asChild className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg">
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">

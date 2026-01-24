@@ -17,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Send, Mail } from "lucide-react";
+import { Loader2, ArrowLeft, Send } from "lucide-react";
 
 export default function EmailListPage() {
   const params = useParams<{ workspaceSlug: string; listSlug: string }>();
@@ -120,14 +120,9 @@ export default function EmailListPage() {
           Back to list
         </Button>
 
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 bg-primary/10 rounded-full">
-            <Mail className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Email List</h1>
-            <p className="text-muted-foreground">Send "{list.name}" via email</p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold">Email List</h1>
+          <p className="text-muted-foreground">Send "{list.name}" via email</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">

@@ -134,9 +134,9 @@ export default function HomePage() {
                       className="w-14 h-14 rounded-full object-cover"
                     />
                     <div>
-                      <h3 className="font-semibold text-gray-900">{designer.name}</h3>
-                      <p className="text-sm text-gray-600">{designer.title}</p>
-                      <p className="text-sm text-gray-500">{designer.company}</p>
+                      <h3 className="text-sm font-semibold text-gray-900">{designer.name}</h3>
+                      <p className="text-xs text-gray-600">{designer.title}</p>
+                      <p className="text-xs text-gray-500">{designer.company}</p>
                     </div>
                   </div>
                 </div>

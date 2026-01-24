@@ -465,6 +465,7 @@ function ViewListDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl overflow-hidden p-0">
           <div className="relative">
+            {/* Halftone Dots Shader - kept for future use
             {firstDesignerPhoto && (
               <div className="absolute inset-0 h-32 overflow-hidden">
                 <HalftoneDots
@@ -488,10 +489,8 @@ function ViewListDialog({
                 />
               </div>
             )}
-            {!firstDesignerPhoto && (
-              <div className="h-32 bg-gradient-to-r from-primary/20 to-primary/5" />
-            )}
-            <div className="h-32" />
+            */}
+            <div className="h-8 bg-gradient-to-r from-primary/20 to-primary/5" />
           </div>
           <div className="px-6 pb-6 pt-2">
             <DialogHeader className="mb-4">

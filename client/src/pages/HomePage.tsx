@@ -12,7 +12,16 @@ export default function HomePage() {
     <>
       {/* Full-width hero with navigation overlay */}
       <section className="hero relative h-[70vh] w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
-        {/* Halftone Dots Shader Background */}
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/hero-design.png')",
+            filter: "brightness(0.7) contrast(1.1)"
+          }}
+        />
+
+        {/* Halftone Dots Shader Background - kept for future use
         <div className="absolute inset-0 opacity-20">
           <HalftoneDots
             width="100%"
@@ -34,9 +43,10 @@ export default function HomePage() {
             fit="cover"
           />
         </div>
+        */}
 
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
 
         {/* Navigation overlay */}
         <div className="relative z-20">

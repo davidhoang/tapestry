@@ -72,22 +72,57 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* About Tapestry Section */}
-      <section className="py-16 bg-warmNeutral">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            What is Tapestry?
-          </h2>
-          <p className="text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto mb-8">
-            Tapestry is an intelligent platform that revolutionizes how you discover and connect with design talent. 
-            Our comprehensive database and AI-powered matching system helps you find the perfect designer for any project, 
-            whether you're building a team, curating talent lists, or seeking specialized expertise.
-          </p>
-          <Button asChild className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg">
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">
-              Request access
-            </a>
-          </Button>
+      {/* Designer Cards Stack Section */}
+      <section className="py-16 bg-warmNeutral overflow-hidden">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            {/* Stacked Cards */}
+            <div className="relative w-full md:w-1/2 h-[400px] flex items-center justify-center">
+              {/* Card Stack */}
+              {[
+                { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -8, offset: { x: -20, y: 20 } },
+                { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -4, offset: { x: -10, y: 10 } },
+                { name: "Elena Rodriguez", title: "Staff Designer", company: "Stripe", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop", rotation: 0, offset: { x: 0, y: 0 } },
+                { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 4, offset: { x: 10, y: -10 } },
+                { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 8, offset: { x: 20, y: -20 } },
+              ].map((designer, index) => (
+                <div
+                  key={designer.name}
+                  className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-300 hover:shadow-xl hover:scale-105"
+                  style={{
+                    transform: `rotate(${designer.rotation}deg) translate(${designer.offset.x}px, ${designer.offset.y}px)`,
+                    zIndex: index + 1,
+                  }}
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={designer.photo}
+                      alt={designer.name}
+                      className="w-14 h-14 rounded-full object-cover"
+                    />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{designer.name}</h3>
+                      <p className="text-sm text-gray-600">{designer.title}</p>
+                      <p className="text-sm text-gray-500">{designer.company}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA Content */}
+            <div className="w-full md:w-1/2 text-center md:text-left">
+              <p className="text-lg text-gray-700 leading-relaxed mb-8">
+                Tapestry is an intelligent platform that revolutionizes how you discover and connect with design talent. 
+                Our comprehensive database and AI-powered matching system helps you find the perfect designer for any project.
+              </p>
+              <Button asChild className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg">
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">
+                  Request access
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 

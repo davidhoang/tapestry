@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { HalftoneCmyk } from "@paper-design/shaders-react";
 import {
   useLists,
   useCreateList,
@@ -457,17 +458,46 @@ function ViewListDialog({
     });
   };
 
+  const firstDesignerPhoto = list.designers?.[0]?.designer?.photoUrl;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">{list.name}</DialogTitle>
-            <p className="text-muted-foreground">{list.description}</p>
-            <p className="text-sm text-muted-foreground">
-              {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
-            </p>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-2xl overflow-hidden p-0">
+          <div className="relative">
+            {firstDesignerPhoto && (
+              <div className="absolute inset-0 h-32 overflow-hidden">
+                <HalftoneCmyk
+                  width="100%"
+                  height={128}
+                  image={firstDesignerPhoto}
+                  colorBack="#fbfaf4"
+                  colorC="#00b3ff"
+                  colorM="#fc4f9d"
+                  colorY="#ffd900"
+                  colorK="#231f20"
+                  size={0.15}
+                  gridNoise={0.1}
+                  type="ink"
+                  softness={0.8}
+                  contrast={1.2}
+                  fit="cover"
+                />
+              </div>
+            )}
+            {!firstDesignerPhoto && (
+              <div className="h-32 bg-gradient-to-r from-primary/20 to-primary/5" />
+            )}
+            <div className="h-32" />
+          </div>
+          <div className="px-6 pb-6 pt-2">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-2xl">{list.name}</DialogTitle>
+              <p className="text-muted-foreground">{list.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
+              </p>
+            </DialogHeader>
           <div className="space-y-5">
             <div className="space-y-4">
               {list.designers?.map(
@@ -615,6 +645,7 @@ function ViewListDialog({
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>

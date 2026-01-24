@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
@@ -8,6 +9,16 @@ import { HalftoneDots } from "@paper-design/shaders-react";
 
 export default function HomePage() {
   const { user } = useUser();
+  const [isCardStackHovered, setIsCardStackHovered] = useState(false);
+  
+  const mockDesigners = [
+    { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -8, spreadX: -160, spreadY: 80 },
+    { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -4, spreadX: -80, spreadY: 40 },
+    { name: "Elena Rodriguez", title: "Staff Designer", company: "Stripe", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop", rotation: 0, spreadX: 0, spreadY: 0 },
+    { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 4, spreadX: 80, spreadY: -40 },
+    { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 8, spreadX: 160, spreadY: -80 },
+  ];
+
   return (
     <>
       {/* Full-width hero with navigation overlay */}
@@ -77,21 +88,43 @@ export default function HomePage() {
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="flex flex-col md:flex-row items-center gap-12">
             {/* Stacked Cards */}
-            <div className="relative w-full md:w-1/2 h-[400px] flex items-center justify-center">
+            <div 
+              className="relative w-full md:w-1/2 h-[400px] flex items-center justify-center"
+              onMouseEnter={() => setIsCardStackHovered(true)}
+              onMouseLeave={() => setIsCardStackHovered(false)}
+            >
+              {/* List Background - appears behind cards */}
+              <div className={`absolute inset-4 bg-white rounded-2xl shadow-inner border-2 border-gray-200 overflow-hidden transition-opacity duration-500 ${isCardStackHovered ? 'opacity-100' : 'opacity-30'}`}>
+                <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                  <span className="ml-3 text-sm font-medium text-gray-600">My Designer List</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
+                      <div className="w-8 h-8 rounded-full bg-gray-200" />
+                      <div className="flex-1">
+                        <div className="h-3 w-24 bg-gray-200 rounded" />
+                        <div className="h-2 w-16 bg-gray-100 rounded mt-1" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Card Stack */}
-              {[
-                { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -8, offset: { x: -20, y: 20 } },
-                { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -4, offset: { x: -10, y: 10 } },
-                { name: "Elena Rodriguez", title: "Staff Designer", company: "Stripe", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop", rotation: 0, offset: { x: 0, y: 0 } },
-                { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 4, offset: { x: 10, y: -10 } },
-                { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 8, offset: { x: 20, y: -20 } },
-              ].map((designer, index) => (
+              {mockDesigners.map((designer, index) => (
                 <div
                   key={designer.name}
-                  className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-300 hover:shadow-xl hover:scale-105"
+                  className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-500 ease-out"
                   style={{
-                    transform: `rotate(${designer.rotation}deg) translate(${designer.offset.x}px, ${designer.offset.y}px)`,
-                    zIndex: index + 1,
+                    transform: isCardStackHovered 
+                      ? `rotate(0deg) translate(${designer.spreadX}px, ${designer.spreadY}px)`
+                      : `rotate(${designer.rotation}deg)`,
+                    zIndex: 10 + index,
+                    boxShadow: isCardStackHovered ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : undefined,
                   }}
                 >
                   <div className="flex items-center gap-4">

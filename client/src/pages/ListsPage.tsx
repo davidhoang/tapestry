@@ -5,6 +5,7 @@ import {
   useDeleteList,
   useUpdateList,
   useAddDesignersToList,
+  useUpdateListDesignerNotes,
 } from "@/hooks/use-lists";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designer";
@@ -389,10 +390,45 @@ function ViewListDialog({
   const workspaceSlug = pathParts[1];
   const [isPublic, setIsPublic] = useState(list.isPublic || false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [editingNotesFor, setEditingNotesFor] = useState<number | null>(null);
+  const [notesValue, setNotesValue] = useState("");
   const updateList = useUpdateList();
+  const updateNotes = useUpdateListDesignerNotes();
   const { toast } = useToast();
   const origin = window.location.origin;
   const shareUrl = `${origin}/lists/${list.slug || list.id}`;
+
+  const handleSaveNotes = async (designerId: number) => {
+    try {
+      await updateNotes.mutateAsync({
+        listId: list.id,
+        designerId,
+        notes: notesValue,
+      });
+      toast({
+        title: "Success",
+        description: "Notes saved successfully",
+      });
+      setEditingNotesFor(null);
+      setNotesValue("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save notes",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStartEditNotes = (designerId: number, currentNotes?: string) => {
+    setEditingNotesFor(designerId);
+    setNotesValue(currentNotes || "");
+  };
+
+  const handleCancelEditNotes = () => {
+    setEditingNotesFor(null);
+    setNotesValue("");
+  };
 
   const handlePublicToggle = async (checked: boolean) => {
     try {
@@ -445,11 +481,13 @@ function ViewListDialog({
                 }) => (
                   <Card
                     key={designer.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setLocation(`/${workspaceSlug}/designers/${slugify(designer.name)}`)}
+                    className="hover:shadow-lg transition-shadow"
                   >
                     <CardContent className="flex items-start space-x-4 pt-6">
-                      <Avatar className="w-12 h-12">
+                      <Avatar 
+                        className="w-12 h-12 cursor-pointer"
+                        onClick={() => setLocation(`/${workspaceSlug}/designers/${slugify(designer.name)}`)}
+                      >
                         <AvatarImage src={designer.photoUrl || ""} />
                         <AvatarFallback>
                           {designer.name
@@ -459,15 +497,71 @@ function ViewListDialog({
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <h3 className="font-medium">{designer.name}</h3>
+                        <h3 
+                          className="font-medium cursor-pointer hover:underline"
+                          onClick={() => setLocation(`/${workspaceSlug}/designers/${slugify(designer.name)}`)}
+                        >
+                          {designer.name}
+                        </h3>
                         <p className="text-sm text-muted-foreground">
                           {designer.title}
                         </p>
-                        {notes && (
-                          <div className="mt-2 text-sm">
-                            <p className="font-medium">Notes:</p>
-                            <p className="text-muted-foreground">{notes}</p>
+                        {editingNotesFor === designer.id ? (
+                          <div className="mt-3 space-y-2">
+                            <Textarea
+                              value={notesValue}
+                              onChange={(e) => setNotesValue(e.target.value)}
+                              placeholder="Add notes about this designer..."
+                              className="min-h-[80px]"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveNotes(designer.id)}
+                                disabled={updateNotes.isPending}
+                              >
+                                {updateNotes.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : null}
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleCancelEditNotes}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
+                        ) : (
+                          <>
+                            {notes ? (
+                              <div className="mt-2 text-sm">
+                                <p className="font-medium">Notes:</p>
+                                <p className="text-muted-foreground">{notes}</p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-1 h-7 px-2 text-xs"
+                                  onClick={() => handleStartEditNotes(designer.id, notes)}
+                                >
+                                  <Pencil className="h-3 w-3 mr-1" />
+                                  Edit notes
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-2 h-7 px-2 text-xs"
+                                onClick={() => handleStartEditNotes(designer.id)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add notes
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </CardContent>

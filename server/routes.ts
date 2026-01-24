@@ -2074,6 +2074,53 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Update notes for a designer in a list
+  app.patch("/api/lists/:listId/designers/:designerId", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const designerId = parseInt(req.params.designerId);
+      const { notes } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Update the notes for this designer in the list
+      const updatedEntry = await db
+        .update(listDesigners)
+        .set({ notes })
+        .where(
+          and(
+            eq(listDesigners.listId, listId),
+            eq(listDesigners.designerId, designerId)
+          )
+        )
+        .returning();
+
+      if (updatedEntry.length === 0) {
+        return res.status(404).json({ error: "Designer not found in this list" });
+      }
+
+      res.json(updatedEntry[0]);
+    } catch (err) {
+      console.error('Error updating designer notes:', err);
+      res.status(500).json({ error: "Failed to update designer notes" });
+    }
+  }));
+
   // Public list route
   app.get("/api/lists/:slugOrId/public", async (req, res) => {
     try {

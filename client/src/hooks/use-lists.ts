@@ -210,3 +210,40 @@ export function useBulkAddDesignersToList() {
     },
   });
 }
+
+export function useUpdateListDesignerNotes() {
+  const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+
+  return useMutation({
+    mutationFn: async ({
+      listId,
+      designerId,
+      notes,
+    }: {
+      listId: number;
+      designerId: number;
+      notes: string;
+    }) => {
+      const response = await fetch(`/api/lists/${listId}/designers/${designerId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ notes }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
+    },
+  });
+}

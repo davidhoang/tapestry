@@ -84,7 +84,10 @@ export async function sendListEmail(
   subject: string,
   summary: string,
 ) {
-  const baseUrl = process.env.BASE_URL || 'https://design-matchmaker.proofofconcept.pub';
+  const baseUrl = process.env.REPLIT_DEPLOYMENT_URL 
+    || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null)
+    || process.env.BASE_URL 
+    || 'https://tapestry.replit.app';
 
   function getPhotoUrl(url: string | null): string | null {
     if (!url) return null;
@@ -154,10 +157,10 @@ export async function sendListEmail(
             ${designersHtml}
           </div>
           <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">
-            Shared via <a href="${baseUrl}" style="color: #6b7280; text-decoration: none; font-weight: 500;">Design Talent Match</a>
+            Shared via <a href="${baseUrl}" style="color: #6b7280; text-decoration: none; font-weight: 500;">Tapestry</a>
           </p>
           <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">
-            <a href="${baseUrl}/lists/${list.id}" style="color: #6b7280; text-decoration: none;">View this list online</a>
+            <a href="${baseUrl}/lists/${list.slug || list.id}" style="color: #6b7280; text-decoration: none;">View this list online</a>
           </p>
         </div>
       </body>

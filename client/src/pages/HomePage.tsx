@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
-import { Database, List, Zap } from "lucide-react";
+import { Database, List, Code } from "lucide-react";
 import { HalftoneDots } from "@paper-design/shaders-react";
 
 export default function HomePage() {
@@ -166,11 +166,8 @@ export default function HomePage() {
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Three powerful tools for intelligent curation
+              Classic features mixed with modern
             </h2>
-            <p className="text-lg text-gray-600">
-              Three powerful tools for high touch recruiting
-            </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -202,16 +199,15 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            {/* Matchmaker Feature */}
+            {/* API and MCP Feature */}
             <Card className="border-2 hover:border-primary/50 transition-colors">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Zap className="w-8 h-8 text-primary" />
+                  <Code className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Matchmaker</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">API and MCP</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Describe your project or role requirements and let our AI analyze your needs to 
-                  recommend the most suitable designers from our database.
+                  Connect Tapestry to your favorite Chat assistant or build your own vibe coded app.
                 </p>
               </CardContent>
             </Card>

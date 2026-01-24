@@ -46,6 +46,8 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **Command Palette**: Keyboard-accessible navigation for quick actions.
 - **Bulk Actions**: Multi-select and bulk operations on designers.
 - **MCP Designer Enrichment**: Integration for AI-assisted profile enrichment via external AI tools, supporting token-based authentication and various enrichment tools.
+- **Public API**: REST API with JWT authentication for mobile apps and external integrations. Includes rate limiting (500 requests per 15 min per IP).
+- **MCP Server**: Remote Model Context Protocol server at `/mcp` for AI assistants like Claude Desktop. Users can self-service API tokens via Settings > API Tokens page.
 
 ## External Dependencies
 

@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
 import { Database, List, Zap } from "lucide-react";
+import { HalftoneCmyk } from "@paper-design/shaders-react";
 
 export default function HomePage() {
   const { user } = useUser();
@@ -11,17 +12,32 @@ export default function HomePage() {
     <>
       {/* Full-width hero with navigation overlay */}
       <section className="hero relative h-[70vh] w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: "url('/hero-design.png')",
-            filter: "brightness(0.7) contrast(1.1)"
-          }}
-        />
+        {/* Halftone CMYK Shader Background */}
+        <div className="absolute inset-0">
+          <HalftoneCmyk
+            width="100%"
+            height="100%"
+            image="/hero-design.png"
+            colorBack="#1a1a2e"
+            colorC="#00b3ff"
+            colorM="#fc4f9d"
+            colorY="#ffd900"
+            colorK="#231f20"
+            size={0.12}
+            gridNoise={0.15}
+            type="ink"
+            softness={0.7}
+            contrast={1.3}
+            floodC={0.1}
+            floodM={0.05}
+            floodY={0.05}
+            floodK={0.2}
+            fit="cover"
+          />
+        </div>
 
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
 
         {/* Navigation overlay */}
         <div className="relative z-20">

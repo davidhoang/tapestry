@@ -389,7 +389,6 @@ function ViewListDialog({
   const pathParts = location.split("/");
   const workspaceSlug = pathParts[1];
   const [isPublic, setIsPublic] = useState(list.isPublic || false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [editingNotesFor, setEditingNotesFor] = useState<number | null>(null);
   const [notesValue, setNotesValue] = useState("");
   const updateList = useUpdateList();
@@ -603,7 +602,10 @@ function ViewListDialog({
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => setShowEmailDialog(true)}
+                          onClick={() => {
+                            const listIdentifier = list.slug || String(list.id);
+                            setLocation(`/${workspaceSlug}/lists/${listIdentifier}/email`);
+                          }}
                         >
                           <Mail className="h-4 w-4" />
                         </Button>
@@ -616,12 +618,6 @@ function ViewListDialog({
           </div>
         </DialogContent>
       </Dialog>
-
-      <EmailListDialog
-        list={list}
-        open={showEmailDialog}
-        onOpenChange={setShowEmailDialog}
-      />
     </>
   );
 }
@@ -1121,133 +1117,6 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Create List
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Add new EmailListDialog component
-interface EmailListDialogProps {
-  list: SelectList;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-function EmailListDialog({ list, open, onOpenChange }: EmailListDialogProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const form = useForm({
-    defaultValues: {
-      email: "",
-      subject: `${list.name} - Designer List`,
-      summary: list.summary || "",
-    },
-  });
-
-  const onSubmit = async (values: {
-    email: string;
-    subject: string;
-    summary: string;
-  }) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/lists/${list.id}/email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      toast({
-        title: "Success",
-        description: "List has been emailed successfully",
-      });
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send email",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Email List</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        {...field}
-                        placeholder="Email address"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="subject"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="summary"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Summary</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        className="resize-none"
-                        {...field}
-                        placeholder="Add a summary for the email..."
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send email
               </Button>
             </div>
           </form>

@@ -36,6 +36,7 @@ const InvitePage = lazy(() => import("./pages/InvitePage"));
 const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const ApiTokensPage = lazy(() => import("./pages/ApiTokensPage"));
 const RecommendationsPage = lazy(() => import("./pages/RecommendationsPage"));
+const EmailListPage = lazy(() => import("./pages/EmailListPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -190,6 +191,7 @@ function App() {
                     <Route path="/:workspaceSlug/directory" component={DirectoryPage} />
                     <Route path="/:workspaceSlug/directory/:slug" component={DesignerDetailsPage} />
                     <Route path="/:workspaceSlug/search" component={SearchResultsPage} />
+                    <Route path="/:workspaceSlug/lists/:listSlug/email" component={EmailListPage} />
                     <Route path="/:workspaceSlug/lists/:listSlug" component={ListsPage} />
                     <Route path="/:workspaceSlug/lists" component={ListsPage} />
                     <Route path="/:workspaceSlug/inbox" component={InboxPage} />

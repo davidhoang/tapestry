@@ -18,6 +18,7 @@ interface ApiToken {
   name: string;
   tokenPrefix: string;
   role: string;
+  usageCount: number;
   lastUsedAt: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -186,28 +187,84 @@ export default function ApiTokensPage() {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">Using with Claude Desktop</CardTitle>
+          <CardTitle className="text-lg">Using with Claude Desktop or Claude Code</CardTitle>
           <CardDescription>
-            Connect Tapestry to Claude Desktop to manage designers and lists through natural language
+            Connect Tapestry to AI assistants to manage designers and lists through natural language
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            After creating a token, add this to your Claude Desktop configuration file:
-          </p>
-          <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Step 1: Add the MCP server to your Claude Desktop config</h4>
+            <p className="text-sm text-muted-foreground">
+              Open your Claude Desktop configuration file:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+              <li><strong>macOS:</strong> <code className="bg-muted px-1 rounded text-xs">~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
+              <li><strong>Windows:</strong> <code className="bg-muted px-1 rounded text-xs">%APPDATA%\Claude\claude_desktop_config.json</code></li>
+            </ul>
+            <div className="relative">
+              <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
 {`{
   "mcpServers": {
     "tapestry": {
       "command": "npx",
-      "args": ["tsx", "/path/to/tapestry/server/mcp/index.ts"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "${window.location.origin}/mcp"
+      ]
     }
   }
 }`}
-          </pre>
-          <p className="text-sm text-muted-foreground">
-            Then use the <code className="bg-muted px-1 rounded">authenticate</code> tool in Claude with your token.
-          </p>
+              </pre>
+              <Button
+                variant="outline"
+                size="sm"
+                className="absolute top-2 right-2"
+                onClick={async () => {
+                  const config = JSON.stringify({
+                    mcpServers: {
+                      tapestry: {
+                        command: "npx",
+                        args: ["-y", "mcp-remote", `${window.location.origin}/mcp`]
+                      }
+                    }
+                  }, null, 2);
+                  await navigator.clipboard.writeText(config);
+                  toast({ title: "Copied!", description: "Configuration copied to clipboard" });
+                }}
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy
+              </Button>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Step 2: Restart Claude Desktop</h4>
+            <p className="text-sm text-muted-foreground">
+              After saving the config, restart Claude Desktop for the changes to take effect.
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Step 3: Authenticate with your token</h4>
+            <p className="text-sm text-muted-foreground">
+              In Claude, use the <code className="bg-muted px-1 rounded">authenticate</code> tool with your API token (starts with <code className="bg-muted px-1 rounded">tap_</code>).
+            </p>
+          </div>
+
+          <Alert>
+            <ExternalLink className="h-4 w-4" />
+            <AlertTitle>MCP Server URL</AlertTitle>
+            <AlertDescription>
+              <p className="font-mono text-xs break-all mb-2">{window.location.origin}/mcp</p>
+              <p className="text-xs text-muted-foreground">
+                If using a custom domain, ensure the MCP server is accessible at the same domain.
+                For Replit deployments, use the <code className="bg-muted px-1 rounded">.replit.app</code> URL.
+              </p>
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
 
@@ -236,6 +293,9 @@ export default function ApiTokensPage() {
                       <span className="font-mono">tap_{token.tokenPrefix}...</span>
                       {" "}&middot;{" "}
                       Created {format(new Date(token.createdAt), "MMM d, yyyy")}
+                      {token.usageCount > 0 && (
+                        <> &middot; {token.usageCount.toLocaleString()} request{token.usageCount !== 1 ? 's' : ''}</>
+                      )}
                       {token.lastUsedAt && (
                         <> &middot; Last used {format(new Date(token.lastUsedAt), "MMM d, yyyy")}</>
                       )}

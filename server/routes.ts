@@ -7214,6 +7214,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
       name: t.name,
       tokenPrefix: t.tokenPrefix,
       role: t.role,
+      usageCount: t.usageCount || 0,
       lastUsedAt: t.lastUsedAt,
       expiresAt: t.expiresAt,
       createdAt: t.createdAt,

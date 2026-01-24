@@ -3,11 +3,37 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import helmet from "helmet";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { setupAuth } from "./auth";
 import { authenticateJWT, setupMobileAuth } from "./jwt-auth";
 import { setupMcpRoutes } from "./mcp-http";
 
 const app = express();
+
+// Trust proxy for rate limiting behind reverse proxy (Replit deployment)
+app.set('trust proxy', 1);
+
+// Rate limiting for public API endpoints (mobile + MCP)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // 500 requests per 15 minutes per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later" },
+  skip: (req) => {
+    // Skip rate limiting for non-API routes
+    return !req.path.startsWith('/api/mobile') && !req.path.startsWith('/mcp');
+  },
+});
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 login attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again later" },
+});
 
 // Security middleware for production
 if (app.get("env") === "production") {
@@ -43,6 +69,13 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Apply rate limiting to public API endpoints
+app.use(apiLimiter);
+
+// Apply stricter rate limiting to auth endpoints
+app.use('/api/mobile/login', authLimiter);
+app.use('/api/mobile/refresh', authLimiter);
 
 // JWT authentication middleware (allows Bearer token auth for mobile apps)
 // Must be before session auth so JWT can set req.user before routes run

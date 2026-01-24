@@ -46,7 +46,10 @@ async function validateToken(token: string): Promise<AuthContext | null> {
   }
   
   await db.update(apiTokens)
-    .set({ lastUsedAt: new Date() })
+    .set({ 
+      lastUsedAt: new Date(),
+      usageCount: sql`COALESCE(${apiTokens.usageCount}, 0) + 1`
+    })
     .where(eq(apiTokens.id, tokenRecord.id));
   
   return {

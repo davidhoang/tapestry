@@ -1130,6 +1130,7 @@ export const apiTokens = pgTable("api_tokens", {
   tokenHash: text("token_hash").notNull(),
   tokenPrefix: text("token_prefix").notNull(),
   role: text("role").notNull().default("editor"),
+  usageCount: integer("usage_count").default(0),
   lastUsedAt: timestamp("last_used_at"),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),

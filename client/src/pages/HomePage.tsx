@@ -13,7 +13,7 @@ export default function HomePage() {
       {/* Full-width hero with navigation overlay */}
       <section className="hero relative h-[70vh] w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
         {/* Halftone Dots Shader Background */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 opacity-20">
           <HalftoneDots
             width="100%"
             height="100%"

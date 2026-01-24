@@ -167,9 +167,11 @@ export async function sendListEmail(
   try {
     const { client, fromEmail } = await getResendClient();
     
+    const senderEmail = fromEmail || "onboarding@resend.dev";
+    
     const { data, error } = await client.emails.send({
       to: recipientEmail,
-      from: fromEmail || "david@davidhoang.com",
+      from: senderEmail,
       subject: subject,
       html: html,
     });

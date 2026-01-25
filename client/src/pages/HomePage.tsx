@@ -1,22 +1,38 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
-import { Database, List, Code } from "lucide-react";
+import { Database, List, Code, MapPin, Briefcase, Mail, ExternalLink } from "lucide-react";
 import { HalftoneDots } from "@paper-design/shaders-react";
+
+type MockDesigner = {
+  name: string;
+  title: string;
+  company: string;
+  photo: string;
+  rotation: number;
+  spreadX: number;
+  spreadY: number;
+  location?: string;
+  email?: string;
+  portfolio?: string;
+  bio?: string;
+};
 
 export default function HomePage() {
   const { user } = useUser();
   const [isCardStackHovered, setIsCardStackHovered] = useState(false);
+  const [selectedDesigner, setSelectedDesigner] = useState<MockDesigner | null>(null);
   
-  const mockDesigners = [
-    { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -6, spreadX: 0, spreadY: -80 },
-    { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -3, spreadX: 0, spreadY: -40 },
-    { name: "Elena Rodriguez", title: "Staff Designer", company: "Stripe", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop", rotation: 0, spreadX: 0, spreadY: 0 },
-    { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 3, spreadX: 0, spreadY: 40 },
-    { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 6, spreadX: 0, spreadY: 80 },
+  const mockDesigners: MockDesigner[] = [
+    { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -6, spreadX: 0, spreadY: -80, location: "San Francisco, CA", email: "sarah@example.com", portfolio: "sarahchen.design", bio: "Passionate about creating intuitive design systems that scale. Previously at Google and Meta." },
+    { name: "Marcus Johnson", title: "Design Director", company: "Airbnb", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop", rotation: -3, spreadX: 0, spreadY: -40, location: "New York, NY", email: "marcus@example.com", portfolio: "marcusjohnson.co", bio: "Leading design teams to create memorable travel experiences. 10+ years in product design." },
+    { name: "Elena Rodriguez", title: "Staff Designer", company: "Stripe", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop", rotation: 0, spreadX: 0, spreadY: 0, location: "Austin, TX", email: "elena@example.com", portfolio: "elenarodriguez.design", bio: "Focused on financial product design and accessibility. Design systems enthusiast." },
+    { name: "James Park", title: "Senior Designer", company: "Linear", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", rotation: 3, spreadX: 0, spreadY: 40, location: "Seattle, WA", email: "james@example.com", portfolio: "jamespark.io", bio: "Crafting productivity tools that developers love. Minimalist design advocate." },
+    { name: "Aisha Patel", title: "Lead Designer", company: "Notion", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop", rotation: 6, spreadX: 0, spreadY: 80, location: "Los Angeles, CA", email: "aisha@example.com", portfolio: "aishapatel.design", bio: "Building the future of collaborative workspaces. Design leadership and mentorship." },
   ];
 
   return (
@@ -59,7 +75,8 @@ export default function HomePage() {
               {mockDesigners.map((designer, index) => (
                 <div
                   key={designer.name}
-                  className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-500 ease-out"
+                  onClick={() => setSelectedDesigner(designer)}
+                  className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-500 ease-out cursor-pointer hover:scale-105"
                   style={{
                     transform: isCardStackHovered 
                       ? `rotate(${designer.rotation}deg) translateY(${designer.spreadY}px)`
@@ -226,6 +243,61 @@ export default function HomePage() {
           />
         </a>
       )}
+
+      {/* Designer Preview Dialog */}
+      <Dialog open={!!selectedDesigner} onOpenChange={(open) => !open && setSelectedDesigner(null)}>
+        <DialogContent className="sm:max-w-md">
+          {selectedDesigner && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="sr-only">{selectedDesigner.name}</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col items-center text-center">
+                <img
+                  src={selectedDesigner.photo.replace('w=150&h=150', 'w=300&h=300')}
+                  alt={selectedDesigner.name}
+                  className="w-24 h-24 rounded-full object-cover mb-4 ring-4 ring-primary/10"
+                />
+                <h3 className="text-xl font-bold text-gray-900">{selectedDesigner.name}</h3>
+                <p className="text-gray-600">{selectedDesigner.title}</p>
+                
+                <div className="flex items-center gap-2 mt-2 text-gray-500">
+                  <Briefcase className="w-4 h-4" />
+                  <span className="text-sm">{selectedDesigner.company}</span>
+                </div>
+                
+                {selectedDesigner.location && (
+                  <div className="flex items-center gap-2 mt-1 text-gray-500">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm">{selectedDesigner.location}</span>
+                  </div>
+                )}
+                
+                {selectedDesigner.bio && (
+                  <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                    {selectedDesigner.bio}
+                  </p>
+                )}
+                
+                <div className="flex gap-3 mt-6">
+                  {selectedDesigner.email && (
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email
+                    </Button>
+                  )}
+                  {selectedDesigner.portfolio && (
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <ExternalLink className="w-4 h-4" />
+                      Portfolio
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

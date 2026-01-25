@@ -22,6 +22,215 @@ type MockDesigner = {
   bio?: string;
 };
 
+function DirectoryFeatureCard() {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const miniDesigners = [
+    { name: "A", rotation: -8, y: -20 },
+    { name: "B", rotation: -4, y: -10 },
+    { name: "C", rotation: 0, y: 0 },
+    { name: "D", rotation: 4, y: 10 },
+    { name: "E", rotation: 8, y: 20 },
+  ];
+
+  return (
+    <Card 
+      className="border-2 hover:border-primary/50 transition-colors overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <CardContent className="p-8 text-center">
+        <div className="relative h-32 mb-6 flex items-center justify-center">
+          {miniDesigners.map((designer, index) => (
+            <motion.div
+              key={designer.name}
+              className="absolute w-16 h-20 bg-white rounded-lg shadow-md border border-gray-100 flex flex-col items-center justify-center"
+              animate={{
+                rotate: isHovered ? designer.rotation : designer.rotation * 0.5,
+                y: isHovered ? designer.y : 0,
+                scale: isHovered ? 1 : 0.95,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 25,
+                delay: index * 0.03,
+              }}
+              style={{ zIndex: 10 - Math.abs(index - 2) }}
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 mb-1" />
+              <div className="w-10 h-1.5 bg-gray-200 rounded" />
+              <div className="w-6 h-1 bg-gray-100 rounded mt-1" />
+            </motion.div>
+          ))}
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Directory</h3>
+        <p className="text-gray-600 leading-relaxed text-sm">
+          Browse our comprehensive database of designers. Filter by skills, experience, and location.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ListsFeatureCard() {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const designers = [
+    { id: 1, delay: 0 },
+    { id: 2, delay: 0.15 },
+    { id: 3, delay: 0.3 },
+  ];
+
+  return (
+    <Card 
+      className="border-2 hover:border-primary/50 transition-colors overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <CardContent className="p-8 text-center">
+        <div className="relative h-32 mb-6 flex items-center justify-center gap-4">
+          {/* Source pile */}
+          <div className="relative w-16">
+            {designers.map((d, i) => (
+              <motion.div
+                key={d.id}
+                className="absolute left-0 w-12 h-12 bg-white rounded-full shadow-md border-2 border-gray-100 flex items-center justify-center"
+                animate={{
+                  x: isHovered ? 80 : 0,
+                  y: isHovered ? (i * 28) - 28 : (i * 4) - 4,
+                  scale: isHovered ? 0.9 : 1,
+                  opacity: 1,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 20,
+                  delay: isHovered ? d.delay : (0.3 - d.delay),
+                }}
+                style={{ zIndex: 3 - i }}
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-primary/20" />
+              </motion.div>
+            ))}
+          </div>
+          
+          {/* Target list */}
+          <div 
+            className={`w-20 h-28 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 p-2 transition-colors duration-200 ${
+              isHovered ? 'border-primary bg-primary/5' : 'border-gray-200 bg-gray-50'
+            }`}
+          >
+            <List className="w-4 h-4 text-gray-400 mb-1" />
+            <AnimatePresence>
+              {isHovered && designers.map((d, i) => (
+                <motion.div
+                  key={`list-${d.id}`}
+                  className="w-full h-5 bg-white rounded shadow-sm flex items-center gap-1 px-1"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: d.delay + 0.2, duration: 0.2 }}
+                >
+                  <div className="w-3 h-3 rounded-full bg-primary/30" />
+                  <div className="flex-1 h-1.5 bg-gray-200 rounded" />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Lists</h3>
+        <p className="text-gray-600 leading-relaxed text-sm">
+          Create curated collections of designers. Share with your team to streamline selection.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApiFeatureCard() {
+  const [isHovered, setIsHovered] = useState(false);
+  const [displayedCode, setDisplayedCode] = useState("");
+  const [showResponse, setShowResponse] = useState(false);
+  
+  const codeSnippet = `GET /api/designers
+?skills=figma`;
+  
+  const response = `[{ "name": "Sarah" }]`;
+
+  useEffect(() => {
+    if (isHovered) {
+      setDisplayedCode("");
+      setShowResponse(false);
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < codeSnippet.length) {
+          setDisplayedCode(codeSnippet.slice(0, index + 1));
+          index++;
+        } else {
+          clearInterval(interval);
+          setTimeout(() => setShowResponse(true), 200);
+        }
+      }, 40);
+      return () => clearInterval(interval);
+    } else {
+      setDisplayedCode("");
+      setShowResponse(false);
+    }
+  }, [isHovered]);
+
+  return (
+    <Card 
+      className="border-2 hover:border-primary/50 transition-colors overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <CardContent className="p-8 text-center">
+        <div className="relative h-32 mb-6 flex flex-col items-center justify-center">
+          <motion.div 
+            className="w-full bg-gray-900 rounded-lg p-3 font-mono text-xs text-left overflow-hidden"
+            animate={{ 
+              scale: isHovered ? 1.02 : 1,
+              boxShadow: isHovered ? '0 10px 25px -5px rgba(0,0,0,0.2)' : '0 4px 6px -1px rgba(0,0,0,0.1)',
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <div className="flex gap-1 mb-2">
+              <div className="w-2 h-2 rounded-full bg-red-400" />
+              <div className="w-2 h-2 rounded-full bg-yellow-400" />
+              <div className="w-2 h-2 rounded-full bg-green-400" />
+            </div>
+            <div className="text-green-400 h-8">
+              {displayedCode || <span className="text-gray-500">$ hover to see...</span>}
+              {isHovered && displayedCode.length < codeSnippet.length && (
+                <motion.span
+                  className="inline-block w-1.5 h-3 bg-green-400 ml-0.5"
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                />
+              )}
+            </div>
+            <AnimatePresence>
+              {showResponse && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-blue-300 mt-1 text-[10px]"
+                >
+                  → {response}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">API and MCP</h3>
+        <p className="text-gray-600 leading-relaxed text-sm">
+          Connect Tapestry to your favorite chat assistant or build your own app.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function HomePage() {
   const { user } = useUser();
   const [isCardStackHovered, setIsCardStackHovered] = useState(false);
@@ -234,46 +443,14 @@ export default function HomePage() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Directory Feature */}
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Database className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Directory</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Browse our comprehensive database of designers. Filter by skills, experience, location, 
-                  and availability to discover talent that matches your specific requirements.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Directory Feature - Mini Card Stack */}
+            <DirectoryFeatureCard />
 
-            {/* Lists Feature */}
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <List className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Lists</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Create and manage curated collections of designers for different projects or needs. 
-                  Share lists with your team or stakeholders to streamline the selection process.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Lists Feature - Drag to List Animation */}
+            <ListsFeatureCard />
 
-            {/* API and MCP Feature */}
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Code className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">API and MCP</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Connect Tapestry to your favorite Chat assistant or build your own vibe coded app.
-                </p>
-              </CardContent>
-            </Card>
+            {/* API and MCP Feature - Code Typing Animation */}
+            <ApiFeatureCard />
           </div>
         </div>
       </section>

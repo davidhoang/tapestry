@@ -7,6 +7,7 @@ import Navigation from "../components/Navigation";
 import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlutedGlass } from "@paper-design/shaders-react";
+import { ShaderButton } from "../components/ShaderButton";
 import heroArtwork from "../assets/visualelectric-1.png";
 
 type MockDesigner = {
@@ -454,11 +455,11 @@ export default function HomePage() {
               <p className="text-lg text-white/90 leading-relaxed mb-8">
                 Tapestry exists to ensure recruiters can focus on what's most important. The relationship with designers. We use intelligence to automate the boring administrative CRM work, not the one-to-one connection.
               </p>
-              <Button asChild className="bg-white hover:bg-white/90 text-gray-900 px-8 py-3 text-lg">
+              <ShaderButton asChild className="bg-white hover:bg-white/90 text-gray-900 px-8 py-3 text-lg">
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">
                   Request access
                 </a>
-              </Button>
+              </ShaderButton>
             </div>
           </div>
         </div>

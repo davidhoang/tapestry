@@ -278,7 +278,7 @@ export default function HomePage() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: "url('/hero-collage.png')",
+            backgroundImage: "url('/images/hero-collage.png')",
             filter: "brightness(0.85)"
           }}
         />

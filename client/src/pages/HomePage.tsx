@@ -7,6 +7,7 @@ import Navigation from "../components/Navigation";
 import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { HalftoneDots } from "@paper-design/shaders-react";
 import { motion, AnimatePresence } from "framer-motion";
+import heroCollage from "../assets/hero-collage.png";
 
 type MockDesigner = {
   name: string;
@@ -278,7 +279,7 @@ export default function HomePage() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: "url('/images/hero-collage.png')",
+            backgroundImage: `url(${heroCollage})`,
             filter: "brightness(0.85)"
           }}
         />

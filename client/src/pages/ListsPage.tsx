@@ -783,7 +783,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto px-6 pb-20">
+        <div className="flex-1 overflow-y-auto px-6 pb-20" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <div className="space-y-6">
             <Form {...form}>
               <form

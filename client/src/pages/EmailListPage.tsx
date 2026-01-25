@@ -213,7 +213,7 @@ export default function EmailListPage() {
                   </p>
                 </div>
 
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                   {list.designers?.map(({ designer, notes }) => (
                     <div
                       key={designer.id}

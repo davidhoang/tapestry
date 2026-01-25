@@ -766,7 +766,7 @@ function AddToListPopover({ designerId }: AddToListPopoverProps) {
       <PopoverContent className="w-80 p-0" align="start">
         <div className="p-4">
           <h4 className="font-medium text-sm mb-3">Add to list</h4>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <div className="space-y-2 max-h-60 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
             {lists && lists.length > 0 ? (
               lists.map((list) => (
                 <div key={list.id} className="flex items-center space-x-3 p-2 hover:bg-accent/50 rounded transition-colors">

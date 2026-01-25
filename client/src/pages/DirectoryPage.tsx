@@ -481,7 +481,7 @@ export default function DirectoryPage() {
                           <DialogHeader className="flex-shrink-0">
                             <DialogTitle>Add new designer</DialogTitle>
                           </DialogHeader>
-                          <div className="flex-1 overflow-y-auto pr-2">
+                          <div className="flex-1 overflow-y-auto pr-2" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                             <AddDesignerDialog
                               designer={null}
                               onClose={() => {}}
@@ -597,7 +597,7 @@ export default function DirectoryPage() {
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit Designer</DialogTitle>
             </DialogHeader>
-            <div className="flex-1 overflow-y-auto pr-2">
+            <div className="flex-1 overflow-y-auto pr-2" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               <AddDesignerDialog
                 designer={designerToEdit}
                 onClose={() => setDesignerToEdit(null)}
@@ -633,7 +633,7 @@ export default function DirectoryPage() {
                 Import from LinkedIn
               </DialogTitle>
             </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               <LinkedInImportModal
                 onClose={() => setShowLinkedInImport(false)}
               />

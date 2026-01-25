@@ -191,7 +191,7 @@ function FilterBar({ filters, onFiltersChange, onGenerate, isGenerating }: Filte
       </div>
 
       <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <DialogHeader>
             <DialogTitle>Upload LinkedIn PDFs</DialogTitle>
           </DialogHeader>
@@ -564,7 +564,7 @@ function RecommendationCard({
               Select which candidates you'd like to include in this action:
             </p>
             
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <div className="space-y-2 max-h-60 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               {recommendation.candidates?.map((candidate) => (
                 <div key={candidate.id} className="flex items-center space-x-2">
                   <Checkbox

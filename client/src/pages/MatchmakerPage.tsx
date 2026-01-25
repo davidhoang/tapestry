@@ -235,7 +235,7 @@ export default function MatchmakerPage() {
         </div>
 
         {recommendations.length > 0 && (
-          <div className="fixed right-0 top-16 bottom-0 w-96 bg-white/95 backdrop-blur-sm border-l border-white/20 shadow-xl overflow-y-auto z-30">
+          <div className="fixed right-0 top-16 bottom-0 w-96 bg-white/95 backdrop-blur-sm border-l border-white/20 shadow-xl overflow-y-auto z-30" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Recommended Designers</h2>

@@ -279,7 +279,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-black" />
         
         {/* Fluted Glass Shader Background */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0" style={{ opacity: 0.3 }}>
           <FlutedGlass
             width="100%"
             height="100%"

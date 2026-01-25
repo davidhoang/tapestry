@@ -29,25 +29,25 @@ export function ShaderButton({
       onMouseLeave={() => setIsHovered(false)}
     >
       {isHovered && (
-        <div className="absolute inset-[-4px] z-0 pointer-events-none">
+        <div className="absolute inset-[-6px] z-0 pointer-events-none rounded-lg overflow-hidden">
           <PulsingBorder
             width="100%"
             height="100%"
             colors={["#0dc1fd", "#d915ef", "#ff3f2ecc"]}
             colorBack="#00000000"
-            roundness={0.25}
-            thickness={0.1}
-            softness={0.75}
+            roundness={0.35}
+            thickness={0.08}
+            softness={0.5}
             aspectRatio="auto"
-            intensity={0.2}
-            bloom={0.25}
+            intensity={0.3}
+            bloom={0.4}
             spots={4}
             spotSize={0.5}
             pulse={0.25}
-            smoke={0.3}
-            smokeSize={0.6}
+            smoke={0.2}
+            smokeSize={0.4}
             speed={1}
-            scale={0.6}
+            scale={1}
             marginLeft={0}
             marginRight={0}
             marginTop={0}

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
-import { Database, List, Code, MapPin, Briefcase, Mail, ExternalLink } from "lucide-react";
+import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { HalftoneDots } from "@paper-design/shaders-react";
 
 type MockDesigner = {
@@ -46,11 +46,11 @@ export default function HomePage() {
             {/* Stacked Cards */}
             <div 
               className="relative w-full md:w-1/2 h-[400px] flex items-center justify-center"
-              onMouseEnter={() => setIsCardStackHovered(true)}
-              onMouseLeave={() => setIsCardStackHovered(false)}
+              onMouseEnter={() => !selectedDesigner && setIsCardStackHovered(true)}
+              onMouseLeave={() => !selectedDesigner && setIsCardStackHovered(false)}
             >
               {/* List Background - appears behind cards */}
-              <div className={`absolute inset-4 bg-white rounded-2xl shadow-inner border-2 border-gray-200 overflow-hidden transition-opacity duration-500 ${isCardStackHovered ? 'opacity-100' : 'opacity-30'}`}>
+              <div className={`absolute inset-4 bg-white rounded-2xl shadow-inner border-2 border-gray-200 overflow-hidden transition-opacity duration-500 ${isCardStackHovered && !selectedDesigner ? 'opacity-100' : 'opacity-30'}`}>
                 <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-400" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
@@ -71,33 +71,69 @@ export default function HomePage() {
               </div>
 
               {/* Card Stack */}
-              {mockDesigners.map((designer, index) => (
-                <div
-                  key={designer.name}
-                  onClick={() => setSelectedDesigner(designer)}
-                  className="absolute bg-white rounded-xl shadow-lg p-5 w-64 transition-all duration-500 ease-out cursor-pointer hover:scale-105"
-                  style={{
-                    transform: isCardStackHovered 
-                      ? `rotate(${designer.rotation}deg) translateY(${designer.spreadY}px)`
-                      : `rotate(${designer.rotation}deg)`,
-                    zIndex: 10 + index,
-                    boxShadow: isCardStackHovered ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : undefined,
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={designer.photo}
-                      alt={designer.name}
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">{designer.name}</h3>
-                      <p className="text-xs text-gray-600">{designer.title}</p>
-                      <p className="text-xs text-gray-500">{designer.company}</p>
+              {mockDesigners.map((designer, index) => {
+                const isSelected = selectedDesigner?.name === designer.name;
+                return (
+                  <div
+                    key={designer.name}
+                    onClick={() => setSelectedDesigner(isSelected ? null : designer)}
+                    className={`absolute bg-white rounded-xl shadow-lg transition-all duration-500 ease-out cursor-pointer
+                      ${isSelected ? 'w-72 p-6 z-50' : 'w-64 p-5 hover:scale-105'}
+                      ${selectedDesigner && !isSelected ? 'opacity-0 scale-90' : 'opacity-100'}`}
+                    style={{
+                      transform: isSelected 
+                        ? 'rotate(0deg) translateY(0px) scale(1.1)'
+                        : isCardStackHovered 
+                          ? `rotate(${designer.rotation}deg) translateY(${designer.spreadY}px)`
+                          : `rotate(${designer.rotation}deg)`,
+                      zIndex: isSelected ? 50 : 10 + index,
+                      boxShadow: isSelected 
+                        ? '0 25px 50px -12px rgb(0 0 0 / 0.25)' 
+                        : isCardStackHovered 
+                          ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' 
+                          : undefined,
+                    }}
+                  >
+                    <div className={`flex ${isSelected ? 'flex-col items-center text-center' : 'flex-row items-center'} gap-4`}>
+                      <img
+                        src={designer.photo}
+                        alt={designer.name}
+                        className={`rounded-full object-cover transition-all duration-500 ${isSelected ? 'w-20 h-20 ring-4 ring-primary/10' : 'w-14 h-14'}`}
+                      />
+                      <div>
+                        <h3 className={`font-semibold text-gray-900 transition-all duration-300 ${isSelected ? 'text-lg' : 'text-sm'}`}>{designer.name}</h3>
+                        <p className={`text-gray-600 ${isSelected ? 'text-sm' : 'text-xs'}`}>{designer.title}</p>
+                        <p className={`text-gray-500 ${isSelected ? 'text-sm' : 'text-xs'}`}>{designer.company}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Expanded details */}
+                    <div className={`overflow-hidden transition-all duration-500 ${isSelected ? 'max-h-48 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                      {designer.location && (
+                        <div className="flex items-center justify-center gap-2 text-gray-500 mb-2">
+                          <MapPin className="w-4 h-4" />
+                          <span className="text-sm">{designer.location}</span>
+                        </div>
+                      )}
+                      {designer.bio && (
+                        <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                          {designer.bio}
+                        </p>
+                      )}
+                      <div className="flex gap-2 justify-center">
+                        <Button variant="outline" size="sm" className="gap-1 text-xs">
+                          <Mail className="w-3 h-3" />
+                          Email
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1 text-xs">
+                          <ExternalLink className="w-3 h-3" />
+                          Portfolio
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* CTA Content */}
@@ -243,76 +279,6 @@ export default function HomePage() {
         </a>
       )}
 
-      {/* Designer Expanded Card Preview */}
-      {selectedDesigner && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/50 z-40 animate-in fade-in duration-200"
-            onClick={() => setSelectedDesigner(null)}
-          />
-          
-          {/* Expanded Card */}
-          <div 
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 
-                       bg-white rounded-xl shadow-2xl p-8 w-[340px]
-                       animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button 
-              onClick={() => setSelectedDesigner(null)}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 
-                         flex items-center justify-center transition-colors text-gray-500"
-            >
-              ×
-            </button>
-            
-            <div className="flex flex-col items-center text-center">
-              <img
-                src={selectedDesigner.photo.replace('w=150&h=150', 'w=300&h=300')}
-                alt={selectedDesigner.name}
-                className="w-20 h-20 rounded-full object-cover mb-4 ring-4 ring-primary/10"
-              />
-              <h3 className="text-xl font-bold text-gray-900">{selectedDesigner.name}</h3>
-              <p className="text-gray-600">{selectedDesigner.title}</p>
-              
-              <div className="flex items-center gap-2 mt-2 text-gray-500">
-                <Briefcase className="w-4 h-4" />
-                <span className="text-sm">{selectedDesigner.company}</span>
-              </div>
-              
-              {selectedDesigner.location && (
-                <div className="flex items-center gap-2 mt-1 text-gray-500">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-sm">{selectedDesigner.location}</span>
-                </div>
-              )}
-              
-              {selectedDesigner.bio && (
-                <p className="mt-4 text-sm text-gray-600 leading-relaxed">
-                  {selectedDesigner.bio}
-                </p>
-              )}
-              
-              <div className="flex gap-3 mt-6">
-                {selectedDesigner.email && (
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </Button>
-                )}
-                {selectedDesigner.portfolio && (
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <ExternalLink className="w-4 h-4" />
-                    Portfolio
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }

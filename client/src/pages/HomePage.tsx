@@ -272,7 +272,7 @@ export default function HomePage() {
       <Navigation />
 
       {/* Designer Cards Stack Section - Main Hero */}
-      <section className="py-16 overflow-hidden relative">
+      <section className="py-24 md:py-32 overflow-hidden relative">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"

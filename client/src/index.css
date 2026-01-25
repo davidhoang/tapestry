@@ -69,6 +69,55 @@
     }
   }
 
+  /* iPad and tablet optimizations (768px - 1024px) */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    /* Prevent rubber-banding/bounce on scroll */
+    html, body {
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Smoother touch scrolling for all scrollable containers */
+    [class*="overflow-y-auto"],
+    [class*="overflow-auto"],
+    [class*="overflow-scroll"] {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scroll-behavior: smooth;
+    }
+    
+    /* Prevent text selection delay on touch */
+    button, a, [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    
+    /* Optimize fixed/sticky elements for smooth scrolling */
+    .fixed, .sticky, [class*="fixed"], [class*="sticky"] {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      will-change: transform;
+    }
+  }
+
+  /* iOS Safari specific fixes */
+  @supports (-webkit-touch-callout: none) {
+    /* Fix for iOS Safari viewport height issues */
+    html {
+      height: -webkit-fill-available;
+    }
+    
+    body {
+      min-height: -webkit-fill-available;
+    }
+    
+    /* Prevent momentum scroll issues in modals */
+    [role="dialog"] {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+  }
+
   body::before {
     content: '';
     position: fixed;

@@ -6,6 +6,7 @@ import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
 import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FlutedGlass } from "@paper-design/shaders-react";
 import heroArtwork from "../assets/visualelectric-1.png";
 
 type MockDesigner = {
@@ -277,31 +278,32 @@ export default function HomePage() {
         {/* Solid black background */}
         <div className="absolute inset-0 bg-black" />
         
-        {/* Background Image with alpha */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url(${heroArtwork})`,
-            opacity: 0.7
-          }}
-        />
-        
-        {/* Paper texture overlay */}
-        <div 
-          className="absolute inset-0 pointer-events-none mix-blend-soft-light"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-            opacity: 0.15
-          }}
-        />
-        
-        {/* Subtle vignette */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)"
-          }}
-        />
+        {/* Fluted Glass Shader Background */}
+        <div className="absolute inset-0">
+          <FlutedGlass
+            width="100%"
+            height="100%"
+            image={heroArtwork}
+            colorBack="#00000000"
+            colorShadow="#000000"
+            colorHighlight="#ffffff"
+            size={0.52}
+            shadows={0.57}
+            highlights={0.18}
+            shape="lines"
+            angle={0}
+            distortionShape="prism"
+            distortion={0.5}
+            shift={0}
+            stretch={0}
+            blur={0}
+            edges={0.25}
+            margin={0}
+            grainMixer={0}
+            grainOverlay={0}
+            fit="cover"
+          />
+        </div>
         
         <div className="container mx-auto px-4 max-w-5xl relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-12">

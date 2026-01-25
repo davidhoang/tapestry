@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
@@ -244,60 +243,76 @@ export default function HomePage() {
         </a>
       )}
 
-      {/* Designer Preview Dialog */}
-      <Dialog open={!!selectedDesigner} onOpenChange={(open) => !open && setSelectedDesigner(null)}>
-        <DialogContent className="sm:max-w-md">
-          {selectedDesigner && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="sr-only">{selectedDesigner.name}</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col items-center text-center">
-                <img
-                  src={selectedDesigner.photo.replace('w=150&h=150', 'w=300&h=300')}
-                  alt={selectedDesigner.name}
-                  className="w-24 h-24 rounded-full object-cover mb-4 ring-4 ring-primary/10"
-                />
-                <h3 className="text-xl font-bold text-gray-900">{selectedDesigner.name}</h3>
-                <p className="text-gray-600">{selectedDesigner.title}</p>
-                
-                <div className="flex items-center gap-2 mt-2 text-gray-500">
-                  <Briefcase className="w-4 h-4" />
-                  <span className="text-sm">{selectedDesigner.company}</span>
-                </div>
-                
-                {selectedDesigner.location && (
-                  <div className="flex items-center gap-2 mt-1 text-gray-500">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">{selectedDesigner.location}</span>
-                  </div>
-                )}
-                
-                {selectedDesigner.bio && (
-                  <p className="mt-4 text-sm text-gray-600 leading-relaxed">
-                    {selectedDesigner.bio}
-                  </p>
-                )}
-                
-                <div className="flex gap-3 mt-6">
-                  {selectedDesigner.email && (
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Mail className="w-4 h-4" />
-                      Email
-                    </Button>
-                  )}
-                  {selectedDesigner.portfolio && (
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <ExternalLink className="w-4 h-4" />
-                      Portfolio
-                    </Button>
-                  )}
-                </div>
+      {/* Designer Expanded Card Preview */}
+      {selectedDesigner && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 animate-in fade-in duration-200"
+            onClick={() => setSelectedDesigner(null)}
+          />
+          
+          {/* Expanded Card */}
+          <div 
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 
+                       bg-white rounded-xl shadow-2xl p-8 w-[340px]
+                       animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button 
+              onClick={() => setSelectedDesigner(null)}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 
+                         flex items-center justify-center transition-colors text-gray-500"
+            >
+              ×
+            </button>
+            
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={selectedDesigner.photo.replace('w=150&h=150', 'w=300&h=300')}
+                alt={selectedDesigner.name}
+                className="w-20 h-20 rounded-full object-cover mb-4 ring-4 ring-primary/10"
+              />
+              <h3 className="text-xl font-bold text-gray-900">{selectedDesigner.name}</h3>
+              <p className="text-gray-600">{selectedDesigner.title}</p>
+              
+              <div className="flex items-center gap-2 mt-2 text-gray-500">
+                <Briefcase className="w-4 h-4" />
+                <span className="text-sm">{selectedDesigner.company}</span>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+              
+              {selectedDesigner.location && (
+                <div className="flex items-center gap-2 mt-1 text-gray-500">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">{selectedDesigner.location}</span>
+                </div>
+              )}
+              
+              {selectedDesigner.bio && (
+                <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                  {selectedDesigner.bio}
+                </p>
+              )}
+              
+              <div className="flex gap-3 mt-6">
+                {selectedDesigner.email && (
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Mail className="w-4 h-4" />
+                    Email
+                  </Button>
+                )}
+                {selectedDesigner.portfolio && (
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <ExternalLink className="w-4 h-4" />
+                    Portfolio
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
 import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { HalftoneDots } from "@paper-design/shaders-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type MockDesigner = {
   name: string;
@@ -71,69 +72,114 @@ export default function HomePage() {
               </div>
 
               {/* Card Stack */}
-              {mockDesigners.map((designer, index) => {
-                const isSelected = selectedDesigner?.name === designer.name;
-                return (
-                  <div
-                    key={designer.name}
-                    onClick={() => setSelectedDesigner(isSelected ? null : designer)}
-                    className={`absolute bg-white rounded-xl shadow-lg transition-all duration-500 ease-out cursor-pointer
-                      ${isSelected ? 'w-72 p-6 z-50' : 'w-64 p-5 hover:scale-105'}
-                      ${selectedDesigner && !isSelected ? 'opacity-0 scale-90' : 'opacity-100'}`}
-                    style={{
-                      transform: isSelected 
-                        ? 'rotate(0deg) translateY(0px) scale(1.1)'
-                        : isCardStackHovered 
-                          ? `rotate(${designer.rotation}deg) translateY(${designer.spreadY}px)`
-                          : `rotate(${designer.rotation}deg)`,
-                      zIndex: isSelected ? 50 : 10 + index,
-                      boxShadow: isSelected 
-                        ? '0 25px 50px -12px rgb(0 0 0 / 0.25)' 
-                        : isCardStackHovered 
-                          ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' 
-                          : undefined,
-                    }}
-                  >
-                    <div className={`flex ${isSelected ? 'flex-col items-center text-center' : 'flex-row items-center'} gap-4`}>
-                      <img
-                        src={designer.photo}
-                        alt={designer.name}
-                        className={`rounded-full object-cover transition-all duration-500 ${isSelected ? 'w-20 h-20 ring-4 ring-primary/10' : 'w-14 h-14'}`}
-                      />
-                      <div>
-                        <h3 className={`font-semibold text-gray-900 transition-all duration-300 ${isSelected ? 'text-lg' : 'text-sm'}`}>{designer.name}</h3>
-                        <p className={`text-gray-600 ${isSelected ? 'text-sm' : 'text-xs'}`}>{designer.title}</p>
-                        <p className={`text-gray-500 ${isSelected ? 'text-sm' : 'text-xs'}`}>{designer.company}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Expanded details */}
-                    <div className={`overflow-hidden transition-all duration-500 ${isSelected ? 'max-h-48 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-                      {designer.location && (
-                        <div className="flex items-center justify-center gap-2 text-gray-500 mb-2">
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-sm">{designer.location}</span>
+              <AnimatePresence>
+                {mockDesigners.map((designer, index) => {
+                  const isSelected = selectedDesigner?.name === designer.name;
+                  const isAnySelected = selectedDesigner !== null;
+                  
+                  return (
+                    <motion.div
+                      key={designer.name}
+                      layoutId={`card-${designer.name}`}
+                      onClick={() => setSelectedDesigner(isSelected ? null : designer)}
+                      className="absolute bg-white rounded-xl shadow-lg cursor-pointer"
+                      initial={false}
+                      animate={{
+                        rotate: isSelected ? 0 : designer.rotation,
+                        y: isSelected ? 0 : isCardStackHovered ? designer.spreadY : 0,
+                        scale: isSelected ? 1.15 : isAnySelected && !isSelected ? 0.9 : 1,
+                        opacity: isAnySelected && !isSelected ? 0 : 1,
+                        width: isSelected ? 288 : 256,
+                        padding: isSelected ? 24 : 20,
+                      }}
+                      whileHover={!isSelected && !isAnySelected ? { scale: 1.05 } : {}}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                        opacity: { duration: 0.2 }
+                      }}
+                      style={{
+                        zIndex: isSelected ? 50 : 10 + index,
+                        boxShadow: isSelected 
+                          ? '0 25px 50px -12px rgb(0 0 0 / 0.25)' 
+                          : isCardStackHovered 
+                            ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' 
+                            : '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                      }}
+                    >
+                      <motion.div 
+                        className="flex gap-4"
+                        animate={{
+                          flexDirection: isSelected ? 'column' : 'row',
+                          alignItems: 'center',
+                          textAlign: isSelected ? 'center' : 'left',
+                        }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <motion.img
+                          src={designer.photo}
+                          alt={designer.name}
+                          className="rounded-full object-cover"
+                          animate={{
+                            width: isSelected ? 80 : 56,
+                            height: isSelected ? 80 : 56,
+                          }}
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          style={{
+                            boxShadow: isSelected ? '0 0 0 4px rgba(var(--primary), 0.1)' : 'none'
+                          }}
+                        />
+                        <div>
+                          <motion.h3 
+                            className="font-semibold text-gray-900"
+                            animate={{ fontSize: isSelected ? '18px' : '14px' }}
+                          >
+                            {designer.name}
+                          </motion.h3>
+                          <p className={`text-gray-600 ${isSelected ? 'text-sm' : 'text-xs'}`}>{designer.title}</p>
+                          <p className={`text-gray-500 ${isSelected ? 'text-sm' : 'text-xs'}`}>{designer.company}</p>
                         </div>
-                      )}
-                      {designer.bio && (
-                        <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                          {designer.bio}
-                        </p>
-                      )}
-                      <div className="flex gap-2 justify-center">
-                        <Button variant="outline" size="sm" className="gap-1 text-xs">
-                          <Mail className="w-3 h-3" />
-                          Email
-                        </Button>
-                        <Button variant="outline" size="sm" className="gap-1 text-xs">
-                          <ExternalLink className="w-3 h-3" />
-                          Portfolio
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                      </motion.div>
+                      
+                      {/* Expanded details */}
+                      <AnimatePresence>
+                        {isSelected && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                            className="overflow-hidden mt-4"
+                          >
+                            {designer.location && (
+                              <div className="flex items-center justify-center gap-2 text-gray-500 mb-2">
+                                <MapPin className="w-4 h-4" />
+                                <span className="text-sm">{designer.location}</span>
+                              </div>
+                            )}
+                            {designer.bio && (
+                              <p className="text-sm text-gray-600 leading-relaxed mb-4 text-center">
+                                {designer.bio}
+                              </p>
+                            )}
+                            <div className="flex gap-2 justify-center">
+                              <Button variant="outline" size="sm" className="gap-1 text-xs">
+                                <Mail className="w-3 h-3" />
+                                Email
+                              </Button>
+                              <Button variant="outline" size="sm" className="gap-1 text-xs">
+                                <ExternalLink className="w-3 h-3" />
+                                Portfolio
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
 
             {/* CTA Content */}

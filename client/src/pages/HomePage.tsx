@@ -273,8 +273,19 @@ export default function HomePage() {
       <Navigation />
 
       {/* Designer Cards Stack Section - Main Hero */}
-      <section className="py-16 bg-warmNeutral overflow-hidden">
-        <div className="container mx-auto px-4 max-w-5xl">
+      <section className="py-16 overflow-hidden relative">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/hero-collage.png')",
+            filter: "brightness(0.85)"
+          }}
+        />
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-black/50" />
+        
+        <div className="container mx-auto px-4 max-w-5xl relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-12">
             {/* Stacked Cards */}
             <div 
@@ -417,13 +428,13 @@ export default function HomePage() {
 
             {/* CTA Content */}
             <div className="w-full md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
                 High touch talent management in the intelligence era
               </h2>
-              <p className="text-lg text-gray-700 leading-relaxed mb-8">
+              <p className="text-lg text-white/90 leading-relaxed mb-8">
                 Tapestry exists to ensure recruiters can focus on what's most important. The relationship with designers. We use intelligence to automate the boring administrative CRM work, not the one-to-one connection.
               </p>
-              <Button asChild className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg">
+              <Button asChild className="bg-white hover:bg-white/90 text-gray-900 px-8 py-3 text-lg">
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">
                   Request access
                 </a>

@@ -287,7 +287,7 @@ export default function HomePage() {
             colorBack="#00000000"
             colorShadow="#000000"
             colorHighlight="#ffffff"
-            size={0.52}
+            size={0.1}
             shadows={0.57}
             highlights={0.18}
             shape="lines"

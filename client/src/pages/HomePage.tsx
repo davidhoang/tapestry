@@ -6,6 +6,7 @@ import { useUser } from "../hooks/use-user";
 import Navigation from "../components/Navigation";
 import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import heroArtwork from "../assets/visualelectric-1.png";
 
 type MockDesigner = {
   name: string;
@@ -277,8 +278,8 @@ export default function HomePage() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: "url('/images/visualelectric-1.png')",
-            filter: "brightness(0.9)"
+            backgroundImage: `url(${heroArtwork})`,
+            filter: "brightness(0.95)"
           }}
         />
         {/* Overlay for readability */}

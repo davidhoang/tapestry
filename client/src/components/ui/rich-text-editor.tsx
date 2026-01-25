@@ -223,7 +223,7 @@ const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
         {!hideToolbar && <MenuBar editor={editor} />}
         <div
           className="overflow-y-auto"
-          style={{ height: hideToolbar ? "100%" : height }}
+          style={{ height: hideToolbar ? "100%" : height, WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
         >
           <EditorContent editor={editor} placeholder={placeholder} />
         </div>

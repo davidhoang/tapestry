@@ -53,6 +53,7 @@ export function PullToRefresh({ children, onRefresh, isRefreshing = false }: Pul
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
     >
       {showIndicator && (
         <div 

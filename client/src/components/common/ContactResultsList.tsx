@@ -54,7 +54,7 @@ export default function ContactResultsList({
         {importResult.errors && importResult.errors.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-medium">Errors:</h4>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
+            <div className="space-y-1 max-h-48 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               {importResult.errors.map((error, index) => (
                 <div key={index} className="bg-muted/30 rounded-lg p-3">
                   <div className="text-sm text-red-600">
@@ -118,7 +118,7 @@ export default function ContactResultsList({
           {batchResult.result.contacts.length > 0 && (
             <div className="space-y-2">
               <h5 className="text-sm font-medium">Extracted Contacts:</h5>
-              <div className="grid gap-2 max-h-48 overflow-y-auto">
+              <div className="grid gap-2 max-h-48 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                 {batchResult.result.contacts.map((contact, contactIndex) => (
                   <div 
                     key={contactIndex} 

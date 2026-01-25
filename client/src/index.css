@@ -10,11 +10,21 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
   body {
     @apply font-serif antialiased text-foreground text-left text-base;
     background-color: #fafaf9;
     min-height: 100vh;
     font-size: 18px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
 
   /* Mobile-first font scaling for better readability on iPhone */

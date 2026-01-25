@@ -626,7 +626,7 @@ export default function DirectoryPage() {
 
         {/* LinkedIn Import Modal */}
         <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
-          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" />

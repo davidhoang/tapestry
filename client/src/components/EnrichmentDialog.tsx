@@ -235,7 +235,7 @@ export default function EnrichmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl" aria-describedby="enrichment-description">
+      <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh]" aria-describedby="enrichment-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />

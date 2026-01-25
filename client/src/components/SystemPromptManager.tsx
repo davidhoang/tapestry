@@ -282,7 +282,7 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
               Create prompt
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl">
+          <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh]">
             <DialogHeader>
               <DialogTitle>Create system prompt</DialogTitle>
               <DialogDescription>
@@ -431,7 +431,7 @@ Only include matches with score 70+ (raised due to feedback learning). Limit to 
 
       {/* Edit Modal */}
       <Dialog open={!!editingPrompt} onOpenChange={() => setEditingPrompt(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Edit system prompt</DialogTitle>
             <DialogDescription>

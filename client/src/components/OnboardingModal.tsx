@@ -112,7 +112,7 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] md:max-h-[85vh] p-0 overflow-hidden">
         <VisuallyHidden>
           <DialogTitle>Onboarding</DialogTitle>
           <DialogDescription>

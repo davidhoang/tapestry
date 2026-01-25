@@ -223,7 +223,7 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="sm:max-w-3xl sm:max-h-[90vh] md:max-h-[85vh]">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
               <DialogDescription>
@@ -508,7 +508,7 @@ export default function ProjectManager({ portfolio }: ProjectManagerProps) {
 
       {/* Edit Project Dialog */}
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="sm:max-w-3xl sm:max-h-[90vh] md:max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
             <DialogDescription>

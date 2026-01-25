@@ -620,7 +620,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
       {/* Create Job Modal */}
       <Dialog open={showCreateJobDialog} onOpenChange={setShowCreateJobDialog}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="font-serif">Create New Job</DialogTitle>
           </DialogHeader>

@@ -188,7 +188,7 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
               Create Portfolio
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="sm:max-w-xl sm:max-h-[90vh] md:max-h-[85vh]">
             <DialogHeader>
               <DialogTitle>Create New Portfolio</DialogTitle>
               <DialogDescription>
@@ -387,7 +387,7 @@ export default function PortfolioManager({ designer }: PortfolioManagerProps) {
 
       {/* Edit Portfolio Dialog */}
       <Dialog open={!!editingPortfolio} onOpenChange={(open) => !open && setEditingPortfolio(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="sm:max-w-xl sm:max-h-[90vh] md:max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Edit Portfolio</DialogTitle>
             <DialogDescription>

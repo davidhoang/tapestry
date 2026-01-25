@@ -154,7 +154,7 @@ export default function RecommendationFeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+      <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] md:max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
         <DialogHeader>
           <DialogTitle>Provide feedback on {designerName}</DialogTitle>
           <DialogDescription>

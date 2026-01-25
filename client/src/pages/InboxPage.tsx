@@ -191,7 +191,7 @@ function FilterBar({ filters, onFiltersChange, onGenerate, isGenerating }: Filte
       </div>
 
       <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+        <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <DialogHeader>
             <DialogTitle>Upload LinkedIn PDFs</DialogTitle>
           </DialogHeader>

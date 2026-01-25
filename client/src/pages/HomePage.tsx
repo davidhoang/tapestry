@@ -21,69 +21,10 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Full-width hero with navigation overlay */}
-      <section className="hero relative h-[70vh] w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: "url('/hero-design.png')",
-            filter: "brightness(0.7) contrast(1.1)"
-          }}
-        />
+      {/* Navigation */}
+      <Navigation />
 
-        {/* Halftone Dots Shader Background - kept for future use
-        <div className="absolute inset-0 opacity-20">
-          <HalftoneDots
-            width="100%"
-            height="100%"
-            image="/hero-design.png"
-            colorBack="#f2f1e8"
-            colorFront="#2b2b2b"
-            originalColors={false}
-            type="gooey"
-            grid="hex"
-            inverted={false}
-            size={0.67}
-            radius={1.25}
-            contrast={0.4}
-            grainMixer={0.2}
-            grainOverlay={0.2}
-            grainSize={0.5}
-            scale={1}
-            fit="cover"
-          />
-        </div>
-        */}
-
-        {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
-
-        {/* Navigation overlay */}
-        <div className="relative z-20">
-          <Navigation />
-        </div>
-
-        {/* Hero Content */}
-        <div className="relative z-10 flex-1 flex items-center justify-center text-center space-y-8 px-4 max-w-4xl mx-auto">
-          <div className="space-y-6">
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
-              Tapestry
-            </h1>
-            <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
-              The intelligent way to stay in touch.
-            </p>
-
-            <p className="text-base text-white/70 text-center">
-              A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
-            </p>
-
-
-          </div>
-        </div>
-      </section>
-
-      {/* Designer Cards Stack Section */}
+      {/* Designer Cards Stack Section - Main Hero */}
       <section className="py-16 bg-warmNeutral overflow-hidden">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="flex flex-col md:flex-row items-center gap-12">
@@ -157,6 +98,61 @@ export default function HomePage() {
                 </a>
               </Button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tapestry Hero Section */}
+      <section className="hero relative h-[50vh] w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/hero-design.png')",
+            filter: "brightness(0.7) contrast(1.1)"
+          }}
+        />
+
+        {/* Halftone Dots Shader Background - kept for future use
+        <div className="absolute inset-0 opacity-20">
+          <HalftoneDots
+            width="100%"
+            height="100%"
+            image="/hero-design.png"
+            colorBack="#f2f1e8"
+            colorFront="#2b2b2b"
+            originalColors={false}
+            type="gooey"
+            grid="hex"
+            inverted={false}
+            size={0.67}
+            radius={1.25}
+            contrast={0.4}
+            grainMixer={0.2}
+            grainOverlay={0.2}
+            grainSize={0.5}
+            scale={1}
+            fit="cover"
+          />
+        </div>
+        */}
+
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
+
+        {/* Hero Content */}
+        <div className="relative z-10 flex-1 flex items-center justify-center text-center space-y-8 px-4 max-w-4xl mx-auto">
+          <div className="space-y-6">
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
+              Tapestry
+            </h1>
+            <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
+              The intelligent way to stay in touch.
+            </p>
+
+            <p className="text-base text-white/70 text-center">
+              A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
+            </p>
           </div>
         </div>
       </section>

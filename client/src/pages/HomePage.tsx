@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
@@ -26,6 +26,29 @@ export default function HomePage() {
   const { user } = useUser();
   const [isCardStackHovered, setIsCardStackHovered] = useState(false);
   const [selectedDesigner, setSelectedDesigner] = useState<MockDesigner | null>(null);
+  const cardStackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedDesigner) {
+        setSelectedDesigner(null);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (selectedDesigner && cardStackRef.current && !cardStackRef.current.contains(e.target as Node)) {
+        setSelectedDesigner(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedDesigner]);
   
   const mockDesigners: MockDesigner[] = [
     { name: "Sarah Chen", title: "Principal Designer", company: "Figma", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop", rotation: -6, spreadX: 0, spreadY: -80, location: "San Francisco, CA", email: "sarah@example.com", portfolio: "sarahchen.design", bio: "Passionate about creating intuitive design systems that scale. Previously at Google and Meta." },
@@ -46,6 +69,7 @@ export default function HomePage() {
           <div className="flex flex-col md:flex-row items-center gap-12">
             {/* Stacked Cards */}
             <div 
+              ref={cardStackRef}
               className="relative w-full md:w-1/2 h-[400px] flex items-center justify-center"
               onMouseEnter={() => !selectedDesigner && setIsCardStackHovered(true)}
               onMouseLeave={() => !selectedDesigner && setIsCardStackHovered(false)}

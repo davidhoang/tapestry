@@ -33,7 +33,7 @@ export function ShaderButton({
           <PulsingBorder
             width="100%"
             height="100%"
-            colors={["#0dc1fd", "#d915ef", "#ff3f2ecc"]}
+            colors={["#C8944B", "#B8843F", "#8B5A2B"]}
             colorBack="#00000000"
             roundness={0.35}
             thickness={0.08}

@@ -102,6 +102,60 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Features Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Classic features mixed with modern
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Directory Feature */}
+            <Card className="border-2 hover:border-primary/50 transition-colors">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Database className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Directory</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Browse our comprehensive database of designers. Filter by skills, experience, location, 
+                  and availability to discover talent that matches your specific requirements.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Lists Feature */}
+            <Card className="border-2 hover:border-primary/50 transition-colors">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <List className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Lists</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Create and manage curated collections of designers for different projects or needs. 
+                  Share lists with your team or stakeholders to streamline the selection process.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* API and MCP Feature */}
+            <Card className="border-2 hover:border-primary/50 transition-colors">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Code className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">API and MCP</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Connect Tapestry to your favorite Chat assistant or build your own vibe coded app.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Tapestry Hero Section */}
       <section className="hero relative h-[50vh] w-screen ml-[calc(50%-50vw)] flex flex-col overflow-hidden">
         {/* Background Image */}
@@ -153,60 +207,6 @@ export default function HomePage() {
             <p className="text-base text-white/70 text-center">
               A <a href="http://www.proofofconcept.pub" target="_blank" className="underline hover:text-white transition-colors">Proof of Concept</a> experiment by David Hoang
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Classic features mixed with modern
-            </h2>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Directory Feature */}
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Database className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Directory</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Browse our comprehensive database of designers. Filter by skills, experience, location, 
-                  and availability to discover talent that matches your specific requirements.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Lists Feature */}
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <List className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Lists</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Create and manage curated collections of designers for different projects or needs. 
-                  Share lists with your team or stakeholders to streamline the selection process.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* API and MCP Feature */}
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Code className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">API and MCP</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Connect Tapestry to your favorite Chat assistant or build your own vibe coded app.
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </section>

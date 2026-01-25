@@ -295,7 +295,7 @@ export default function HomePage() {
               onMouseLeave={() => !selectedDesigner && setIsCardStackHovered(false)}
             >
               {/* List Background - appears behind cards */}
-              <div className={`absolute inset-4 bg-white rounded-2xl shadow-inner border-2 border-gray-200 overflow-hidden transition-opacity duration-500 ${isCardStackHovered && !selectedDesigner ? 'opacity-100' : 'opacity-30'}`}>
+              <div className={`absolute inset-4 bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden transition-all duration-500 ${isCardStackHovered && !selectedDesigner ? 'opacity-100 scale-100' : 'opacity-95 scale-[0.98]'}`}>
                 <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-400" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />

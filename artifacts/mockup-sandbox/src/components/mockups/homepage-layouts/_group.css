@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+  --font-serif: 'Crimson Text', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --primary: #C8944B;
+  --primary-foreground: #ffffff;
+  --background: #fafaf9;
+  --foreground: #111827;
+  --warm-neutral: #F5F2ED;
+  --rich-brown: #8B5A2B;
+  --soft-cream: #FBF8F3;
+  --deep-gold: #B8843F;
+  --muted-tan: #E6D5B7;
+}

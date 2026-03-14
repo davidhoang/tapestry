@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
+import { slugify } from "@/utils/slugify";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
@@ -134,6 +135,7 @@ function RecommendationCardSkeleton() {
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
+  workspaceSlug: string;
   onAccept: (id: number) => void;
   onReject: (id: number, reason: string) => void;
   isAccepting: boolean;
@@ -142,6 +144,7 @@ interface RecommendationCardProps {
 
 function RecommendationCard({
   recommendation,
+  workspaceSlug,
   onAccept,
   onReject,
   isAccepting,
@@ -194,17 +197,21 @@ function RecommendationCard({
     <Card className="w-full transition-all duration-200 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-4">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={designer.photoUrl || ""} />
-            <AvatarFallback>
-              {designer.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
-          </Avatar>
+          <Link href={`/${workspaceSlug}/directory/${slugify(designer.name)}`} className="shrink-0">
+            <Avatar className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarImage src={designer.photoUrl || ""} />
+              <AvatarFallback>
+                {designer.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg truncate">{designer.name}</h3>
+            <Link href={`/${workspaceSlug}/directory/${slugify(designer.name)}`}>
+              <h3 className="font-semibold text-lg truncate cursor-pointer hover:underline hover:text-primary transition-colors">{designer.name}</h3>
+            </Link>
             <p className="text-muted-foreground text-sm truncate">
               {designer.title}
               {designer.company && ` at ${designer.company}`}
@@ -513,6 +520,7 @@ export default function RecommendationsPage() {
                   <RecommendationCard
                     key={recommendation.id}
                     recommendation={recommendation}
+                    workspaceSlug={workspaceSlug!}
                     onAccept={handleAccept}
                     onReject={handleReject}
                     isAccepting={acceptingId === recommendation.id}

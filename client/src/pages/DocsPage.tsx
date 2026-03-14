@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Copy, Check, BookOpen, Terminal, MessageSquare, Lightbulb, ArrowLeft, Monitor, Apple } from "lucide-react";
-import { SiWindows } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -217,7 +216,7 @@ export default function DocsPage() {
                             </code>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <SiWindows className="h-4 w-4 text-muted-foreground" />
+                            <Monitor className="h-4 w-4 text-muted-foreground" />
                             <strong>Windows:</strong>
                             <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono break-all">
                               %APPDATA%\Claude\claude_desktop_config.json
@@ -273,7 +272,7 @@ export default function DocsPage() {
                             </code>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <SiWindows className="h-4 w-4 text-muted-foreground" />
+                            <Monitor className="h-4 w-4 text-muted-foreground" />
                             <strong>Windows:</strong>
                             <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono break-all">
                               %APPDATA%\ChatGPT\chatgpt_mcp_config.json

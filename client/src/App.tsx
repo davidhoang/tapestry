@@ -116,7 +116,7 @@ function DefaultRoute() {
 
 function App() {
   const { user, isLoading } = useUser();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   // Handle public routes first
   if (window.location.pathname.startsWith('/lists/')) {
@@ -139,12 +139,7 @@ function App() {
   }
 
   // Handle public docs routes
-  if (window.location.pathname === '/docs' || window.location.pathname === '/docs/') {
-    window.location.replace('/docs/mcp');
-    return null;
-  }
-
-  if (window.location.pathname === '/docs/mcp' || window.location.pathname === '/docs/mcp/') {
+  if (location === '/docs/mcp' || location === '/docs/mcp/') {
     return (
       <QueryClientProvider client={queryClient}>
         <Suspense fallback={<PageLoader />}>
@@ -153,6 +148,10 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     );
+  }
+  if (location === '/docs' || location === '/docs/') {
+    setLocation('/docs/mcp');
+    return null;
   }
 
   // Handle public portfolio routes

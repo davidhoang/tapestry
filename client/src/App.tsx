@@ -37,6 +37,7 @@ const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const ApiTokensPage = lazy(() => import("./pages/ApiTokensPage"));
 const RecommendationsPage = lazy(() => import("./pages/RecommendationsPage"));
 const EmailListPage = lazy(() => import("./pages/EmailListPage"));
+const DocsPage = lazy(() => import("./pages/DocsPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -135,6 +136,23 @@ function App() {
         </QueryClientProvider>
       );
     }
+  }
+
+  // Handle public docs routes
+  if (window.location.pathname === '/docs' || window.location.pathname === '/docs/') {
+    window.location.replace('/docs/mcp');
+    return null;
+  }
+
+  if (window.location.pathname === '/docs/mcp' || window.location.pathname === '/docs/mcp/') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Suspense fallback={<PageLoader />}>
+          <DocsPage />
+        </Suspense>
+        <Toaster />
+      </QueryClientProvider>
+    );
   }
 
   // Handle public portfolio routes

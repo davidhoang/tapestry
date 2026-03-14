@@ -19,7 +19,7 @@ Add to your Claude Code config (`.claude/settings.json` or via `claude mcp add`)
   "mcpServers": {
     "tapestry": {
       "type": "http",
-      "url": "https://your-tapestry-domain.com/mcp",
+      "url": "https://tapestry.design/mcp",
       "headers": {
         "Authorization": "Bearer tap_your_token_here"
       }
@@ -28,7 +28,7 @@ Add to your Claude Code config (`.claude/settings.json` or via `claude mcp add`)
 }
 ```
 
-Replace `https://your-tapestry-domain.com` with your deployed Tapestry URL and `tap_your_token_here` with your actual API token.
+Replace `tap_your_token_here` with your actual API token.
 
 ### 3. Local stdio mode (alternative)
 

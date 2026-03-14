@@ -138,19 +138,16 @@ function App() {
     }
   }
 
-  // Handle public docs routes
-  if (location === '/docs/mcp' || location === '/docs/mcp/') {
+  // Handle public docs routes (window.location is reliable for direct navigation)
+  if (window.location.pathname === '/docs/mcp' || window.location.pathname === '/docs/mcp/') {
     return (
-      <QueryClientProvider client={queryClient}>
-        <Suspense fallback={<PageLoader />}>
-          <DocsPage />
-        </Suspense>
-        <Toaster />
-      </QueryClientProvider>
+      <Suspense fallback={<PageLoader />}>
+        <DocsPage />
+      </Suspense>
     );
   }
-  if (location === '/docs' || location === '/docs/') {
-    setLocation('/docs/mcp');
+  if (window.location.pathname === '/docs' || window.location.pathname === '/docs/') {
+    window.location.replace('/docs/mcp');
     return null;
   }
 
@@ -183,10 +180,12 @@ function App() {
       <OnboardingProvider>
         <CommandPaletteWrapper />
         <div className="min-h-screen flex flex-col pb-16 md:pb-0">
-          <Navigation />
+          {location !== '/docs/mcp' && <Navigation />}
           <main className="flex-1">
             <Suspense fallback={<PageLoader />}>
               <Switch>
+                <Route path="/docs/mcp" component={DocsPage} />
+                <Route path="/docs">{() => { window.location.replace('/docs/mcp'); return null; }}</Route>
                 {!user && <Route path="/" component={HomePage} />}
                 <Route path="/register" component={RegisterPage} />
                 <Route path="/invite/:token" component={InvitePage} />
@@ -225,8 +224,8 @@ function App() {
               </Switch>
             </Suspense>
           </main>
-          <Footer />
-          {user && <MobileBottomNav />}
+          {location !== '/docs/mcp' && <Footer />}
+          {user && location !== '/docs/mcp' && <MobileBottomNav />}
           <Toaster />
         </div>
       </OnboardingProvider>

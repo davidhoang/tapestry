@@ -549,7 +549,26 @@ async function handleToolCall(name: string, args: Record<string, unknown>, authC
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(designer, null, 2)
+          text: JSON.stringify({
+            id: designer.id,
+            name: designer.name,
+            title: designer.title,
+            location: designer.location,
+            company: designer.company,
+            level: designer.level,
+            website: designer.website,
+            linkedIn: designer.linkedIn,
+            email: designer.email,
+            phoneNumber: designer.phoneNumber,
+            photoUrl: designer.photoUrl,
+            skills: designer.skills,
+            available: designer.available,
+            description: designer.description,
+            notes: designer.notes,
+            enrichedAt: designer.enrichedAt,
+            enrichmentSource: designer.enrichmentSource,
+            createdAt: designer.createdAt,
+          }, null, 2)
         }]
       };
     }

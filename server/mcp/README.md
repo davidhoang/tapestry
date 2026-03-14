@@ -1,6 +1,6 @@
 # Tapestry MCP Server
 
-Connect Claude Desktop to Tapestry for natural language designer and list management.
+Connect Claude to Tapestry for natural language designer and list management.
 
 ## Setup
 
@@ -10,9 +10,29 @@ Connect Claude Desktop to Tapestry for natural language designer and list manage
 2. Click your profile dropdown → "API tokens"
 3. Create a new token and copy it (shown only once)
 
-### 2. Configure Claude Desktop
+### 2. Configure Claude Code (Remote HTTP)
 
-Add to your Claude Desktop config file:
+Add to your Claude Code config (`.claude/settings.json` or via `claude mcp add`):
+
+```json
+{
+  "mcpServers": {
+    "tapestry": {
+      "type": "http",
+      "url": "https://your-tapestry-domain.com/mcp",
+      "headers": {
+        "Authorization": "Bearer tap_your_token_here"
+      }
+    }
+  }
+}
+```
+
+Replace `https://your-tapestry-domain.com` with your deployed Tapestry URL and `tap_your_token_here` with your actual API token.
+
+### 3. Local stdio mode (alternative)
+
+For local development, you can also run the MCP server via stdio. Add to your Claude Desktop config:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -33,17 +53,14 @@ Add to your Claude Desktop config file:
 
 Replace `/path/to/your/tapestry` with the actual path to your Tapestry installation.
 
-### 3. Restart Claude Desktop
+## Authentication
 
-Restart Claude Desktop to load the MCP server.
-
-### 4. Authenticate
-
-In Claude, say: "Authenticate with Tapestry using token tap_xxxxx"
+- **Remote HTTP**: Auth is handled via the `Authorization: Bearer tap_xxx` header — no additional steps needed.
+- **Local stdio**: In Claude, say: "Authenticate with Tapestry using token tap_xxxxx"
 
 ## Available Commands
 
-Once authenticated, you can ask Claude to:
+Once connected, you can ask Claude to:
 
 - "Search for designers with UX skills"
 - "Create a designer named John Smith, Senior Product Designer at Acme Corp"
@@ -58,12 +75,14 @@ Once authenticated, you can ask Claude to:
 
 | Tool | Description |
 |------|-------------|
-| authenticate | Connect with your API token |
-| search_designers | Find designers by name, skills, or location |
+| search_designers | Find designers by name, skills, or location (with pagination) |
+| quick_search | Lightweight search returning id, name, and title |
 | get_designer | Get full profile for a designer |
+| get_designer_timeline | Get timeline events for a designer |
+| add_note | Add a note to a designer's timeline |
 | create_designer | Add a new designer |
 | update_designer | Modify an existing designer |
-| workspace_info | Get workspace stats |
+| workspace_info | Get workspace details |
 
 ### List Management
 

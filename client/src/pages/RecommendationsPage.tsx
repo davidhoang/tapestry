@@ -142,6 +142,13 @@ interface RecommendationCardProps {
   isRejecting: boolean;
 }
 
+const PRIORITY_CONFIG = {
+  urgent: { label: "Urgent", className: "bg-red-50 text-red-700 border-red-200" },
+  high:   { label: "High priority", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  medium: { label: "Medium", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  low:    { label: "Low", className: "bg-gray-50 text-gray-500 border-gray-200" },
+};
+
 function RecommendationCard({
   recommendation,
   workspaceSlug,
@@ -160,7 +167,7 @@ function RecommendationCard({
     switch (recommendation.recommendationType) {
       case "recommend_designer":
         return {
-          subtitle: recommendation.metadata?.jobTitle
+          contactedText: recommendation.metadata?.jobTitle
             ? `For ${recommendation.metadata.jobTitle}`
             : undefined,
           actionLabel: "Add to shortlist",
@@ -168,24 +175,25 @@ function RecommendationCard({
         };
       case "reach_out":
         const lastContacted = recommendation.metadata?.lastContactedAt;
-        const contactedText = lastContacted
-          ? `Last contacted ${formatDistance(new Date(lastContacted), new Date(), { addSuffix: true })}`
-          : "Never contacted";
         return {
-          subtitle: contactedText,
+          contactedText: lastContacted
+            ? `Last contacted ${formatDistance(new Date(lastContacted), new Date(), { addSuffix: true })}`
+            : "Never contacted",
           actionLabel: "Schedule outreach",
           icon: <Mail className="h-4 w-4 mr-2" />,
         };
       default:
         return {
-          subtitle: undefined,
+          contactedText: undefined,
           actionLabel: "Accept",
           icon: <Check className="h-4 w-4 mr-2" />,
         };
     }
   };
 
-  const { subtitle, actionLabel, icon } = getActionContent();
+  const { contactedText, actionLabel, icon } = getActionContent();
+  const priorityConfig = PRIORITY_CONFIG[recommendation.priority] ?? PRIORITY_CONFIG.low;
+  const reasoning = recommendation.candidates?.[0]?.reasoning || recommendation.description;
 
   if (!designer) {
     return null;
@@ -201,27 +209,38 @@ function RecommendationCard({
             <Avatar className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity">
               <AvatarImage src={designer.photoUrl || ""} />
               <AvatarFallback>
-                {designer.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {designer.name.split(" ").map((n) => n[0]).join("")}
               </AvatarFallback>
             </Avatar>
           </Link>
           <div className="flex-1 min-w-0">
-            <Link href={`/${workspaceSlug}/directory/${slugify(designer.name)}`}>
-              <h3 className="font-semibold text-lg truncate cursor-pointer hover:underline hover:text-primary transition-colors">{designer.name}</h3>
-            </Link>
+            <div className="flex items-start justify-between gap-2">
+              <Link href={`/${workspaceSlug}/directory/${slugify(designer.name)}`}>
+                <h3 className="font-semibold text-lg leading-tight cursor-pointer hover:underline hover:text-primary transition-colors">{designer.name}</h3>
+              </Link>
+              {recommendation.priority !== "low" && (
+                <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full border ${priorityConfig.className}`}>
+                  {priorityConfig.label}
+                </span>
+              )}
+            </div>
             <p className="text-muted-foreground text-sm truncate">
               {designer.title}
               {designer.company && ` at ${designer.company}`}
             </p>
-            {subtitle && (
-              <p className="text-sm text-primary mt-1">{subtitle}</p>
+            {contactedText && (
+              <p className="text-sm text-primary mt-0.5">{contactedText}</p>
             )}
           </div>
         </div>
+
+        {reasoning && (
+          <p className="text-sm text-muted-foreground leading-relaxed mt-3 line-clamp-2">
+            {reasoning}
+          </p>
+        )}
       </CardHeader>
+
       <CardContent className="pt-0">
         {skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
@@ -242,7 +261,8 @@ function RecommendationCard({
           <Button
             onClick={() => onAccept(recommendation.id)}
             disabled={isAccepting || isRejecting}
-            className="flex-1"
+            variant="outline"
+            className="flex-1 text-foreground"
             size="sm"
           >
             {isAccepting ? (
@@ -254,11 +274,11 @@ function RecommendationCard({
           </Button>
 
           <Button
-            variant="outline"
+            variant="default"
             size="icon"
             onClick={() => onAccept(recommendation.id)}
             disabled={isAccepting || isRejecting}
-            className="h-10 w-10"
+            className="h-9 w-9"
           >
             {isAccepting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -273,10 +293,10 @@ function RecommendationCard({
           >
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 disabled={isAccepting || isRejecting}
-                className="h-10 w-10"
+                className="h-9 w-9 text-muted-foreground hover:text-foreground"
               >
                 {isRejecting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

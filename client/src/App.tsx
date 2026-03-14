@@ -139,6 +139,7 @@ function App() {
   }
 
   // Handle public docs routes (window.location is reliable for direct navigation)
+  console.log('APP RENDER — pathname:', window.location.pathname, '| href:', window.location.href, '| wouter location:', location);
   if (window.location.pathname === '/docs/mcp' || window.location.pathname === '/docs/mcp/') {
     return (
       <Suspense fallback={<PageLoader />}>

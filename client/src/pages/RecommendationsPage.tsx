@@ -525,7 +525,7 @@ export default function RecommendationsPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-10 max-w-2xl">
+      <div className="container mx-auto px-4 pt-20 pb-8 space-y-10 max-w-screen-xl">
         {/* Intelligent Match Section */}
         <IntelligentMatch />
 
@@ -538,27 +538,28 @@ export default function RecommendationsPage() {
           )}
 
           {isLoadingRecommendations ? (
-            <div className="space-y-4">
-              <RecommendationCardSkeleton />
-              <RecommendationCardSkeleton />
-              <RecommendationCardSkeleton />
+            <div className="flex flex-row gap-4 overflow-x-auto pb-2">
+              <div className="w-[360px] flex-shrink-0"><RecommendationCardSkeleton /></div>
+              <div className="w-[360px] flex-shrink-0"><RecommendationCardSkeleton /></div>
+              <div className="w-[360px] flex-shrink-0"><RecommendationCardSkeleton /></div>
             </div>
           ) : recommendations.length === 0 ? (
             <EmptyState onLoadMore={handleLoadMore} isLoading={loadMoreMutation.isPending} />
           ) : (
-            <div className="space-y-4">
+            <div className="flex flex-row gap-4 overflow-x-auto pb-2 items-start">
               {recommendations
                 .filter((r) => r.status === "new")
                 .map((recommendation) => (
-                  <RecommendationCard
-                    key={recommendation.id}
-                    recommendation={recommendation}
-                    workspaceSlug={workspaceSlug!}
-                    onAccept={handleAccept}
-                    onReject={handleReject}
-                    isAccepting={acceptingId === recommendation.id}
-                    isRejecting={rejectingId === recommendation.id}
-                  />
+                  <div key={recommendation.id} className="w-[360px] flex-shrink-0">
+                    <RecommendationCard
+                      recommendation={recommendation}
+                      workspaceSlug={workspaceSlug!}
+                      onAccept={handleAccept}
+                      onReject={handleReject}
+                      isAccepting={acceptingId === recommendation.id}
+                      isRejecting={rejectingId === recommendation.id}
+                    />
+                  </div>
                 ))}
             </div>
           )}

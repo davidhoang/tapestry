@@ -68,7 +68,7 @@ function DirectoryFeatureCard() {
         </div>
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Directory</h3>
         <p className="text-gray-600 leading-relaxed text-sm">
-          Browse our comprehensive database of designers. Filter by skills, experience, and location.
+          Great design hires start with knowing who's out there. Tapestry's directory maps the design talent landscape so you can surface the right candidates in seconds, not days of LinkedIn digging.
         </p>
       </CardContent>
     </Card>
@@ -142,7 +142,7 @@ function ListsFeatureCard() {
         </div>
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Lists</h3>
         <p className="text-gray-600 leading-relaxed text-sm">
-          Create curated collections of designers. Share with your team to streamline selection.
+          Juggling candidates across tabs and spreadsheets kills your momentum. Lists let you organize talent into focused pipelines you can share with hiring managers instantly, keeping every search moving.
         </p>
       </CardContent>
     </Card>
@@ -226,7 +226,7 @@ function ApiFeatureCard() {
         </div>
         <h3 className="text-xl font-semibold text-gray-900 mb-4">API and MCP</h3>
         <p className="text-gray-600 leading-relaxed text-sm">
-          Connect Tapestry to your favorite chat assistant or build your own app.
+          Your recruiting workflow shouldn't bend to fit another tool. Plug Tapestry's API into your ATS, feed candidate data to an AI assistant via MCP, or build custom automations that work exactly the way your team does.
         </p>
       </CardContent>
     </Card>
@@ -450,10 +450,10 @@ export default function HomePage() {
             {/* CTA Content */}
             <div className="w-full md:w-1/2 text-center md:text-left">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                High touch talent management in the intelligence era
+                Stop sourcing. Start recruiting the best designers.
               </h2>
               <p className="text-lg text-white/90 leading-relaxed mb-8">
-                Tapestry exists to ensure recruiters can focus on what's most important. The relationship with designers. We use intelligence to automate the boring administrative CRM work, not the one-to-one connection.
+                Tapestry gives design recruiters a living, intelligent talent network so you spend less time hunting for candidates and more time building the relationships that land them.
               </p>
               <ShaderButton asChild className="bg-white hover:bg-white/90 text-gray-900 px-8 py-3 text-lg">
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSfflPlc72SEcit6E8BH7TF7SCrUfBPxEv-ZN-asgo7Aq0joOQ/viewform" target="_blank" rel="noopener noreferrer">
@@ -470,7 +470,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Classic features mixed with modern
+              Everything you need to own design recruiting
             </h2>
           </div>
           

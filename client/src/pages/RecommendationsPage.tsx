@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LocationConsentModal from "@/components/LocationConsentModal";
+import DraftMessageModal from "@/components/DraftMessageModal";
 import {
   Check,
   X,
@@ -136,6 +137,7 @@ interface RecommendationCardProps {
   workspaceSlug: string;
   onAccept: (id: number) => void;
   onReject: (id: number, reason: string) => void;
+  onDraft?: (id: number, designerName: string) => void;
   isAccepting: boolean;
   isRejecting: boolean;
 }
@@ -152,6 +154,7 @@ function RecommendationCard({
   workspaceSlug,
   onAccept,
   onReject,
+  onDraft,
   isAccepting,
   isRejecting,
 }: RecommendationCardProps) {
@@ -322,7 +325,13 @@ function RecommendationCard({
 
         {/* Primary action */}
         <Button
-          onClick={() => onAccept(recommendation.id)}
+          onClick={() => {
+            if (recommendation.recommendationType === "reach_out" && onDraft && designer) {
+              onDraft(recommendation.id, designer.name);
+            } else {
+              onAccept(recommendation.id);
+            }
+          }}
           disabled={isAccepting || isRejecting}
           className="w-full mt-4"
           size="sm"
@@ -347,6 +356,7 @@ interface SwipeableCardProps {
   workspaceSlug: string;
   onAccept: (id: number) => void;
   onReject: (id: number, reason: string) => void;
+  onDraft: (id: number, designerName: string) => void;
   isAccepting: boolean;
   isRejecting: boolean;
   onSwipeRight: () => void;
@@ -355,7 +365,7 @@ interface SwipeableCardProps {
 
 function SwipeableCard({
   recommendation, stackOffset, isTop, exitX,
-  workspaceSlug, onAccept, onReject, isAccepting, isRejecting,
+  workspaceSlug, onAccept, onReject, onDraft, isAccepting, isRejecting,
   onSwipeRight, onSwipeLeft,
 }: SwipeableCardProps) {
   const x = useMotionValue(0);
@@ -437,6 +447,7 @@ function SwipeableCard({
         workspaceSlug={workspaceSlug}
         onAccept={onAccept}
         onReject={onReject}
+        onDraft={onDraft}
         isAccepting={isAccepting}
         isRejecting={isRejecting}
       />
@@ -449,11 +460,12 @@ interface CardStackProps {
   workspaceSlug: string;
   onAccept: (id: number) => void;
   onReject: (id: number, reason: string) => void;
+  onDraft: (id: number, designerName: string) => void;
   acceptingId: number | null;
   rejectingId: number | null;
 }
 
-function CardStack({ recommendations, workspaceSlug, onAccept, onReject, acceptingId, rejectingId }: CardStackProps) {
+function CardStack({ recommendations, workspaceSlug, onAccept, onReject, onDraft, acceptingId, rejectingId }: CardStackProps) {
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [exitDirections, setExitDirections] = useState<Record<number, number>>({});
 
@@ -495,6 +507,7 @@ function CardStack({ recommendations, workspaceSlug, onAccept, onReject, accepti
                 workspaceSlug={workspaceSlug}
                 onAccept={(id) => handleSwipeRight(id)}
                 onReject={(id, reason) => handleSwipeLeft(id, reason ?? "not_relevant")}
+                onDraft={onDraft}
                 isAccepting={acceptingId === rec.id}
                 isRejecting={rejectingId === rec.id}
                 onSwipeRight={() => handleSwipeRight(rec.id)}
@@ -570,6 +583,7 @@ export default function RecommendationsPage() {
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [draftModal, setDraftModal] = useState<{ open: boolean; recommendationId: number; designerName: string } | null>(null);
 
   const {
     data: recommendationsData,
@@ -690,6 +704,10 @@ export default function RecommendationsPage() {
     loadMoreMutation.mutate();
   };
 
+  const handleDraft = (id: number, designerName: string) => {
+    setDraftModal({ open: true, recommendationId: id, designerName });
+  };
+
   const handleEnableLocation = () => {
     setShowLocationDialog(true);
   };
@@ -726,6 +744,7 @@ export default function RecommendationsPage() {
               workspaceSlug={workspaceSlug!}
               onAccept={handleAccept}
               onReject={handleReject}
+              onDraft={handleDraft}
               acceptingId={acceptingId}
               rejectingId={rejectingId}
             />
@@ -757,6 +776,20 @@ export default function RecommendationsPage() {
           }}
         />
       </div>
+
+      {draftModal && (
+        <DraftMessageModal
+          open={draftModal.open}
+          onOpenChange={(open) => setDraftModal(open ? draftModal : null)}
+          recommendationId={draftModal.recommendationId}
+          designerName={draftModal.designerName}
+          workspaceSlug={workspaceSlug!}
+          onDone={() => {
+            handleAccept(draftModal.recommendationId);
+            setDraftModal(null);
+          }}
+        />
+      )}
     </div>
   );
 }

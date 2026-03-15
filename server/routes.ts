@@ -6478,6 +6478,121 @@ Analyze this role and recommend matching designers, considering feedback pattern
     });
   }));
 
+  // POST /api/home/recommendations/:id/draft-message - Generate a personalized outreach draft
+  app.post("/api/home/recommendations/:id/draft-message", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { workspaceId, userId } = workspaceContext;
+    const recommendationId = parseInt(req.params.id);
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "OpenAI not configured" });
+    }
+
+    // Fetch recommendation + designer
+    const recommendation = await db.query.inboxRecommendations.findFirst({
+      where: and(
+        eq(inboxRecommendations.id, recommendationId),
+        eq(inboxRecommendations.workspaceId, workspaceId)
+      ),
+      with: {
+        candidates: {
+          with: { designer: true },
+          orderBy: [asc(inboxRecommendationCandidates.rank)],
+        },
+      },
+    });
+
+    if (!recommendation) {
+      return res.status(404).json({ error: "Recommendation not found" });
+    }
+
+    const designer = recommendation.candidates?.[0]?.designer;
+    if (!designer) {
+      return res.status(400).json({ error: "No designer associated with this recommendation" });
+    }
+
+    // Fetch workspace name and sender info
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+    });
+
+    // Fetch active jobs for context
+    const activeJobs = await db.query.jobs.findMany({
+      where: and(
+        eq(jobs.workspaceId, workspaceId),
+        eq(jobs.status, 'active')
+      ),
+      columns: { title: true, description: true },
+      limit: 3,
+    });
+
+    // Fetch user info for sender context
+    const sender = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { username: true, email: true },
+    });
+
+    const reasoning = recommendation.candidates?.[0]?.reasoning || recommendation.description || "";
+    const trigger = (recommendation.metadata as any)?.trigger;
+    const triggerDetail = (recommendation.metadata as any)?.triggerDetail;
+    const designerSkills = Array.isArray(designer.skills) ? (designer.skills as string[]).slice(0, 6).join(", ") : "";
+    const jobContext = activeJobs.length > 0
+      ? `Active open roles at this company: ${activeJobs.map(j => j.title).join(", ")}.`
+      : "";
+
+    const systemPrompt = `You are a thoughtful design recruiter writing a concise, personal outreach message. 
+Write naturally and specifically — avoid generic phrases like "I came across your profile" or "I'd love to connect". 
+The message should feel like it was written by a real person who did their homework. Keep it brief: 3 short paragraphs max.
+Never use emojis. Use sentence case for the subject line, not title case.`;
+
+    const userPrompt = `Write a personalized outreach message to ${designer.name}, a ${designer.title || "designer"}${designer.company ? ` currently at ${designer.company}` : ""}.
+
+Context about why we're reaching out now:
+${trigger ? `Trigger: ${trigger}` : ""}
+${triggerDetail ? `Trigger detail: ${triggerDetail}` : ""}
+${reasoning ? `AI reasoning: ${reasoning}` : ""}
+${jobContext}
+
+Designer profile:
+- Name: ${designer.name}
+- Title: ${designer.title || "Designer"}
+- Company: ${designer.company || "Unknown"}
+- Location: ${designer.location || "Unknown"}
+- Skills: ${designerSkills}
+- Available for new work: ${designer.available ? "Yes" : "Not currently"}
+
+Sender context: ${sender?.username || "a recruiter"} from ${workspace?.name || "our company"}.
+
+Return a JSON object with exactly these fields:
+{
+  "subject": "short email subject line (8 words max, sentence case)",
+  "body": "the email body (plain text, 3 paragraphs max, no salutation line - start after 'Hi [Name],')"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      return res.status(500).json({ error: "Failed to generate draft" });
+    }
+
+    const draft = JSON.parse(content);
+    res.json({
+      subject: draft.subject || "",
+      body: draft.body || "",
+      designerName: designer.name,
+    });
+  }));
+
   // POST /api/home/recommendations/:id/reject - Reject a recommendation with RLHF feedback
   app.post("/api/home/recommendations/:id/reject", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
     const workspaceContext = (req as any).workspaceContext;

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-const MCP_URL = "https://tapestry-dh-design.replit.app/mcp";
+const MCP_URL = "https://tapestry.design/mcp";
 
 const mcpTools = [
   { name: "authenticate", description: "Authenticate with your API token (required first)" },

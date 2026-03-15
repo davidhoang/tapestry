@@ -620,11 +620,11 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
 
       {/* Create Job Modal */}
       <Dialog open={showCreateJobDialog} onOpenChange={setShowCreateJobDialog}>
-        <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="font-serif">Create New Job</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
             <div className="space-y-2">
               <Label htmlFor="jobTitle">Job Title</Label>
               <Input

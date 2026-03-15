@@ -112,7 +112,7 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] md:max-h-[85vh] p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] p-0 overflow-hidden flex flex-col">
         <VisuallyHidden>
           <DialogTitle>Onboarding</DialogTitle>
           <DialogDescription>
@@ -121,9 +121,9 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
         </VisuallyHidden>
         
         {/* Main content */}
-        <div className="relative min-h-[500px] flex flex-col">
+        <div className="relative min-h-0 flex-1 flex flex-col">
           {/* Slide content */}
-          <div className="flex-1 p-8 pt-8 text-center">
+          <div className="flex-1 overflow-y-auto p-8 pt-8 text-center" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
             <div className="max-w-md mx-auto space-y-6">
               {/* Icon */}
               <div className="flex justify-center">
@@ -166,7 +166,7 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
           </div>
 
           {/* Navigation buttons with border-top */}
-          <div className="border-t border-border px-6 py-4 flex justify-between items-center">
+          <div className="flex-shrink-0 border-t border-border px-6 py-4 flex justify-between items-center">
             {/* Back button - floating left */}
             {currentSlide > 0 ? (
               <Button

@@ -247,11 +247,11 @@ export default function MatchmakerPage() {
                         Create list ({selectedDesigners.size})
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
+                    <DialogContent className="max-h-[90vh] flex flex-col">
+                      <DialogHeader className="flex-shrink-0">
                         <DialogTitle>Create New List</DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4">
+                      <div className="flex-1 overflow-y-auto space-y-4" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                         <div>
                           <Label htmlFor="list-name">List Name</Label>
                           <Input

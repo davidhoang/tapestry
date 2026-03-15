@@ -463,8 +463,8 @@ function ViewListDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl overflow-hidden p-0">
-          <div className="relative">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+          <div className="flex-shrink-0 relative">
             {/* Halftone Dots Shader - kept for future use
             {firstDesignerPhoto && (
               <div className="absolute inset-0 h-32 overflow-hidden">
@@ -492,14 +492,14 @@ function ViewListDialog({
             */}
             <div className="h-8 bg-gradient-to-r from-primary/20 to-primary/5" />
           </div>
-          <div className="px-6 pb-6 pt-2">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-2xl">{list.name}</DialogTitle>
-              <p className="text-muted-foreground">{list.description}</p>
-              <p className="text-sm text-muted-foreground">
-                {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
-              </p>
-            </DialogHeader>
+          <DialogHeader className="flex-shrink-0 px-6 pt-2 mb-4">
+            <DialogTitle className="text-2xl">{list.name}</DialogTitle>
+            <p className="text-muted-foreground">{list.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
+            </p>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <div className="space-y-5">
             <div className="space-y-4">
               {list.designers?.map(
@@ -779,7 +779,7 @@ function EditListDialog({ list, open, onOpenChange }: EditListDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl sm:w-[95vw] md:max-h-[85vh] flex flex-col !p-0">
+      <DialogContent className="sm:max-w-4xl sm:w-[95vw] max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col !p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Edit List</DialogTitle>
         </DialogHeader>
@@ -1091,69 +1091,71 @@ function CreateListDialog({ open, onOpenChange }: CreateListDialogProps) {
           Create list
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Create new list</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea className="resize-none" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="space-y-5">
-              <h3 className="font-medium">Add Designers</h3>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <DesignerSelect onSelect={handleAddDesigner} />
-                </div>
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-              {selectedDesignerIds.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Selected Designers</h4>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedDesignerIds.length} designer
-                    {selectedDesignerIds.length !== 1 ? "s" : ""} selected
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea className="resize-none" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="space-y-5">
+                <h3 className="font-medium">Add Designers</h3>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <DesignerSelect onSelect={handleAddDesigner} />
                   </div>
                 </div>
-              )}
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="submit" disabled={createList.isPending}>
-                {createList.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {selectedDesignerIds.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Selected Designers</h4>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedDesignerIds.length} designer
+                      {selectedDesignerIds.length !== 1 ? "s" : ""} selected
+                    </div>
+                  </div>
                 )}
-                Create List
-              </Button>
-            </div>
-          </form>
-        </Form>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="submit" disabled={createList.isPending}>
+                  {createList.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Create List
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

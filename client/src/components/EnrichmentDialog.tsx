@@ -235,8 +235,8 @@ export default function EnrichmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh]" aria-describedby="enrichment-description">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col" aria-describedby="enrichment-description">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             {isNewDesigner ? "Enrich New Designer Profile" : "Enrich Designer Profile"}
@@ -249,7 +249,7 @@ export default function EnrichmentDialog({
           }
         </div>
 
-        <div className="space-y-6 -mt-2">
+        <div className="flex-1 overflow-y-auto space-y-6 -mt-2" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           {!enrichmentResult && (
             <div className="space-y-4">
               <div className="text-center py-4">

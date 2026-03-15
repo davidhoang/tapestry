@@ -247,8 +247,8 @@ export function EnrichmentModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl sm:max-h-[85vh] md:max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-[85vh] md:max-h-[80vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             Enrich Profile
@@ -258,6 +258,7 @@ export function EnrichmentModal({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
         {!hasEnriched ? (
           <div className="py-8 text-center">
             <p className="text-muted-foreground mb-6">
@@ -361,6 +362,7 @@ export function EnrichmentModal({
             )}
           </>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

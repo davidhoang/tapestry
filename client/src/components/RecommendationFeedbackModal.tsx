@@ -154,15 +154,15 @@ export default function RecommendationFeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl sm:max-h-[90vh] md:max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Provide feedback on {designerName}</DialogTitle>
           <DialogDescription>
             Help us improve our AI matching by providing feedback on this recommendation.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           {/* Match Score Display */}
           <div className="bg-muted p-4 rounded-lg">
             <div className="flex items-center justify-between mb-2">

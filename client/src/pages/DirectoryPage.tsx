@@ -477,7 +477,7 @@ export default function DirectoryPage() {
                             Add designer
                           </DropdownMenuItem>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
+                        <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col">
                           <DialogHeader className="flex-shrink-0">
                             <DialogTitle>Add new designer</DialogTitle>
                           </DialogHeader>
@@ -593,7 +593,7 @@ export default function DirectoryPage() {
             }
           }}
         >
-          <DialogContent className="sm:max-w-2xl h-full sm:max-h-[85vh] flex flex-col">
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit Designer</DialogTitle>
             </DialogHeader>
@@ -626,7 +626,7 @@ export default function DirectoryPage() {
 
         {/* LinkedIn Import Modal */}
         <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
-          <DialogContent className="sm:max-w-4xl sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" />
@@ -1385,13 +1385,14 @@ function AddToListDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             Add {designerIds.length} designer{designerIds.length > 1 ? 's' : ''} to list
           </DialogTitle>
         </DialogHeader>
         
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
         <Tabs defaultValue={defaultTab} className="w-full">
           {lists && lists.length > 0 && (
             <TabsList className="grid w-full grid-cols-2">
@@ -1504,6 +1505,7 @@ function AddToListDialog({
             </Form>
           </TabsContent>
         </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -26,6 +26,7 @@ import {
   Mail,
   MapPin,
   Inbox,
+  Sparkles,
 } from "lucide-react";
 import { formatDistance } from "date-fns";
 
@@ -107,27 +108,23 @@ const REJECTION_REASONS = [
 
 function RecommendationCardSkeleton() {
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
+    <Card className="w-full border-l-4 border-l-transparent">
+      <CardContent className="p-5">
+        <div className="flex gap-4 items-start">
+          <Skeleton className="h-14 w-14 rounded-full shrink-0" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-3.5 w-24" />
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex gap-2 mb-4">
-          <Skeleton className="h-6 w-16 rounded-full" />
-          <Skeleton className="h-6 w-20 rounded-full" />
-          <Skeleton className="h-6 w-14 rounded-full" />
+        <Skeleton className="h-14 w-full rounded-lg mt-4" />
+        <div className="flex gap-1.5 mt-3">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-5 w-14 rounded-full" />
         </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 w-10" />
-          <Skeleton className="h-10 w-10" />
-        </div>
+        <Skeleton className="h-9 w-full mt-4" />
       </CardContent>
     </Card>
   );
@@ -143,10 +140,10 @@ interface RecommendationCardProps {
 }
 
 const PRIORITY_CONFIG = {
-  urgent: { label: "Urgent", className: "bg-red-50 text-red-700 border-red-200" },
-  high:   { label: "High priority", className: "bg-amber-50 text-amber-700 border-amber-200" },
-  medium: { label: "Medium", className: "bg-blue-50 text-blue-700 border-blue-200" },
-  low:    { label: "Low", className: "bg-gray-50 text-gray-500 border-gray-200" },
+  urgent: { label: "Urgent", className: "bg-red-50 text-red-700 border-red-200", border: "border-l-red-400" },
+  high:   { label: "High priority", className: "bg-amber-50 text-amber-700 border-amber-200", border: "border-l-amber-400" },
+  medium: { label: "Medium", className: "bg-blue-50 text-blue-700 border-blue-200", border: "border-l-blue-300" },
+  low:    { label: "Low", className: "bg-gray-50 text-gray-500 border-gray-200", border: "border-l-transparent" },
 };
 
 function RecommendationCard({
@@ -158,6 +155,7 @@ function RecommendationCard({
   isRejecting,
 }: RecommendationCardProps) {
   const [showRejectDropdown, setShowRejectDropdown] = useState(false);
+  const [reasoningExpanded, setReasoningExpanded] = useState(false);
 
   const designer =
     recommendation.candidates?.[0]?.designer ||
@@ -194,132 +192,147 @@ function RecommendationCard({
   const { contactedText, actionLabel, icon } = getActionContent();
   const priorityConfig = PRIORITY_CONFIG[recommendation.priority] ?? PRIORITY_CONFIG.low;
   const reasoning = recommendation.candidates?.[0]?.reasoning || recommendation.description;
+  const isLongReasoning = reasoning && reasoning.length > 130;
 
-  if (!designer) {
-    return null;
-  }
+  if (!designer) return null;
 
   const skills = Array.isArray(designer.skills) ? designer.skills : [];
 
   return (
-    <Card className="w-full transition-all duration-200 hover:shadow-md">
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-4">
+    <Card className={`w-full group relative transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 border-l-4 ${priorityConfig.border}`}>
+      {/* Dismiss — appears on hover, top-right */}
+      <div className="absolute top-3 right-3 z-10">
+        <DropdownMenu open={showRejectDropdown} onOpenChange={setShowRejectDropdown}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isAccepting || isRejecting}
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+            >
+              {isRejecting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <X className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {REJECTION_REASONS.map((reason) => (
+              <DropdownMenuItem
+                key={reason.value}
+                onClick={() => {
+                  onReject(recommendation.id, reason.value);
+                  setShowRejectDropdown(false);
+                }}
+              >
+                {reason.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <CardContent className="p-5">
+        {/* Designer header */}
+        <div className="flex gap-4 items-start pr-6">
           <Link href={`/${workspaceSlug}/directory/${slugify(designer.name)}`} className="shrink-0">
-            <Avatar className="h-12 w-12 cursor-pointer hover:opacity-80 transition-opacity">
+            <Avatar className="h-14 w-14 cursor-pointer ring-2 ring-transparent hover:ring-primary/30 transition-all duration-150">
               <AvatarImage src={designer.photoUrl || ""} />
-              <AvatarFallback>
-                {designer.name.split(" ").map((n) => n[0]).join("")}
+              <AvatarFallback className="text-base font-medium">
+                {designer.name.split(" ").map((n: string) => n[0]).join("")}
               </AvatarFallback>
             </Avatar>
           </Link>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Link href={`/${workspaceSlug}/directory/${slugify(designer.name)}`}>
-                <h3 className="font-semibold text-lg leading-tight cursor-pointer hover:underline hover:text-primary transition-colors">{designer.name}</h3>
+                <h3 className="font-semibold text-base leading-tight cursor-pointer hover:text-primary transition-colors">
+                  {designer.name}
+                </h3>
               </Link>
+              {designer.available && (
+                <span className="flex items-center gap-1 text-[11px] text-green-600 font-medium">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block" />
+                  Available
+                </span>
+              )}
               {recommendation.priority !== "low" && (
-                <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full border ${priorityConfig.className}`}>
+                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${priorityConfig.className}`}>
                   {priorityConfig.label}
                 </span>
               )}
             </div>
-            <p className="text-muted-foreground text-sm truncate">
+
+            <p className="text-muted-foreground text-sm mt-0.5">
               {designer.title}
-              {designer.company && ` at ${designer.company}`}
+              {designer.company && (
+                <span className="text-muted-foreground/60"> · {designer.company}</span>
+              )}
             </p>
+
+            {designer.location && (
+              <p className="text-xs text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                <MapPin className="h-3 w-3 shrink-0" />
+                {designer.location}
+              </p>
+            )}
+
             {contactedText && (
-              <p className="text-sm text-primary mt-0.5">{contactedText}</p>
+              <p className="text-xs text-primary mt-1">{contactedText}</p>
             )}
           </div>
         </div>
 
+        {/* AI reasoning callout */}
         {reasoning && (
-          <p className="text-sm text-muted-foreground leading-relaxed mt-3 line-clamp-2">
-            {reasoning}
-          </p>
+          <div className="mt-4 bg-muted/40 rounded-lg px-3 py-2.5">
+            <p className={`text-sm text-muted-foreground leading-relaxed ${!reasoningExpanded && isLongReasoning ? "line-clamp-2" : ""}`}>
+              <Sparkles className="h-3 w-3 inline mr-1.5 text-primary align-middle" />
+              {reasoning}
+            </p>
+            {isLongReasoning && (
+              <button
+                onClick={() => setReasoningExpanded(!reasoningExpanded)}
+                className="text-xs text-primary mt-1 hover:underline"
+              >
+                {reasoningExpanded ? "Show less" : "Show more"}
+              </button>
+            )}
+          </div>
         )}
-      </CardHeader>
 
-      <CardContent className="pt-0">
+        {/* Skills */}
         {skills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {skills.slice(0, 5).map((skill, index) => (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {skills.slice(0, 5).map((skill: string, index: number) => (
               <Badge key={index} variant="secondary" className="text-xs">
                 {skill}
               </Badge>
             ))}
             {skills.length > 5 && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs text-muted-foreground">
                 +{skills.length - 5}
               </Badge>
             )}
           </div>
         )}
 
-        <div className="flex gap-2">
-          <Button
-            onClick={() => onAccept(recommendation.id)}
-            disabled={isAccepting || isRejecting}
-            variant="outline"
-            className="flex-1 text-foreground"
-            size="sm"
-          >
-            {isAccepting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              icon
-            )}
-            {actionLabel}
-          </Button>
-
-          <Button
-            variant="default"
-            size="icon"
-            onClick={() => onAccept(recommendation.id)}
-            disabled={isAccepting || isRejecting}
-            className="h-9 w-9"
-          >
-            {isAccepting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-          </Button>
-
-          <DropdownMenu
-            open={showRejectDropdown}
-            onOpenChange={setShowRejectDropdown}
-          >
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={isAccepting || isRejecting}
-                className="h-9 w-9 text-muted-foreground hover:text-foreground"
-              >
-                {isRejecting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {REJECTION_REASONS.map((reason) => (
-                <DropdownMenuItem
-                  key={reason.value}
-                  onClick={() => {
-                    onReject(recommendation.id, reason.value);
-                    setShowRejectDropdown(false);
-                  }}
-                >
-                  {reason.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* Primary action */}
+        <Button
+          onClick={() => onAccept(recommendation.id)}
+          disabled={isAccepting || isRejecting}
+          className="w-full mt-4"
+          size="sm"
+        >
+          {isAccepting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            icon
+          )}
+          {actionLabel}
+        </Button>
       </CardContent>
     </Card>
   );

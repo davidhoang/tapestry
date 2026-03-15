@@ -154,9 +154,11 @@ export default function PortraitHero() {
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
       `}} />
-      <div className="w-full max-w-[380px] space-y-4">
+      <div className="w-full flex gap-5 justify-center items-start px-2">
         {mockData.map(card => (
-          <PortraitCard key={card.id} data={card} />
+          <div key={card.id} className="w-[340px] shrink-0">
+            <PortraitCard data={card} />
+          </div>
         ))}
       </div>
     </div>

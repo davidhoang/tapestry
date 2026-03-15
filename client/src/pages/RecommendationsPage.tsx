@@ -359,27 +359,46 @@ function SwipeableCard({
   onSwipeRight, onSwipeLeft,
 }: SwipeableCardProps) {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-260, 0, 260], [-14, 0, 14]);
+  const rotate = useTransform(x, [-260, 0, 260], [-13, 0, 13]);
   const addOpacity = useTransform(x, [30, 110], [0, 1]);
   const passOpacity = useTransform(x, [-110, -30], [1, 0]);
 
+  /* Background cards — slim ribbons that peek below the top card */
+  if (!isTop) {
+    return (
+      <motion.div
+        animate={{ scale: 1 - stackOffset * 0.025 }}
+        transition={{ type: "spring", stiffness: 320, damping: 32 }}
+        className="bg-white border border-border shadow-sm"
+        style={{
+          position: "absolute",
+          top: "100%",
+          left: stackOffset * 10,
+          right: stackOffset * 10,
+          height: 16,
+          marginTop: -(stackOffset * 2),
+          zIndex: 10 - stackOffset,
+          borderRadius: "0 0 12px 12px",
+        }}
+      />
+    );
+  }
+
+  /* Top card — in normal flow (defines container height), draggable */
   return (
     <motion.div
-      drag={isTop ? "x" : false}
+      drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.88}
       style={{
-        x: isTop ? x : undefined,
-        rotate: isTop ? rotate : undefined,
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 10 - stackOffset,
-        cursor: isTop ? "grab" : "default",
+        position: "relative",
+        zIndex: 10,
+        x,
+        rotate,
+        cursor: "grab",
         touchAction: "none",
       }}
-      animate={{ scale: 1 - stackOffset * 0.042, y: stackOffset * 16 }}
+      animate={{ scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       onDragEnd={(_, info) => {
         if (info.offset.x > 100) onSwipeRight();
@@ -391,29 +410,28 @@ function SwipeableCard({
         rotate: exitX > 0 ? 18 : -18,
         transition: { duration: 0.32, ease: "easeOut" },
       }}
-      className={isTop ? "active:cursor-grabbing select-none" : "select-none"}
+      className="active:cursor-grabbing select-none"
     >
-      {/* Swipe overlay indicators */}
-      {isTop && (
-        <>
-          <motion.div
-            style={{ opacity: addOpacity }}
-            className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-green-500 bg-green-50/60"
-          >
-            <span className="absolute top-4 left-4 text-green-600 font-bold text-sm border-2 border-green-600 rounded px-2 py-0.5 bg-white/90 -rotate-12">
-              Add
-            </span>
-          </motion.div>
-          <motion.div
-            style={{ opacity: passOpacity }}
-            className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-red-400 bg-red-50/60"
-          >
-            <span className="absolute top-4 right-4 text-red-500 font-bold text-sm border-2 border-red-500 rounded px-2 py-0.5 bg-white/90 rotate-12">
-              Pass
-            </span>
-          </motion.div>
-        </>
-      )}
+      {/* Add indicator */}
+      <motion.div
+        style={{ opacity: addOpacity }}
+        className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-green-500 bg-green-50/50"
+      >
+        <span className="absolute top-4 left-4 text-green-600 font-bold text-sm border-2 border-green-600 rounded px-2 py-0.5 bg-white/90 -rotate-12">
+          Add
+        </span>
+      </motion.div>
+
+      {/* Pass indicator */}
+      <motion.div
+        style={{ opacity: passOpacity }}
+        className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-red-400 bg-red-50/50"
+      >
+        <span className="absolute top-4 right-4 text-red-500 font-bold text-sm border-2 border-red-500 rounded px-2 py-0.5 bg-white/90 rotate-12">
+          Pass
+        </span>
+      </motion.div>
+
       <RecommendationCard
         recommendation={recommendation}
         workspaceSlug={workspaceSlug}
@@ -458,26 +476,32 @@ function CardStack({ recommendations, workspaceSlug, onAccept, onReject, accepti
 
   if (activeCards.length === 0) return null;
 
+  // Render order: background cards first (lower z), top card last (higher z)
+  const renderCards = [...visibleCards].reverse(); // index 0 = furthest back
+
   return (
     <div>
-      <div className="relative" style={{ minHeight: 400 }}>
+      <div className="relative pb-6">
         <AnimatePresence>
-          {visibleCards.map((rec, i) => (
-            <SwipeableCard
-              key={rec.id}
-              recommendation={rec}
-              stackOffset={i}
-              isTop={i === 0}
-              exitX={exitDirections[rec.id] ?? 520}
-              workspaceSlug={workspaceSlug}
-              onAccept={(id) => handleSwipeRight(id)}
-              onReject={(id, reason) => handleSwipeLeft(id, reason ?? "not_relevant")}
-              isAccepting={acceptingId === rec.id}
-              isRejecting={rejectingId === rec.id}
-              onSwipeRight={() => handleSwipeRight(rec.id)}
-              onSwipeLeft={() => handleSwipeLeft(rec.id)}
-            />
-          ))}
+          {renderCards.map((rec) => {
+            const i = visibleCards.indexOf(rec);
+            return (
+              <SwipeableCard
+                key={rec.id}
+                recommendation={rec}
+                stackOffset={i}
+                isTop={i === 0}
+                exitX={exitDirections[rec.id] ?? 520}
+                workspaceSlug={workspaceSlug}
+                onAccept={(id) => handleSwipeRight(id)}
+                onReject={(id, reason) => handleSwipeLeft(id, reason ?? "not_relevant")}
+                isAccepting={acceptingId === rec.id}
+                isRejecting={rejectingId === rec.id}
+                onSwipeRight={() => handleSwipeRight(rec.id)}
+                onSwipeLeft={() => handleSwipeLeft(rec.id)}
+              />
+            );
+          })}
         </AnimatePresence>
       </div>
       <div className="flex items-center justify-between text-xs text-muted-foreground mt-3 px-1">

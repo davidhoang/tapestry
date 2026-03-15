@@ -1,5 +1,6 @@
+import OpenAI from "openai";
 import { db } from "@db";
-import { designers, lists, listDesigners } from "@db/schema";
+import { designers, lists, designerOutreach } from "@db/schema";
 import { eq, and, notInArray, desc, sql } from "drizzle-orm";
 import { 
   RecommendationGenerator, 
@@ -10,12 +11,16 @@ import {
   RecommendationCandidate
 } from "../recommendation-utils";
 
-/**
- * Add to List Generator
- * 
- * Finds designers that would be good fits for existing lists
- * based on skills, experience level, and list criteria.
- */
+const MAX_CANDIDATES = 5;
+const AVAILABILITY_BOOST = 15;
+
+interface AICriteria {
+  skills: { name: string; weight: number }[];
+  seniority: string | null;
+  specialization: string | null;
+  availabilityPreference: boolean;
+}
+
 export class AddToListGenerator implements RecommendationGenerator {
   
   getType(): string {
@@ -23,7 +28,6 @@ export class AddToListGenerator implements RecommendationGenerator {
   }
 
   async isEnabled(context: GeneratorContext): Promise<boolean> {
-    // Check if workspace has lists that could benefit from new additions
     const listsCount = await db
       .select({ count: sql<number>`count(*)` })
       .from(lists)
@@ -35,7 +39,6 @@ export class AddToListGenerator implements RecommendationGenerator {
   async generate(context: GeneratorContext): Promise<RecommendationResult[]> {
     const recommendations: RecommendationResult[] = [];
 
-    // Get all lists in the workspace
     const workspaceLists = await db.query.lists.findMany({
       where: eq(lists.workspaceId, context.workspaceId),
       with: {
@@ -48,7 +51,6 @@ export class AddToListGenerator implements RecommendationGenerator {
       orderBy: desc(lists.createdAt),
     });
 
-    // Generate recommendations for each list
     for (const list of workspaceLists) {
       try {
         const listRecommendations = await this.generateForList(list, context);
@@ -65,289 +67,348 @@ export class AddToListGenerator implements RecommendationGenerator {
     list: any, 
     context: GeneratorContext
   ): Promise<RecommendationResult[]> {
-    // Skip if list already has many designers (>20)
     if (list.designers.length > 20) {
       return [];
     }
 
-    // Get existing designer IDs in the list
     const existingDesignerIds = list.designers.map((ld: any) => ld.designerId);
 
-    // Analyze existing designers to understand list criteria
-    const listCriteria = await this.analyzeListCriteria(list, context);
+    const aiCriteria = await this.interpretListWithAI(list);
 
-    // Find potential candidates
     const candidates = await this.findCandidates(
       list, 
       existingDesignerIds, 
-      listCriteria, 
+      aiCriteria, 
       context
     );
 
     if (candidates.length === 0) {
-      return []; // No suitable candidates
+      return [];
     }
 
-    // Create recommendation
     const recommendation: RecommendationResult = {
-      id: 0, // Will be set when persisted
+      id: 0,
       type: 'add_to_list',
       title: `Add designers to "${list.name}"`,
-      description: `Found ${candidates.length} designers who would be great additions to this list`,
-      score: this.calculateListRecommendationScore(list, candidates, listCriteria),
-      priority: this.calculatePriority(list, candidates),
-      candidates: candidates.slice(0, 10), // Top 10 candidates
+      description: `Found ${candidates.length} designer${candidates.length === 1 ? '' : 's'} who would be great additions to this list`,
+      score: this.calculateListRecommendationScore(list, candidates),
+      priority: this.calculatePriority(candidates),
+      candidates,
       reasoning: [
-        `Found ${candidates.length} designers matching the list criteria`,
+        `Found ${candidates.length} designers matching the list intent`,
         `Top candidate has ${candidates[0]?.score || 0}% compatibility`,
-        `Average skill match across candidates: ${Math.round(candidates.reduce((sum, c) => sum + c.score, 0) / candidates.length)}%`
+        `Average match across candidates: ${Math.round(candidates.reduce((sum, c) => sum + c.score, 0) / candidates.length)}%`
       ],
       metadata: {
         listId: list.id,
         listName: list.name,
         existingCount: list.designers.length,
         candidateCount: candidates.length,
-        ...listCriteria,
+        aiCriteria,
         actionUrl: `/lists/${list.id}`,
-        estimatedValue: this.estimateValue(candidates.length),
       },
       groupKey: `add_to_list_${list.id}`,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     };
 
     return [recommendation];
   }
 
-  private async analyzeListCriteria(list: any, context: GeneratorContext) {
-    const designers = list.designers.map((ld: any) => ld.designer);
+  private async interpretListWithAI(list: any): Promise<AICriteria> {
+    const existingDesignerSummary = list.designers
+      .map((ld: any) => ld.designer)
+      .filter(Boolean)
+      .slice(0, 5)
+      .map((d: any) => `${d.name} (${d.title || 'N/A'}, ${d.level || 'N/A'}, skills: ${(d.skills || []).slice(0, 5).join(', ')})`)
+      .join('\n');
 
-    if (designers.length === 0) {
+    const prompt = `Analyze this talent list and determine what kind of designers belong in it.
+
+List Name: "${list.name}"
+Description: ${list.description || 'No description provided'}
+${existingDesignerSummary ? `\nCurrent members (sample):\n${existingDesignerSummary}` : ''}
+
+Based on the list name, description, and any existing members, determine the ideal candidate criteria.
+
+Respond in JSON format:
+{
+  "skills": [{"name": "skill name", "weight": 1-10}],
+  "seniority": "intern|junior|mid|senior|lead|principal" or null,
+  "specialization": "brief specialization description" or null,
+  "availabilityPreference": true/false
+}`;
+
+    try {
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a recruiting assistant that interprets talent list intent. Analyze list names and descriptions to determine the ideal candidate profile. Be specific about skills and seniority. Return valid JSON only.",
+          },
+          { role: "user", content: prompt },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+
+      const content = response.choices[0]?.message?.content || '{}';
+      const result = JSON.parse(content);
+
       return {
-        commonSkills: [],
-        averageLevel: null,
-        commonLocation: null,
-        preferredAvailability: false,
+        skills: Array.isArray(result.skills) ? result.skills.slice(0, 10) : [],
+        seniority: result.seniority || null,
+        specialization: result.specialization || null,
+        availabilityPreference: result.availabilityPreference === true,
+      };
+    } catch (error) {
+      console.error('AI list interpretation failed, falling back to mechanical analysis:', error);
+      return this.fallbackCriteria(list);
+    }
+  }
+
+  private fallbackCriteria(list: any): AICriteria {
+    const existingDesigners = list.designers.map((ld: any) => ld.designer).filter(Boolean);
+
+    if (existingDesigners.length === 0) {
+      return {
+        skills: [],
+        seniority: null,
+        specialization: null,
+        availabilityPreference: false,
       };
     }
 
-    // Analyze skills
-    const allSkills = designers
-      .flatMap((d: any) => d.skills || [])
-      .filter(Boolean);
-
+    const allSkills = existingDesigners.flatMap((d: any) => d.skills || []).filter(Boolean);
     const skillCounts = new Map<string, number>();
     for (const skill of allSkills) {
       skillCounts.set(skill, (skillCounts.get(skill) || 0) + 1);
     }
-
-    // Get skills that appear in at least 30% of designers
-    const threshold = Math.max(1, Math.ceil(designers.length * 0.3));
-    const commonSkills = Array.from(skillCounts.entries())
+    const threshold = Math.max(1, Math.ceil(existingDesigners.length * 0.3));
+    const skills = Array.from(skillCounts.entries())
       .filter(([_, count]) => count >= threshold)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
-      .map(([skill]) => skill);
+      .map(([name, count]) => ({ name, weight: Math.min(10, Math.round((count / existingDesigners.length) * 10)) }));
 
-    // Analyze levels
-    const levels = designers.map((d: any) => d.level).filter(Boolean);
+    const levels = existingDesigners.map((d: any) => d.level).filter(Boolean);
     const levelCounts = new Map<string, number>();
     for (const level of levels) {
       levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
     }
-    const averageLevel = levelCounts.size > 0 
+    const seniority = levelCounts.size > 0
       ? Array.from(levelCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
-      : undefined;
+      : null;
 
-    // Analyze locations
-    const locations = designers.map((d: any) => d.location).filter(Boolean);
-    const locationCounts = new Map<string, number>();
-    for (const location of locations) {
-      locationCounts.set(location, (locationCounts.get(location) || 0) + 1);
-    }
-    const commonLocation = locationCounts.size > 0 
-      ? Array.from(locationCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
-      : undefined;
+    const availableCount = existingDesigners.filter((d: any) => d.available).length;
+    const availabilityPreference = availableCount > existingDesigners.length * 0.6;
 
-    // Analyze availability preference
-    const availableCount = designers.filter((d: any) => d.available).length;
-    const preferredAvailability = availableCount > designers.length * 0.6;
-
-    return {
-      commonSkills,
-      averageLevel,
-      commonLocation,
-      preferredAvailability,
-    };
+    return { skills, seniority, specialization: null, availabilityPreference };
   }
 
   private async findCandidates(
     list: any,
     existingDesignerIds: number[],
-    criteria: any,
+    criteria: AICriteria,
     context: GeneratorContext
   ): Promise<RecommendationCandidate[]> {
-    // Build query conditions
     const whereConditions = [eq(designers.workspaceId, context.workspaceId)];
 
-    // Exclude existing designers
     if (existingDesignerIds.length > 0) {
       whereConditions.push(notInArray(designers.id, existingDesignerIds));
     }
 
-    // Get all potential candidates
     const potentialCandidates = await db.query.designers.findMany({
       where: and(...whereConditions),
       orderBy: desc(designers.createdAt),
     });
 
-    // Score and rank candidates
+    const outreachRecords = await db.query.designerOutreach.findMany({
+      where: eq(designerOutreach.workspaceId, context.workspaceId),
+      orderBy: desc(designerOutreach.createdAt),
+    });
+
+    const lastOutreachByDesigner = new Map<number, Date>();
+    for (const record of outreachRecords) {
+      const existing = lastOutreachByDesigner.get(record.designerId);
+      if (!existing || new Date(record.createdAt) > existing) {
+        lastOutreachByDesigner.set(record.designerId, new Date(record.createdAt));
+      }
+    }
+
     const scoredCandidates: RecommendationCandidate[] = [];
 
     for (const designer of potentialCandidates) {
-      const score = context.utils.scoreDesigner(designer, {
-        requiredSkills: criteria.commonSkills,
-        preferredLevel: criteria.averageLevel,
-        locationPreference: criteria.commonLocation,
-        availabilityRequired: criteria.preferredAvailability,
-      });
+      let score = this.scoreDesignerWithAICriteria(designer, criteria, context);
 
-      // Only include candidates with reasonable scores
+      if (designer.available) {
+        score += AVAILABILITY_BOOST;
+      }
+
+      const lastOutreach = lastOutreachByDesigner.get(designer.id);
+      if (lastOutreach) {
+        const daysSince = Math.floor((Date.now() - lastOutreach.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince < 30) {
+          score += 10;
+        } else if (daysSince < 90) {
+          score += 5;
+        }
+      }
+
       if (score >= 40) {
         const reasoning = this.generateCandidateReasoning(designer, criteria, score);
 
         scoredCandidates.push({
           designerId: designer.id,
-          score,
-          rank: 0, // Will be set after sorting
+          score: Math.min(100, score),
+          rank: 0,
           reasoning,
           metadata: {
-            skillMatches: this.getSkillMatches(designer.skills, criteria.commonSkills),
-            experienceMatch: this.calculateExperienceMatch(designer.level, criteria.averageLevel),
-            locationMatch: this.calculateLocationMatch(designer.location || '', criteria.commonLocation || ''),
-            availabilityMatch: designer.available === criteria.preferredAvailability,
-            portfolioRelevance: 0, // Could be enhanced with portfolio analysis
-            confidence: this.calculateConfidence(score),
+            available: designer.available,
+            lastContactDaysAgo: lastOutreach
+              ? Math.floor((Date.now() - lastOutreach.getTime()) / (1000 * 60 * 60 * 24))
+              : null,
           },
         });
       }
     }
 
-    // Sort by score and assign ranks
     scoredCandidates.sort((a, b) => b.score - a.score);
-    scoredCandidates.forEach((candidate, index) => {
+    const topCandidates = scoredCandidates.slice(0, MAX_CANDIDATES);
+    topCandidates.forEach((candidate, index) => {
       candidate.rank = index + 1;
     });
 
-    return scoredCandidates.slice(0, 20); // Top 20 candidates
+    return topCandidates;
   }
 
-  private generateCandidateReasoning(designer: any, criteria: any, score: number): string {
+  private scoreDesignerWithAICriteria(
+    designer: any,
+    criteria: AICriteria,
+    context: GeneratorContext
+  ): number {
+    let score = 0;
+    const designerSkills = (designer.skills || []).map((s: string) => s.toLowerCase());
+
+    if (criteria.skills.length > 0) {
+      const totalWeight = criteria.skills.reduce((sum, s) => sum + s.weight, 0);
+      let weightedMatches = 0;
+
+      for (const skill of criteria.skills) {
+        const skillLower = skill.name.toLowerCase();
+        const exactMatch = designerSkills.includes(skillLower);
+        const partialMatch = !exactMatch && designerSkills.some((ds: string) =>
+          ds.includes(skillLower) || skillLower.includes(ds)
+        );
+
+        if (exactMatch) {
+          weightedMatches += skill.weight;
+        } else if (partialMatch) {
+          weightedMatches += skill.weight * 0.6;
+        }
+      }
+
+      score += totalWeight > 0 ? (weightedMatches / totalWeight) * 40 : 0;
+    } else {
+      score += Math.min(40, (designer.skills?.length || 0) * 5);
+    }
+
+    if (criteria.seniority && designer.level) {
+      const levels = ['intern', 'junior', 'mid', 'senior', 'lead', 'principal'];
+      const designerIdx = levels.indexOf(designer.level.toLowerCase());
+      const targetIdx = levels.indexOf(criteria.seniority.toLowerCase());
+      if (designerIdx !== -1 && targetIdx !== -1) {
+        const distance = Math.abs(designerIdx - targetIdx);
+        score += Math.max(0, 20 - distance * 5);
+      } else {
+        score += 10;
+      }
+    } else {
+      score += 14;
+    }
+
+    if (criteria.specialization) {
+      const specLower = criteria.specialization.toLowerCase();
+      const titleLower = (designer.title || '').toLowerCase();
+      const descLower = (designer.description || '').toLowerCase();
+      const skillsJoined = designerSkills.join(' ');
+
+      const specWords = specLower.split(/\s+/).filter((w: string) => w.length > 3);
+      let specMatches = 0;
+      for (const word of specWords) {
+        if (titleLower.includes(word) || descLower.includes(word) || skillsJoined.includes(word)) {
+          specMatches++;
+        }
+      }
+      const specScore = specWords.length > 0 ? (specMatches / specWords.length) * 15 : 0;
+      score += specScore;
+    }
+
+    if (criteria.availabilityPreference) {
+      score += designer.available ? 15 : 0;
+    } else {
+      score += designer.available ? 5 : 3;
+    }
+
+    const completeness = context.utils.calculateProfileCompleteness(designer);
+    score += (completeness / 100) * 10;
+
+    return Math.round(Math.max(0, Math.min(100, score)));
+  }
+
+  private generateCandidateReasoning(designer: any, criteria: AICriteria, score: number): string {
     const reasons: string[] = [];
 
-    // Skill matches
-    const skillMatches = this.getSkillMatches(designer.skills || [], criteria.commonSkills);
-    if (skillMatches.length > 0) {
-      reasons.push(`Matches ${skillMatches.length} key skills: ${skillMatches.slice(0, 3).join(', ')}`);
+    const designerSkills = (designer.skills || []).map((s: string) => s.toLowerCase());
+    const matchedSkills = criteria.skills
+      .filter(s => designerSkills.includes(s.name.toLowerCase()))
+      .map(s => s.name);
+
+    if (matchedSkills.length > 0) {
+      reasons.push(`Matches key skills: ${matchedSkills.slice(0, 3).join(', ')}`);
     }
 
-    // Level match
-    if (designer.level === criteria.averageLevel) {
-      reasons.push(`Experience level (${designer.level}) aligns with list average`);
+    if (criteria.seniority && designer.level && designer.level.toLowerCase() === criteria.seniority.toLowerCase()) {
+      reasons.push(`Experience level (${designer.level}) aligns with list target`);
     }
 
-    // Location match
-    if (designer.location && criteria.commonLocation && designer.location === criteria.commonLocation) {
-      reasons.push(`Located in preferred area: ${designer.location}`);
-    }
-
-    // Availability
-    if (designer.available && criteria.preferredAvailability) {
+    if (designer.available) {
       reasons.push('Currently available for work');
     }
 
-    // Profile quality - simplified calculation
-    const hasPhoto = !!designer.photoUrl;
-    const hasDescription = !!designer.description;
-    const hasWebsite = !!designer.website;
-    const profileQuality = hasPhoto && hasDescription && hasWebsite;
-    
-    if (profileQuality) {
-      reasons.push('Comprehensive profile with photo, description, and portfolio');
+    if (criteria.specialization) {
+      const desc = (designer.description || '').toLowerCase();
+      const title = (designer.title || '').toLowerCase();
+      const spec = criteria.specialization.toLowerCase();
+      if (desc.includes(spec) || title.includes(spec)) {
+        reasons.push(`Specializes in ${criteria.specialization}`);
+      }
     }
 
-    // Default reasoning if no specific matches
     if (reasons.length === 0) {
-      reasons.push(`Good overall compatibility (${score}% match)`);
+      reasons.push(`Good overall compatibility (${Math.min(100, score)}% match)`);
     }
 
     return reasons.slice(0, 3).join('. ') + '.';
   }
 
-  private getSkillMatches(designerSkills: string[], requiredSkills: string[]): string[] {
-    if (!designerSkills || !requiredSkills) return [];
-
-    // Handle case where skills might not be arrays
-    const skillsArray = Array.isArray(designerSkills) ? designerSkills : [];
-    const reqSkillsArray = Array.isArray(requiredSkills) ? requiredSkills : [];
-
-    if (skillsArray.length === 0 || reqSkillsArray.length === 0) return [];
-
-    const normalizedDesignerSkills = skillsArray.map(s => String(s).toLowerCase());
-    const normalizedRequiredSkills = reqSkillsArray.map(s => String(s).toLowerCase());
-
-    return requiredSkills.filter(skill =>
-      normalizedDesignerSkills.includes(skill.toLowerCase())
-    );
-  }
-
-  private calculateExperienceMatch(designerLevel: string, preferredLevel: string): number {
-    if (!designerLevel || !preferredLevel) return 50;
-
-    const levels = ['intern', 'junior', 'mid', 'senior', 'lead', 'principal'];
-    const designerIndex = levels.indexOf(designerLevel.toLowerCase());
-    const preferredIndex = levels.indexOf(preferredLevel.toLowerCase());
-
-    if (designerIndex === -1 || preferredIndex === -1) return 50;
-    if (designerIndex === preferredIndex) return 100;
-
-    const distance = Math.abs(designerIndex - preferredIndex);
-    return Math.max(0, 100 - (distance * 25));
-  }
-
-  private calculateLocationMatch(designerLocation: string, preferredLocation: string): boolean {
-    if (!designerLocation || !preferredLocation) return false;
-    return designerLocation.toLowerCase() === preferredLocation.toLowerCase();
-  }
-
-  private calculateConfidence(score: number): number {
-    // Higher scores get higher confidence
-    if (score >= 80) return 90;
-    if (score >= 70) return 80;
-    if (score >= 60) return 70;
-    if (score >= 50) return 60;
-    return 50;
-  }
-
-  private calculateListRecommendationScore(list: any, candidates: RecommendationCandidate[], criteria: any): number {
+  private calculateListRecommendationScore(list: any, candidates: RecommendationCandidate[]): number {
     if (candidates.length === 0) return 0;
 
     let score = 0;
 
-    // Base score from top candidates
     const topCandidatesScore = candidates.slice(0, 5).reduce((sum, c) => sum + c.score, 0) / Math.min(5, candidates.length);
     score += topCandidatesScore * 0.6;
 
-    // Bonus for quantity of good candidates
     const goodCandidates = candidates.filter(c => c.score >= 70).length;
-    score += Math.min(20, goodCandidates * 2);
+    score += Math.min(20, goodCandidates * 4);
 
-    // Bonus for list activity (recently created or updated lists are prioritized)
     const daysSinceCreation = (Date.now() - new Date(list.createdAt).getTime()) / (1000 * 60 * 60 * 24);
     if (daysSinceCreation < 7) {
-      score += 10; // New list bonus
+      score += 10;
     }
 
-    // Penalty for lists that already have many designers
     if (list.designers.length > 10) {
       score -= 5;
     }
@@ -355,7 +416,7 @@ export class AddToListGenerator implements RecommendationGenerator {
     return Math.round(Math.max(0, Math.min(100, score)));
   }
 
-  private calculatePriority(list: any, candidates: RecommendationCandidate[]): string {
+  private calculatePriority(candidates: RecommendationCandidate[]): string {
     const topScore = candidates[0]?.score || 0;
     const goodCandidateCount = candidates.filter(c => c.score >= 70).length;
 
@@ -368,12 +429,5 @@ export class AddToListGenerator implements RecommendationGenerator {
     }
 
     return 'low';
-  }
-
-  private estimateValue(candidateCount: number): string {
-    if (candidateCount >= 10) return 'High potential - many strong candidates';
-    if (candidateCount >= 5) return 'Medium potential - several good candidates';
-    if (candidateCount >= 2) return 'Low potential - few candidates';
-    return 'Minimal potential - very few candidates';
   }
 }

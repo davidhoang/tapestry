@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { designers, designerOutreach, userLocations } from "@db/schema";
+import { designers, designerOutreach, userLocations, lists, jobs } from "@db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { 
   RecommendationGenerator, 
@@ -17,7 +17,22 @@ interface DesignerOutreachInfo {
   locationMatch: boolean;
   userCity: string | null;
   designerCity: string | null;
+  trigger: string | null;
+  triggerDetail: string | null;
 }
+
+const MAX_RECOMMENDATIONS = 5;
+const LONG_GAP_DAYS = 60;
+const HIGH_COMPLETENESS_THRESHOLD = 60;
+
+const COMMON_SKILLS = [
+  'figma', 'sketch', 'adobe xd', 'photoshop', 'illustrator',
+  'react', 'vue', 'angular', 'javascript', 'typescript',
+  'html', 'css', 'sass', 'tailwind', 'ui', 'ux', 'design',
+  'prototyping', 'wireframing', 'user research', 'product design',
+  'motion design', 'animation', 'branding', 'graphic design',
+  'interaction design', 'visual design', 'design systems',
+];
 
 export class ReachOutGenerator implements RecommendationGenerator {
   
@@ -35,8 +50,6 @@ export class ReachOutGenerator implements RecommendationGenerator {
   }
 
   async generate(context: GeneratorContext): Promise<RecommendationResult[]> {
-    const recommendations: RecommendationResult[] = [];
-
     const allDesigners = await db.query.designers.findMany({
       where: eq(designers.workspaceId, context.workspaceId),
       orderBy: desc(designers.createdAt),
@@ -66,6 +79,27 @@ export class ReachOutGenerator implements RecommendationGenerator {
       }
     }
 
+    const workspaceLists = await db.query.lists.findMany({
+      where: eq(lists.workspaceId, context.workspaceId),
+      with: {
+        designers: {
+          with: {
+            designer: true,
+          },
+        },
+      },
+    });
+
+    const activeJobs = await db.query.jobs.findMany({
+      where: and(
+        eq(jobs.workspaceId, context.workspaceId),
+        eq(jobs.status, 'active')
+      ),
+    });
+
+    const listMatchesByDesigner = this.findListMatches(allDesigners, workspaceLists, context);
+    const roleMatchesByDesigner = this.findRoleMatches(allDesigners, activeJobs, context);
+
     const designerInfoList: DesignerOutreachInfo[] = allDesigners.map(designer => {
       const lastOutreach = lastOutreachByDesigner.get(designer.id) || null;
       const daysSinceContact = lastOutreach 
@@ -81,17 +115,165 @@ export class ReachOutGenerator implements RecommendationGenerator {
         locationMatch,
         userCity: userLocation?.city || null,
         designerCity: this.extractCity(designer.location),
+        trigger: null,
+        triggerDetail: null,
       };
     });
 
-    const sortedDesigners = this.prioritizeDesigners(designerInfoList);
+    const triggered = this.applySignalTriggers(designerInfoList, listMatchesByDesigner, roleMatchesByDesigner, context);
 
-    for (const info of sortedDesigners.slice(0, 15)) {
-      const recommendation = this.createRecommendation(info, context);
-      recommendations.push(recommendation);
+    const sorted = triggered.sort((a, b) => {
+      const scoreA = this.calculatePriorityScore(a);
+      const scoreB = this.calculatePriorityScore(b);
+      return scoreB - scoreA;
+    });
+
+    const recommendations: RecommendationResult[] = [];
+    for (const info of sorted.slice(0, MAX_RECOMMENDATIONS)) {
+      recommendations.push(this.createRecommendation(info, context));
     }
 
     return recommendations;
+  }
+
+  private applySignalTriggers(
+    designerInfoList: DesignerOutreachInfo[],
+    listMatchesByDesigner: Map<number, { listName: string; score: number }>,
+    roleMatchesByDesigner: Map<number, { jobTitle: string; score: number }>,
+    context: GeneratorContext
+  ): DesignerOutreachInfo[] {
+    const triggered: DesignerOutreachInfo[] = [];
+
+    for (const info of designerInfoList) {
+      const neverContacted = info.daysSinceContact === null;
+      const completeness = context.utils.calculateProfileCompleteness(info.designer);
+
+      if (info.designer.available && neverContacted) {
+        triggered.push({
+          ...info,
+          trigger: 'just_available',
+          triggerDetail: 'Just went available',
+        });
+        continue;
+      }
+
+      const listMatch = listMatchesByDesigner.get(info.designer.id);
+      if (listMatch && listMatch.score >= 60) {
+        triggered.push({
+          ...info,
+          trigger: 'list_match',
+          triggerDetail: `Top match for your ${listMatch.listName} list`,
+        });
+        continue;
+      }
+
+      const roleMatch = roleMatchesByDesigner.get(info.designer.id);
+      if (roleMatch && roleMatch.score >= 60) {
+        triggered.push({
+          ...info,
+          trigger: 'role_match',
+          triggerDetail: `Strong fit for ${roleMatch.jobTitle} role`,
+        });
+        continue;
+      }
+
+      if (
+        info.daysSinceContact !== null &&
+        info.daysSinceContact >= LONG_GAP_DAYS &&
+        completeness > HIGH_COMPLETENESS_THRESHOLD
+      ) {
+        const months = Math.floor(info.daysSinceContact / 30);
+        const timePhrase = months >= 2 ? `${months} months` : `${info.daysSinceContact} days`;
+        triggered.push({
+          ...info,
+          trigger: 'long_gap_high_value',
+          triggerDetail: `Haven't spoken in ${timePhrase} — high-value contact`,
+        });
+        continue;
+      }
+    }
+
+    return triggered;
+  }
+
+  private findRoleMatches(
+    allDesigners: any[],
+    activeJobs: any[],
+    context: GeneratorContext
+  ): Map<number, { jobTitle: string; score: number }> {
+    const matches = new Map<number, { jobTitle: string; score: number }>();
+
+    for (const job of activeJobs) {
+      const requiredSkills = this.extractSkillsFromJobDescription(job.description);
+
+      for (const designer of allDesigners) {
+        const score = context.utils.scoreDesigner(designer, {
+          requiredSkills,
+        });
+
+        const existing = matches.get(designer.id);
+        if (!existing || score > existing.score) {
+          matches.set(designer.id, { jobTitle: job.title, score });
+        }
+      }
+    }
+
+    return matches;
+  }
+
+  private extractSkillsFromJobDescription(description: string): string[] {
+    const lowerDescription = description.toLowerCase();
+    return COMMON_SKILLS.filter(skill => lowerDescription.includes(skill));
+  }
+
+  private findListMatches(
+    allDesigners: any[],
+    workspaceLists: any[],
+    context: GeneratorContext
+  ): Map<number, { listName: string; score: number }> {
+    const matches = new Map<number, { listName: string; score: number }>();
+
+    for (const list of workspaceLists) {
+      const existingIds = new Set(list.designers.map((ld: any) => ld.designerId));
+      const existingDesigners = list.designers.map((ld: any) => ld.designer).filter(Boolean);
+
+      if (existingDesigners.length === 0) continue;
+
+      const allSkills = existingDesigners.flatMap((d: any) => d.skills || []).filter(Boolean);
+      const skillCounts = new Map<string, number>();
+      for (const skill of allSkills) {
+        skillCounts.set(skill, (skillCounts.get(skill) || 0) + 1);
+      }
+      const threshold = Math.max(1, Math.ceil(existingDesigners.length * 0.3));
+      const commonSkills = Array.from(skillCounts.entries())
+        .filter(([_, count]) => count >= threshold)
+        .map(([skill]) => skill);
+
+      const levels = existingDesigners.map((d: any) => d.level).filter(Boolean);
+      const levelCounts = new Map<string, number>();
+      for (const level of levels) {
+        levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
+      }
+      const preferredLevel = levelCounts.size > 0
+        ? Array.from(levelCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
+        : undefined;
+
+      for (const designer of allDesigners) {
+        if (existingIds.has(designer.id)) continue;
+
+        const score = context.utils.scoreDesigner(designer, {
+          requiredSkills: commonSkills,
+          preferredLevel,
+        });
+
+        const existing = matches.get(designer.id);
+        if (!existing || score > existing.score) {
+          matches.set(designer.id, { listName: list.name, score });
+        }
+      }
+    }
+
+    return matches;
   }
 
   private checkLocationMatch(designerLocation: string | null, userCity: string | null): boolean {
@@ -113,54 +295,35 @@ export class ReachOutGenerator implements RecommendationGenerator {
     return parts[0] || location;
   }
 
-  private prioritizeDesigners(designerInfoList: DesignerOutreachInfo[]): DesignerOutreachInfo[] {
-    return designerInfoList.sort((a, b) => {
-      const scoreA = this.calculatePriorityScore(a);
-      const scoreB = this.calculatePriorityScore(b);
-      return scoreB - scoreA;
-    });
-  }
-
   private calculatePriorityScore(info: DesignerOutreachInfo): number {
     let score = 0;
 
-    if (info.daysSinceContact === null) {
-      score += 50;
-    } else if (info.daysSinceContact >= 30) {
-      score += 30 + Math.min(20, Math.floor((info.daysSinceContact - 30) / 10));
-    } else {
-      score += Math.max(0, info.daysSinceContact);
-    }
-
-    if (info.locationMatch) {
-      score += 25;
+    if (info.trigger === 'just_available') {
+      score += 90;
+    } else if (info.trigger === 'list_match') {
+      score += 85;
+    } else if (info.trigger === 'role_match') {
+      score += 80;
+    } else if (info.trigger === 'long_gap_high_value') {
+      score += 70;
     }
 
     if (info.designer.available) {
       score += 10;
     }
 
-    const completeness = this.calculateBasicCompleteness(info.designer);
-    score += Math.floor(completeness / 10);
+    if (info.locationMatch) {
+      score += 5;
+    }
 
     return score;
-  }
-
-  private calculateBasicCompleteness(designer: any): number {
-    const fields = ['photoUrl', 'description', 'website', 'location', 'linkedIn', 'email'];
-    const filledFields = fields.filter(field => 
-      designer[field] && designer[field].toString().trim().length > 0
-    ).length;
-    
-    return (filledFields / fields.length) * 100;
   }
 
   private createRecommendation(
     info: DesignerOutreachInfo, 
     context: GeneratorContext
   ): RecommendationResult {
-    const neverContacted = info.daysSinceContact === null;
-    const notContactedIn30Days = info.daysSinceContact !== null && info.daysSinceContact >= 30;
+    const triggerPhrase = info.triggerDetail || 'Signal-based recommendation';
     
     let priority: string;
     let score: number;
@@ -168,46 +331,62 @@ export class ReachOutGenerator implements RecommendationGenerator {
     let description: string;
     let reasoning: string[];
 
-    if (info.locationMatch) {
-      title = `In town: ${info.designer.name}`;
-      description = `${info.designer.name} is in ${info.designerCity || 'your area'}. Great opportunity to connect locally.`;
-      priority = neverContacted ? 'high' : 'medium';
-      score = neverContacted ? 90 : 75;
-      reasoning = [
-        `Located in ${info.designerCity || 'your area'}`,
-        neverContacted ? 'Never been contacted' : `Last contacted ${info.daysSinceContact} days ago`,
-        info.designer.available ? 'Currently available for work' : 'Check availability',
-      ];
-    } else if (neverContacted) {
-      title = `Reach out to ${info.designer.name}`;
-      description = `You haven't reached out to ${info.designer.name} yet. Consider making initial contact.`;
-      priority = 'high';
-      score = 80;
-      reasoning = [
-        'Never been contacted',
-        `${info.designer.title || 'Designer'} at ${info.designer.company || 'their company'}`,
-        info.designer.available ? 'Currently available for work' : 'Check availability',
-      ];
-    } else if (notContactedIn30Days) {
-      title = `Reach out to ${info.designer.name}`;
-      description = `It's been ${info.daysSinceContact} days since you last contacted ${info.designer.name}. Time to reconnect.`;
-      priority = 'medium';
-      score = 60 + Math.min(20, Math.floor((info.daysSinceContact! - 30) / 5));
-      reasoning = [
-        `Last contacted ${info.daysSinceContact} days ago`,
-        'Time to follow up or check in',
-        info.designer.available ? 'Currently available for work' : 'Check availability',
-      ];
-    } else {
-      title = `Reach out to ${info.designer.name}`;
-      description = `Consider reaching out to ${info.designer.name} to maintain the relationship.`;
-      priority = 'low';
-      score = 40 + (info.daysSinceContact || 0);
-      reasoning = [
-        `Last contacted ${info.daysSinceContact} days ago`,
-        'Maintain relationship',
-        info.designer.available ? 'Currently available for work' : 'Check availability',
-      ];
+    switch (info.trigger) {
+      case 'just_available':
+        title = `Reach out to ${info.designer.name}`;
+        description = `${info.designer.name} is available and hasn't been contacted yet. Great time to connect.`;
+        priority = 'high';
+        score = 90;
+        reasoning = [
+          triggerPhrase,
+          `${info.designer.title || 'Designer'} at ${info.designer.company || 'their company'}`,
+          'Currently available for work',
+        ];
+        break;
+
+      case 'list_match':
+        title = `Reach out to ${info.designer.name}`;
+        description = `${info.designer.name} is a strong match for one of your lists. Consider reaching out.`;
+        priority = 'high';
+        score = 85;
+        reasoning = [
+          triggerPhrase,
+          `${info.designer.title || 'Designer'}`,
+          info.designer.available ? 'Currently available for work' : 'Check availability',
+        ];
+        break;
+
+      case 'role_match':
+        title = `Reach out to ${info.designer.name}`;
+        description = `${info.designer.name} is a strong fit for an active role. Consider reaching out.`;
+        priority = 'high';
+        score = 83;
+        reasoning = [
+          triggerPhrase,
+          `${info.designer.title || 'Designer'}`,
+          info.designer.available ? 'Currently available for work' : 'Check availability',
+        ];
+        break;
+
+      case 'long_gap_high_value':
+        title = `Reconnect with ${info.designer.name}`;
+        description = `It's been a while since you last contacted ${info.designer.name}. They have a strong profile worth reconnecting over.`;
+        priority = 'medium';
+        score = 75;
+        reasoning = [
+          triggerPhrase,
+          `Last contacted ${info.daysSinceContact} days ago`,
+          info.designer.available ? 'Currently available for work' : 'Check availability',
+        ];
+        break;
+
+      default:
+        title = `Reach out to ${info.designer.name}`;
+        description = `Consider reaching out to ${info.designer.name}.`;
+        priority = 'low';
+        score = 50;
+        reasoning = [triggerPhrase];
+        break;
     }
 
     const candidate: RecommendationCandidate = {
@@ -219,6 +398,7 @@ export class ReachOutGenerator implements RecommendationGenerator {
         lastOutreach: info.lastOutreach?.toISOString() || null,
         daysSinceContact: info.daysSinceContact,
         locationMatch: info.locationMatch,
+        trigger: info.trigger,
       },
     };
 
@@ -239,6 +419,8 @@ export class ReachOutGenerator implements RecommendationGenerator {
         locationMatch: info.locationMatch,
         userCity: info.userCity,
         designerCity: info.designerCity,
+        trigger: info.trigger,
+        triggerDetail: info.triggerDetail,
         actionUrl: `/designers/${info.designer.id}`,
       },
       groupKey: `reach_out_${info.designer.id}`,

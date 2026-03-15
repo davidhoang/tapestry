@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Check, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecCardData {
@@ -87,40 +87,39 @@ const CompactFeedCard = ({ card }: { card: RecCardData }) => {
       <Button 
         variant="ghost" 
         size="icon" 
-        className="absolute top-2 right-2 h-[28px] w-[28px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:bg-muted"
+        className="absolute top-2 right-2 h-[28px] w-[28px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:bg-muted z-10"
         aria-label="Dismiss"
       >
         <X className="w-4 h-4" />
       </Button>
 
-      {/* Main Row */}
-      <div className="flex gap-4 items-start">
-        {/* Avatar Left */}
+      <div className="flex gap-4">
+        {/* Avatar far left */}
         <Avatar className="h-[40px] w-[40px] shrink-0 border">
           <AvatarImage src={card.avatarUrl} alt={card.name} className="object-cover" />
           <AvatarFallback className="font-serif bg-[#F5F0E6] text-[#C8944B]">{card.name.charAt(0)}</AvatarFallback>
         </Avatar>
-        
-        {/* Middle Section: Name, Title, Location (tight stack) */}
-        <div className="flex-1 min-w-0 flex flex-col justify-start leading-tight">
-          <div className="flex items-center gap-2">
+
+        {/* Middle Section */}
+        <div className="flex-1 min-w-0 flex flex-col justify-start leading-tight mt-[-2px]">
+          <div className="flex items-center gap-2 mb-1">
             <h3 className="font-serif font-bold text-base text-foreground truncate inline">{card.name}</h3>
             {card.available && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider shrink-0">
                 Available
               </span>
             )}
           </div>
-          <div className="text-[13px] text-muted-foreground truncate mt-1">
+          <div className="text-[13px] text-muted-foreground truncate mb-0.5">
             {card.title} at {card.company}
           </div>
-          <div className="text-[12px] text-muted-foreground truncate mt-0.5">
+          <div className="text-[12px] text-muted-foreground truncate">
             {card.location}
           </div>
         </div>
 
-        {/* Far Right Column: Priority Dot + Accept/Dismiss Buttons */}
-        <div className="flex flex-col items-center gap-2 shrink-0 self-start mr-8 group-hover:mr-0 transition-all duration-200">
+        {/* Far Right Column */}
+        <div className="flex flex-col items-center gap-2 shrink-0 self-start mr-8 group-hover:mr-0 transition-all duration-200 pl-2">
           <div 
             className={cn("w-2 h-2 rounded-full", priorityConfig[card.priority].dot)} 
             title={`Priority: ${card.priority}`} 
@@ -133,13 +132,20 @@ const CompactFeedCard = ({ card }: { card: RecCardData }) => {
             >
               <Check className="w-4 h-4" />
             </Button>
-            {/* Kept an explicit dismiss here to match stacked accept/dismiss requirement, though absolute one is also added per instructions */}
+            <Button 
+              size="icon" 
+              variant="ghost"
+              className="h-[28px] w-[28px] rounded text-muted-foreground hover:bg-muted"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Skills Row */}
-      <div className="mt-3">
+      {/* Below main row: Skills */}
+      <div className="mt-3 ml-[56px]">
         <div className="flex flex-wrap gap-1.5">
           {card.skills.map(skill => (
             <Badge key={skill} variant="secondary" className="px-1.5 py-0.5 text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground font-normal rounded-sm">
@@ -149,22 +155,26 @@ const CompactFeedCard = ({ card }: { card: RecCardData }) => {
         </div>
       </div>
 
-      {/* AI Reasoning */}
-      <div className="mt-3 text-[13px] text-muted-foreground">
-        <span className="font-medium text-[#C8944B]">AI Match: </span>
-        {expanded ? card.reasoning : (isTruncated ? `${card.reasoning.substring(0, 60)}...` : card.reasoning)}
-        {isTruncated && (
-          <button 
-            onClick={() => setExpanded(!expanded)} 
-            className="inline-flex items-center ml-1 text-[#C8944B] hover:opacity-80 font-medium transition-opacity focus:outline-none"
-          >
-            {expanded ? (
-              <ChevronUp className="w-3.5 h-3.5 ml-0.5" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5 ml-0.5" />
+      {/* Below skills: AI Reasoning */}
+      <div className="mt-2.5 ml-[56px] bg-[#FDFBF7] border border-[#F5F0E6] rounded p-2 text-[12px]">
+        <div className="flex gap-1.5 items-start">
+          <Sparkles className="w-3.5 h-3.5 text-[#C8944B] shrink-0 mt-0.5" />
+          <div className="flex-1 text-muted-foreground leading-relaxed">
+            {expanded ? card.reasoning : (isTruncated ? `${card.reasoning.substring(0, 60)}...` : card.reasoning)}
+            {isTruncated && (
+              <button 
+                onClick={() => setExpanded(!expanded)} 
+                className="inline-flex items-center ml-1 text-[#C8944B] hover:opacity-80 font-medium transition-opacity focus:outline-none"
+              >
+                {expanded ? (
+                  <ChevronUp className="w-3.5 h-3.5 ml-0.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 ml-0.5" />
+                )}
+              </button>
             )}
-          </button>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -172,14 +182,14 @@ const CompactFeedCard = ({ card }: { card: RecCardData }) => {
 
 export default function CompactFeed() {
   return (
-    <div className="min-h-screen bg-gray-50 p-6 flex justify-center font-sans">
-      <div className="w-full max-w-2xl flex flex-col gap-4 py-8">
+    <div className="min-h-screen bg-gray-50 p-6 flex justify-center font-sans text-foreground">
+      <div className="w-full max-w-2xl flex flex-col gap-[16px] py-10">
         <div className="mb-4">
           <h2 className="text-2xl font-serif font-bold text-foreground">Compact Review Feed</h2>
           <p className="text-sm text-muted-foreground mt-1">Review your prioritized matches efficiently.</p>
         </div>
         
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[16px]">
           {mockData.map(card => (
             <CompactFeedCard key={card.id} card={card} />
           ))}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { slugify } from "@/utils/slugify";
@@ -338,6 +339,160 @@ function RecommendationCard({
   );
 }
 
+interface SwipeableCardProps {
+  recommendation: Recommendation;
+  stackOffset: number;
+  isTop: boolean;
+  exitX: number;
+  workspaceSlug: string;
+  onAccept: (id: number) => void;
+  onReject: (id: number, reason: string) => void;
+  isAccepting: boolean;
+  isRejecting: boolean;
+  onSwipeRight: () => void;
+  onSwipeLeft: () => void;
+}
+
+function SwipeableCard({
+  recommendation, stackOffset, isTop, exitX,
+  workspaceSlug, onAccept, onReject, isAccepting, isRejecting,
+  onSwipeRight, onSwipeLeft,
+}: SwipeableCardProps) {
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-260, 0, 260], [-14, 0, 14]);
+  const addOpacity = useTransform(x, [30, 110], [0, 1]);
+  const passOpacity = useTransform(x, [-110, -30], [1, 0]);
+
+  return (
+    <motion.div
+      drag={isTop ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.88}
+      style={{
+        x: isTop ? x : undefined,
+        rotate: isTop ? rotate : undefined,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10 - stackOffset,
+        cursor: isTop ? "grab" : "default",
+        touchAction: "none",
+      }}
+      animate={{ scale: 1 - stackOffset * 0.042, y: stackOffset * 16 }}
+      transition={{ type: "spring", stiffness: 320, damping: 32 }}
+      onDragEnd={(_, info) => {
+        if (info.offset.x > 100) onSwipeRight();
+        else if (info.offset.x < -100) onSwipeLeft();
+      }}
+      exit={{
+        x: exitX,
+        opacity: 0,
+        rotate: exitX > 0 ? 18 : -18,
+        transition: { duration: 0.32, ease: "easeOut" },
+      }}
+      className={isTop ? "active:cursor-grabbing select-none" : "select-none"}
+    >
+      {/* Swipe overlay indicators */}
+      {isTop && (
+        <>
+          <motion.div
+            style={{ opacity: addOpacity }}
+            className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-green-500 bg-green-50/60"
+          >
+            <span className="absolute top-4 left-4 text-green-600 font-bold text-sm border-2 border-green-600 rounded px-2 py-0.5 bg-white/90 -rotate-12">
+              Add
+            </span>
+          </motion.div>
+          <motion.div
+            style={{ opacity: passOpacity }}
+            className="absolute inset-0 z-20 pointer-events-none rounded-xl border-2 border-red-400 bg-red-50/60"
+          >
+            <span className="absolute top-4 right-4 text-red-500 font-bold text-sm border-2 border-red-500 rounded px-2 py-0.5 bg-white/90 rotate-12">
+              Pass
+            </span>
+          </motion.div>
+        </>
+      )}
+      <RecommendationCard
+        recommendation={recommendation}
+        workspaceSlug={workspaceSlug}
+        onAccept={onAccept}
+        onReject={onReject}
+        isAccepting={isAccepting}
+        isRejecting={isRejecting}
+      />
+    </motion.div>
+  );
+}
+
+interface CardStackProps {
+  recommendations: Recommendation[];
+  workspaceSlug: string;
+  onAccept: (id: number) => void;
+  onReject: (id: number, reason: string) => void;
+  acceptingId: number | null;
+  rejectingId: number | null;
+}
+
+function CardStack({ recommendations, workspaceSlug, onAccept, onReject, acceptingId, rejectingId }: CardStackProps) {
+  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const [exitDirections, setExitDirections] = useState<Record<number, number>>({});
+
+  const activeCards = recommendations.filter(
+    (r) => r.status === "new" && !dismissed.has(r.id)
+  );
+  const visibleCards = activeCards.slice(0, 3);
+
+  const handleSwipeRight = (id: number) => {
+    setExitDirections((prev) => ({ ...prev, [id]: 520 }));
+    setDismissed((prev) => new Set([...prev, id]));
+    onAccept(id);
+  };
+
+  const handleSwipeLeft = (id: number, reason = "not_relevant") => {
+    setExitDirections((prev) => ({ ...prev, [id]: -520 }));
+    setDismissed((prev) => new Set([...prev, id]));
+    onReject(id, reason);
+  };
+
+  if (activeCards.length === 0) return null;
+
+  return (
+    <div>
+      <div className="relative" style={{ minHeight: 400 }}>
+        <AnimatePresence>
+          {visibleCards.map((rec, i) => (
+            <SwipeableCard
+              key={rec.id}
+              recommendation={rec}
+              stackOffset={i}
+              isTop={i === 0}
+              exitX={exitDirections[rec.id] ?? 520}
+              workspaceSlug={workspaceSlug}
+              onAccept={(id) => handleSwipeRight(id)}
+              onReject={(id, reason) => handleSwipeLeft(id, reason ?? "not_relevant")}
+              isAccepting={acceptingId === rec.id}
+              isRejecting={rejectingId === rec.id}
+              onSwipeRight={() => handleSwipeRight(rec.id)}
+              onSwipeLeft={() => handleSwipeLeft(rec.id)}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground mt-3 px-1">
+        <span className="flex items-center gap-1">
+          <span className="text-red-400 font-semibold">←</span> Swipe to pass
+        </span>
+        <span>{activeCards.length} {activeCards.length === 1 ? "card" : "cards"} remaining</span>
+        <span className="flex items-center gap-1">
+          Swipe to add <span className="text-green-500 font-semibold">→</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 interface EmptyStateProps {
   onLoadMore: () => void;
   isLoading: boolean;
@@ -525,7 +680,7 @@ export default function RecommendationsPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-10 max-w-screen-xl">
+      <div className="container mx-auto px-4 pt-20 pb-8 space-y-10 max-w-2xl">
         {/* Intelligent Match Section */}
         <IntelligentMatch />
 
@@ -538,30 +693,18 @@ export default function RecommendationsPage() {
           )}
 
           {isLoadingRecommendations ? (
-            <div className="flex flex-row gap-4 overflow-x-auto pb-2">
-              <div className="w-[360px] flex-shrink-0"><RecommendationCardSkeleton /></div>
-              <div className="w-[360px] flex-shrink-0"><RecommendationCardSkeleton /></div>
-              <div className="w-[360px] flex-shrink-0"><RecommendationCardSkeleton /></div>
-            </div>
+            <RecommendationCardSkeleton />
           ) : recommendations.length === 0 ? (
             <EmptyState onLoadMore={handleLoadMore} isLoading={loadMoreMutation.isPending} />
           ) : (
-            <div className="flex flex-row gap-4 overflow-x-auto pb-2 items-start">
-              {recommendations
-                .filter((r) => r.status === "new")
-                .map((recommendation) => (
-                  <div key={recommendation.id} className="w-[360px] flex-shrink-0">
-                    <RecommendationCard
-                      recommendation={recommendation}
-                      workspaceSlug={workspaceSlug!}
-                      onAccept={handleAccept}
-                      onReject={handleReject}
-                      isAccepting={acceptingId === recommendation.id}
-                      isRejecting={rejectingId === recommendation.id}
-                    />
-                  </div>
-                ))}
-            </div>
+            <CardStack
+              recommendations={recommendations}
+              workspaceSlug={workspaceSlug!}
+              onAccept={handleAccept}
+              onReject={handleReject}
+              acceptingId={acceptingId}
+              rejectingId={rejectingId}
+            />
           )}
 
           {canLoadMore && recommendations.length > 0 && (

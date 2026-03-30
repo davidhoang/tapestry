@@ -123,6 +123,11 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Return 404 for OAuth discovery so mcp-remote falls back to direct transport
+    app.use("/.well-known", (_req, res) => {
+      res.status(404).json({ error: "Not found" });
+    });
+
     // Register API routes BEFORE Vite middleware
     const server = registerRoutes(app);
 

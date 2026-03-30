@@ -1381,6 +1381,11 @@ async function handleToolCall(name: string, args: Record<string, unknown>, authC
 }
 
 export function setupMcpRoutes(app: Express) {
+  // Return 404 for .well-known discovery under /mcp path so mcp-remote doesn't get HTML
+  app.use("/mcp/.well-known/*", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found" });
+  });
+
   app.get("/mcp/health", (_req: Request, res: Response) => {
     res.json({ status: "ok", service: "tapestry-mcp", transport: "streamable-http" });
   });

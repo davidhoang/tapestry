@@ -1,5 +1,6 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -1380,16 +1381,63 @@ async function handleToolCall(name: string, args: Record<string, unknown>, authC
   }
 }
 
+interface SseSession {
+  transport: SSEServerTransport;
+  server: Server;
+  authContext: AuthContext;
+}
+
+const sseSessions = new Map<string, SseSession>();
+
+function buildMcpServer(authContext: AuthContext): Server {
+  const server = new Server(
+    { name: "tapestry", version: "1.0.0" },
+    { capabilities: { tools: {} } }
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return { tools: TOOLS };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+    try {
+      return await handleToolCall(name, args as Record<string, unknown> || {}, authContext);
+    } catch (error: unknown) {
+      console.error(`MCP tool error (${name}):`, error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        content: [{
+          type: "text",
+          text: `Error executing '${name}': ${message}. If this persists, please check your parameters and try again, or contact support.`
+        }],
+        isError: true
+      };
+    }
+  });
+
+  return server;
+}
+
 export function setupMcpRoutes(app: Express) {
-  // Return 404 for .well-known discovery under /mcp path so mcp-remote doesn't get HTML
   app.use("/mcp/.well-known/*", (_req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
   });
 
   app.get("/mcp/health", (_req: Request, res: Response) => {
-    res.json({ status: "ok", service: "tapestry-mcp", transport: "streamable-http" });
+    res.json({
+      status: "ok",
+      service: "tapestry-mcp",
+      transports: ["streamable-http", "sse"],
+      endpoints: {
+        streamableHttp: "POST /mcp",
+        sse: "GET /sse?token=tap_xxx",
+        sseMessages: "POST /messages?sessionId=xxx"
+      }
+    });
   });
 
+  // ── Streamable HTTP transport (MCP spec 2025-03-26, Node 18+) ──────────────
   app.post("/mcp", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -1404,48 +1452,71 @@ export function setupMcpRoutes(app: Express) {
       return;
     }
 
-    const server = new Server(
-      { name: "tapestry", version: "1.0.0" },
-      { capabilities: { tools: {} } }
-    );
-
-    server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return { tools: TOOLS };
-    });
-
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      try {
-        return await handleToolCall(name, args as Record<string, unknown> || {}, authContext);
-      } catch (error: unknown) {
-        console.error(`MCP tool error (${name}):`, error);
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        return { 
-          content: [{ 
-            type: "text", 
-            text: `Error executing '${name}': ${message}. If this persists, please check your parameters and try again, or contact support.` 
-          }],
-          isError: true
-        };
-      }
-    });
+    const server = buildMcpServer(authContext);
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
     });
 
     await server.connect(transport);
-
     await transport.handleRequest(req, res, req.body);
   });
 
   app.get("/mcp", async (_req: Request, res: Response) => {
-    res.status(405).json({ error: "Method not allowed. Use POST for MCP Streamable HTTP requests." });
+    res.status(405).json({
+      error: "GET not supported on /mcp in stateless mode. Use POST for Streamable HTTP or GET /sse for SSE transport."
+    });
   });
 
   app.delete("/mcp", async (_req: Request, res: Response) => {
     res.status(405).json({ error: "Method not allowed. This server runs in stateless mode." });
   });
 
-  console.log("MCP Streamable HTTP routes registered at /mcp");
+  // ── SSE transport (MCP spec 2024-11-05, backwards-compatible) ─────────────
+  // Older clients (mcp-remote < 0.1, Claude Desktop with SSE config) connect here.
+  // The token is passed as ?token=tap_xxx because EventSource cannot set headers.
+  app.get("/sse", async (req: Request, res: Response) => {
+    const token = (req.query.token as string | undefined)
+      || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+
+    if (!token || !token.startsWith('tap_')) {
+      res.status(401).json({ error: "Missing token. Provide ?token=tap_xxx as a query parameter." });
+      return;
+    }
+
+    const authContext = await validateToken(token);
+    if (!authContext) {
+      res.status(401).json({ error: "Invalid or expired API token." });
+      return;
+    }
+
+    const transport = new SSEServerTransport('/messages', res);
+    const server = buildMcpServer(authContext);
+
+    sseSessions.set(transport.sessionId, { transport, server, authContext });
+
+    transport.onclose = () => {
+      sseSessions.delete(transport.sessionId);
+    };
+
+    await server.connect(transport);
+  });
+
+  app.post("/messages", async (req: Request, res: Response) => {
+    const sessionId = req.query.sessionId as string | undefined;
+    if (!sessionId) {
+      res.status(400).json({ error: "Missing sessionId query parameter." });
+      return;
+    }
+
+    const session = sseSessions.get(sessionId);
+    if (!session) {
+      res.status(404).json({ error: "Session not found or expired. Reconnect via GET /sse?token=tap_xxx" });
+      return;
+    }
+
+    await session.transport.handlePostMessage(req, res, req.body);
+  });
+
+  console.log("MCP routes registered — Streamable HTTP: POST /mcp | SSE: GET /sse");
 }

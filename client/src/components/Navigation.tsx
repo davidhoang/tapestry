@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity, Key, Home } from "lucide-react";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity, Key, Home, BookOpen } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -150,6 +150,12 @@ export default function Navigation() {
                   Hiring
                 </Link>
               )}
+              <Link
+                to="/docs/mcp"
+                className={location === "/docs/mcp" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Docs
+              </Link>
             </div>
           )}
         </div>
@@ -164,6 +170,14 @@ export default function Navigation() {
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-4">
+            {!user && (
+              <Link
+                to="/docs/mcp"
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Docs
+              </Link>
+            )}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -227,6 +241,12 @@ export default function Navigation() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem asChild>
+                    <Link to="/docs/mcp" className="flex items-center w-full">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Docs
+                    </Link>
+                  </DropdownMenuItem>
                   <div className="border-t"></div>
                   <DropdownMenuItem onSelect={() => logout()}>
                     Logout
@@ -310,6 +330,17 @@ export default function Navigation() {
                       </Link>
                     )}
                     <Link
+                      to="/docs/mcp"
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === "/docs/mcp"
+                          ? "text-gray-900 bg-gray-100 font-bold"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Docs
+                    </Link>
+                    <Link
                       to="/profile"
                       className={`text-lg py-3 px-4 rounded-lg transition-colors ${
                         location === "/profile" 
@@ -352,15 +383,23 @@ export default function Navigation() {
                 </SheetContent>
               </Sheet>
             ) : (
-              /* Direct Sign in button on mobile - no hamburger needed */
-              <Button 
-                variant="default" 
-                size="sm"
-                onClick={() => setShowAuthDialog(true)} 
-                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base px-4 py-2"
-              >
-                Sign in
-              </Button>
+              /* Docs + Sign in on mobile when logged out */
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/docs/mcp"
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Docs
+                </Link>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => setShowAuthDialog(true)} 
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base px-4 py-2"
+                >
+                  Sign in
+                </Button>
+              </div>
             )}
           </div>
         </div>

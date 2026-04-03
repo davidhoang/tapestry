@@ -234,12 +234,12 @@ export default function DocsPage() {
               className="text-xs font-bold uppercase tracking-widest mb-5"
               style={{ color: "#C8944B" }}
             >
-              Tapestry Integrations
+              Developer Docs
             </p>
-            <h2 className="text-4xl font-bold tracking-tight mb-4">Build with Tapestry</h2>
+            <h2 className="text-4xl font-bold tracking-tight mb-4">Tapestry Integrations</h2>
             <p className="text-lg leading-relaxed mb-8" style={{ color: "#6B5549" }}>
-              Connect Tapestry to your workflow. Manage designers from the terminal with the CLI,
-              or use natural language through your AI assistant via MCP.
+              Connect Tapestry to your workflow. Use the CLI to manage designers from your terminal,
+              or connect via MCP to work with your AI assistant through natural language.
             </p>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">MCP endpoint</span>
@@ -331,9 +331,10 @@ export default function DocsPage() {
                   </div>
                   <h4 className="font-semibold text-base mb-2">CLI</h4>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                    Manage designers from your terminal. Install{" "}
+                    Install{" "}
                     <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">tapestry-cli</code>{" "}
-                    and run commands directly.
+                    to search, add, and manage designers straight from your terminal. Great for
+                    scripting and staying in your flow.
                   </p>
                   <span className="text-sm font-semibold" style={{ color: "#C8944B" }}>
                     CLI setup →
@@ -356,8 +357,8 @@ export default function DocsPage() {
                   </div>
                   <h4 className="font-semibold text-base mb-2">MCP (AI assistants)</h4>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                    Connect to Claude Desktop or ChatGPT Desktop and manage your talent pool through
-                    natural language.
+                    Connect Tapestry to Claude Desktop or ChatGPT Desktop and manage your talent
+                    pool through natural language.
                   </p>
                   <span className="text-sm font-semibold" style={{ color: "#C8944B" }}>
                     MCP setup →
@@ -372,10 +373,10 @@ export default function DocsPage() {
                   borderLeft: "4px solid #C8944B",
                 }}
               >
-                <p className="text-sm font-semibold mb-1">Both options need an API token</p>
+                <p className="text-sm font-semibold mb-1">Both options use an API token</p>
                 <p className="text-sm text-muted-foreground">
-                  Go to <strong>Settings → API Tokens</strong> to generate a token. It will start
-                  with <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">tap_</code>.
+                  Go to <strong>Settings → API Tokens</strong> to generate a token starting with{" "}
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">tap_</code>.
                 </p>
               </div>
             </section>
@@ -385,8 +386,8 @@ export default function DocsPage() {
               <SectionHeader icon={Package}>CLI</SectionHeader>
               <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
                 The Tapestry CLI lets you search, add, and manage designers directly from your
-                terminal — no browser needed. Useful for scripting, bulk work, or just staying in
-                your flow.
+                terminal — no browser needed. It's useful for scripting, bulk work, or just staying
+                in your flow.
               </p>
 
               {/* Steps */}

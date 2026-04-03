@@ -31,9 +31,10 @@ if (app.get("env") === "production") {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
         "img-src": ["'self'", "data:", "blob:", "https:"],
-        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://clerk.tapestry.design"],
         "connect-src": ["'self'", "https://clerk.tapestry.design", "https://accounts.tapestry.design", "https://*.clerk.accounts.dev"],
         "frame-src": ["'self'", "https://accounts.tapestry.design", "https://*.clerk.accounts.dev"],
+        "worker-src": ["'self'", "blob:"],
         "frame-ancestors": ["'self'"],
       },
     },

@@ -2,11 +2,23 @@ import { useAuth, useClerk } from '@clerk/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SelectUser } from "@db/schema";
 import { getAuthHeaders } from '../lib/queryClient';
+import { useState, useEffect } from 'react';
 
 export function useUser() {
   const { isSignedIn, isLoaded } = useAuth();
   const { signOut, openSignIn, openSignUp } = useClerk();
   const queryClient = useQueryClient();
+
+  // Safety net: if Clerk hasn't loaded within 10 seconds, treat user as
+  // logged out so the site doesn't hang forever.
+  const [clerkTimedOut, setClerkTimedOut] = useState(false);
+  useEffect(() => {
+    if (isLoaded) return;
+    const timer = setTimeout(() => setClerkTimedOut(true), 10000);
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
+
+  const effectivelyLoaded = isLoaded || clerkTimedOut;
 
   const { data: user, isLoading: isUserLoading } = useQuery<SelectUser | null>({
     queryKey: ['user'],
@@ -24,7 +36,7 @@ export function useUser() {
     retry: false,
   });
 
-  const isLoading = !isLoaded || (!!isSignedIn && isUserLoading);
+  const isLoading = !effectivelyLoaded || (!!isSignedIn && isUserLoading);
 
   const login = async (_userData?: any) => {
     if (!isLoaded) {

@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Navigation from "../components/Navigation";
+import PageLayout from "@/components/layouts/PageLayout";
 
 const inviteUserSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -339,7 +340,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <div className="container mx-auto px-4 py-8 pt-24 max-w-2xl space-y-6">
+      <PageLayout className="container mx-auto px-4 pb-8 max-w-2xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Profile Card */}
           <Card>
@@ -646,7 +647,7 @@ export default function ProfilePage() {
             </Button>
           )}
         </form>
-      </div>
+      </PageLayout>
     </div>
   );
 }

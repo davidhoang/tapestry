@@ -1,5 +1,6 @@
 import { useParams, useLocation, Link } from "wouter";
 import React from "react";
+import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
@@ -190,7 +191,7 @@ export default function DesignerDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <PageLayout className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-48 bg-muted rounded-2xl mb-8"></div>
@@ -203,13 +204,13 @@ export default function DesignerDetailsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (error || !designer) {
     return (
-      <div className="min-h-screen bg-background">
+      <PageLayout className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -224,12 +225,12 @@ export default function DesignerDetailsPage() {
             <p className="text-muted-foreground">The designer you're looking for doesn't exist.</p>
           </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageLayout className="min-h-screen bg-background">
       {/* Cover Photo Section */}
       <div className="relative h-64 overflow-hidden">
         <img 
@@ -715,7 +716,7 @@ export default function DesignerDetailsPage() {
           }}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }
 

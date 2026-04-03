@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import PageLayout from "@/components/layouts/PageLayout";
 import { useWorkspacePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -224,7 +225,7 @@ export default function WorkspaceMembersPage() {
 
   if (!permissions.canViewMembersList) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+      <PageLayout className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -234,12 +235,12 @@ export default function WorkspaceMembersPage() {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 px-4 sm:px-8 pb-8">
+    <PageLayout className="min-h-screen bg-gray-50 px-4 sm:px-8 pb-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
@@ -556,6 +557,6 @@ export default function WorkspaceMembersPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </PageLayout>
   );
 }

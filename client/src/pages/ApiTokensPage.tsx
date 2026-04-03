@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "wouter";
+import PageLayout from "@/components/layouts/PageLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Key, Plus, Trash2, Copy, Check, AlertCircle, ExternalLink } from "lucide-react";
@@ -119,7 +120,7 @@ export default function ApiTokensPage() {
   };
 
   return (
-    <div className="container max-w-4xl py-8 px-4 md:px-6">
+    <PageLayout className="container max-w-4xl pb-8 px-4 md:px-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">API tokens</h1>
@@ -345,6 +346,6 @@ export default function ApiTokensPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   );
 }

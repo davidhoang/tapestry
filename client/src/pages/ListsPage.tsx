@@ -13,6 +13,7 @@ import { useDesigners } from "@/hooks/use-designer";
 import { useLocation, useParams } from "wouter";
 import { slugify } from "@/utils/slugify";
 import Navigation from "@/components/Navigation";
+import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -216,7 +217,7 @@ export default function ListsPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
+      <PageLayout className="container mx-auto px-4 pb-8 space-y-8">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Lists</h1>
           <CreateListDialog open={isOpen} onOpenChange={setIsOpen} />
@@ -370,7 +371,7 @@ export default function ListsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </div>
+      </PageLayout>
     </div>
   );
 }

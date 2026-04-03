@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Star, ExternalLink, Plus, Mail, User, MapPin, Shuffle, ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import Navigation from "../components/Navigation";
+import PageLayout from "@/components/layouts/PageLayout";
 import RecommendationFeedbackModal from "../components/RecommendationFeedbackModal";
 
 export default function MatchmakerPage() {
@@ -149,7 +150,7 @@ export default function MatchmakerPage() {
       <Navigation />
       
       <div className={`flex transition-all duration-300 relative z-10 ${recommendations.length > 0 ? 'pr-96' : ''}`}>
-        <div className="flex-1 container mx-auto px-4 pt-24 pb-8 max-w-4xl">
+        <PageLayout className="flex-1 container mx-auto px-4 pb-8 max-w-4xl">
           <div className="text-center space-y-6 mb-8">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900">Intelligent Match</h1>
             <p className="text-xl text-gray-700 leading-relaxed">
@@ -232,7 +233,7 @@ export default function MatchmakerPage() {
               </div>
             </div>
           )}
-        </div>
+        </PageLayout>
 
         {recommendations.length > 0 && (
           <div className="fixed right-0 top-16 bottom-0 w-96 bg-white/95 backdrop-blur-sm border-l border-white/20 shadow-xl overflow-y-auto z-30" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>

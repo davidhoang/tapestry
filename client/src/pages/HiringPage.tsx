@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useUser } from "../hooks/use-user";
+import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -354,7 +355,7 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
   }
 
   return (
-    <div className="container mx-auto px-4 pt-24 pb-8 max-w-7xl">
+    <PageLayout className="container mx-auto px-4 pb-8 max-w-7xl">
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2 font-serif">Hiring</h1>
@@ -662,6 +663,6 @@ We're looking for a senior product designer with 5+ years of experience in B2B S
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

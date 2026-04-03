@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import DesignerCard from "@/components/DesignerCard";
 import SkillsInput from "@/components/SkillsInput";
 import Navigation from "@/components/Navigation";
+import PageLayout from "@/components/layouts/PageLayout";
 import { Link, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -427,7 +428,7 @@ export default function DirectoryPage() {
         <Navigation />
         
         {/* Main container with adjusted padding for fixed nav */}
-        <div className="pt-16">
+        <PageLayout>
           {/* Title section */}
           <div className="container mx-auto px-4 sm:px-6 pt-6 pb-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Directory</h1>
@@ -582,7 +583,7 @@ export default function DirectoryPage() {
               </div>
             )}
           </div>
-        </div>
+        </PageLayout>
       </div>
 
         <Dialog

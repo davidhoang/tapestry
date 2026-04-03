@@ -6,6 +6,7 @@ import { slugify } from "@/utils/slugify";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/Navigation";
+import PageLayout from "@/components/layouts/PageLayout";
 import IntelligentMatch from "@/components/IntelligentMatch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -722,7 +723,7 @@ export default function RecommendationsPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-10 max-w-2xl">
+      <PageLayout className="container mx-auto px-4 pb-8 space-y-10 max-w-2xl">
         {/* Intelligent Match Section */}
         <IntelligentMatch />
 
@@ -775,7 +776,7 @@ export default function RecommendationsPage() {
             });
           }}
         />
-      </div>
+      </PageLayout>
 
       {draftModal && (
         <DraftMessageModal

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useLocation, Link } from "wouter";
+import PageLayout from "@/components/layouts/PageLayout";
 import { useQuery } from "@tanstack/react-query";
 import { SelectDesigner } from "@db/schema";
 import DesignerCard from "@/components/DesignerCard";
@@ -122,7 +123,7 @@ export default function SearchResultsPage() {
 
   if (!filterValue) {
     return (
-      <div className="min-h-screen bg-background">
+      <PageLayout className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -137,12 +138,12 @@ export default function SearchResultsPage() {
             <p className="text-muted-foreground">No search criteria specified.</p>
           </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageLayout className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -283,6 +284,6 @@ export default function SearchResultsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

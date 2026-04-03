@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
 import FeedbackAnalyticsDashboard from "@/components/FeedbackAnalyticsDashboard";
+import PageLayout from "@/components/layouts/PageLayout";
 
 export default function FeedbackAnalyticsPage() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <PageLayout className="container mx-auto px-6 pb-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -71,6 +72,6 @@ export default function FeedbackAnalyticsPage() {
 
       {/* Analytics Dashboard */}
       <FeedbackAnalyticsDashboard />
-    </div>
+    </PageLayout>
   );
 }

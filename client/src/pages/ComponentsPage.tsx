@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, Search, Copy, Check, Mail, Calendar, User, Settings, Home, Plus, Trash2, Edit, Heart, Star, Bell, AlertCircle, Info, CheckCircle, XCircle, Bold, Italic, Underline } from "lucide-react";
 import Navigation from "../components/Navigation";
 import AdminRoute from "../components/AdminRoute";
+import PageLayout from "@/components/layouts/PageLayout";
 
 // Import all UI components
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -771,7 +772,7 @@ export default function ComponentsPage() {
     <AdminRoute>
       <div className="min-h-screen">
         <Navigation />
-        <div className="container mx-auto px-4 pt-24 pb-8">
+        <PageLayout className="container mx-auto px-4 pb-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2 font-serif">UI Components Library</h1>
             <p className="text-muted-foreground font-serif">
@@ -988,7 +989,7 @@ export default function ComponentsPage() {
             <p className="text-muted-foreground">No components found matching your search.</p>
           </div>
         )}
-      </div>
+      </PageLayout>
     </div>
     </AdminRoute>
   );

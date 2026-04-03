@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import PageLayout from "@/components/layouts/PageLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,7 @@ export default function WorkspacePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <PageLayout className="container mx-auto px-6 pb-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -186,12 +187,12 @@ export default function WorkspacePage() {
             ))}
           </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <PageLayout className="container mx-auto px-6 pb-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Workspaces</h1>
@@ -401,6 +402,6 @@ export default function WorkspacePage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageLayout>
   );
 }

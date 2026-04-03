@@ -12,6 +12,7 @@ import {
 import { useDesigners } from "@/hooks/use-designer";
 import { useLists } from "@/hooks/use-lists";
 import Navigation from "@/components/Navigation";
+import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -985,7 +986,7 @@ export default function InboxPage() {
     return (
       <div>
         <Navigation />
-        <div className="container mx-auto px-4 pt-20 pb-8">
+        <PageLayout className="container mx-auto px-4 pb-8">
           <div className="text-center py-12">
             <div className="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
               <X className="h-12 w-12 text-red-600" />
@@ -998,7 +999,7 @@ export default function InboxPage() {
               Try Again
             </Button>
           </div>
-        </div>
+        </PageLayout>
       </div>
     );
   }
@@ -1006,7 +1007,7 @@ export default function InboxPage() {
   return (
     <div>
       <Navigation />
-      <div className="container mx-auto px-4 pt-20 pb-8 space-y-8">
+      <PageLayout className="container mx-auto px-4 pb-8 space-y-8">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Inbox</h1>
@@ -1056,7 +1057,7 @@ export default function InboxPage() {
             />
           </>
         )}
-      </div>
+      </PageLayout>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import CsvImport from "@/components/CsvImport";
 import PdfImport from "@/components/PdfImport";
 import AdminRoute from "@/components/AdminRoute";
+import PageLayout from "@/components/layouts/PageLayout";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { Switch } from "@/components/ui/switch";
 import FeedbackAnalyticsDashboard from "@/components/FeedbackAnalyticsDashboard";
@@ -340,7 +341,7 @@ export default function AdminPage() {
 
   return (
     <AdminRoute>
-      <div className="container mx-auto pt-20 pb-8 px-4 max-w-6xl">
+      <PageLayout className="container mx-auto pb-8 px-4 max-w-6xl">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
             <Database className="h-6 w-6" />
@@ -574,7 +575,7 @@ export default function AdminPage() {
             <SystemPromptManager />
           </TabsContent>
         </Tabs>
-      </div>
+      </PageLayout>
     </AdminRoute>
   );
 }

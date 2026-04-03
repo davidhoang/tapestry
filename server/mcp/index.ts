@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 // Use relative imports for standalone execution outside Replit
 import { db } from "../../db/index.js";
-import { designers, lists, listDesigners, workspaces, apiTokens, designerEvents } from "../../db/schema.js";
+import { designers, lists, listDesigners, workspaces, apiTokens, designerEvents, designerWorkExperience, designerSkills, designerTalentProfile, type InsertDesignerWorkExperience, type InsertDesignerSkills, type InsertDesignerTalentProfile } from "../../db/schema.js";
 import { eq, and, desc, or, ilike } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -263,6 +263,80 @@ const TOOLS = [
         designerIds: { type: "array", items: { type: "number" }, description: "Array of designer IDs to enrich" }
       },
       required: ["designerIds"]
+    }
+  },
+  {
+    name: "get_designer_talent_graph",
+    description: "Read the full Talent Graph for a designer: structured work history, skills with proficiency, talent profile (location, compensation, growth motivators).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID" }
+      },
+      required: ["designerId"]
+    }
+  },
+  {
+    name: "set_designer_talent_profile",
+    description: "Upsert the talent profile for a designer. Sets structured location, compensation, remote preference, and growth motivators.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID" },
+        city: { type: "string", description: "City" },
+        country: { type: "string", description: "Country" },
+        timezone: { type: "string", description: "IANA timezone string" },
+        remotePreference: { type: "string", enum: ["remote_only", "hybrid", "on_site", "flexible"], description: "Remote work preference" },
+        currency: { type: "string", description: "Currency code (e.g. USD, EUR)" },
+        currentAnnualComp: { type: "number", description: "Current annual compensation" },
+        expectedAnnualComp: { type: "number", description: "Expected annual compensation" },
+        equityInterest: { type: "boolean", description: "Whether the designer is interested in equity" },
+        growthMotivators: {
+          type: "array",
+          description: "Tagged growth motivators with weights (0-1)",
+          items: {
+            type: "object",
+            properties: {
+              motivator: { type: "string" },
+              weight: { type: "number" }
+            },
+            required: ["motivator", "weight"]
+          }
+        }
+      },
+      required: ["designerId"]
+    }
+  },
+  {
+    name: "add_work_experience",
+    description: "Append a structured job record to a designer's work history.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID" },
+        employerName: { type: "string", description: "Name of the employer/company" },
+        title: { type: "string", description: "Job title" },
+        startDate: { type: "string", description: "Start date (ISO 8601, e.g. 2022-01-01)" },
+        endDate: { type: "string", description: "End date (ISO 8601). Omit or null if current." },
+        isCurrent: { type: "boolean", description: "Whether this is the current position" },
+        description: { type: "string", description: "Role description" },
+        employmentType: { type: "string", enum: ["full_time", "contract", "freelance", "part_time", "internship"], description: "Employment type" }
+      },
+      required: ["designerId", "employerName", "title", "startDate"]
+    }
+  },
+  {
+    name: "add_designer_skill",
+    description: "Add a structured skill with proficiency and category to a designer's Talent Graph.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        designerId: { type: "number", description: "The designer ID" },
+        name: { type: "string", description: "Skill name" },
+        proficiency: { type: "string", enum: ["beginner", "intermediate", "advanced", "expert"], description: "Proficiency level" },
+        category: { type: "string", enum: ["visual", "interaction", "research", "motion", "tooling", "other"], description: "Skill category" }
+      },
+      required: ["designerId", "name"]
     }
   }
 ];
@@ -982,6 +1056,283 @@ ${confidence >= 0.5 ? 'Use the `apply_enrichment` tool to apply these suggestion
       };
     }
     
+    case "get_designer_talent_graph": {
+      const { designerId } = args as { designerId: number };
+
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${designerId} not found in your workspace.` }],
+          isError: true
+        };
+      }
+
+      const [workExpList, skillsList, talentProfile] = await Promise.all([
+        db.query.designerWorkExperience.findMany({
+          where: and(
+            eq(designerWorkExperience.designerId, designerId),
+            eq(designerWorkExperience.workspaceId, authContext.workspaceId)
+          ),
+          orderBy: [desc(designerWorkExperience.startDate)],
+        }),
+        db.query.designerSkills.findMany({
+          where: and(
+            eq(designerSkills.designerId, designerId),
+            eq(designerSkills.workspaceId, authContext.workspaceId)
+          ),
+        }),
+        db.query.designerTalentProfile.findFirst({
+          where: and(
+            eq(designerTalentProfile.designerId, designerId),
+            eq(designerTalentProfile.workspaceId, authContext.workspaceId)
+          ),
+        }),
+      ]);
+
+      const workExpFormatted = workExpList.length > 0
+        ? workExpList.map(e => {
+          const end = e.isCurrent ? 'Present' : (e.endDate ? e.endDate.toISOString().split('T')[0] : '?');
+          return `  - ${e.title} @ ${e.employerName} (${e.startDate.toISOString().split('T')[0]} – ${end}, ${e.employmentType})${e.description ? '\n    ' + e.description : ''}`;
+        }).join('\n')
+        : '  None';
+
+      const skillsFormatted = skillsList.length > 0
+        ? skillsList.map(s => `  - ${s.name}: ${s.proficiency} [${s.category}]`).join('\n')
+        : '  None';
+
+      const profileFormatted = talentProfile
+        ? [
+          talentProfile.city || talentProfile.country ? `  Location: ${[talentProfile.city, talentProfile.country].filter(Boolean).join(', ')} (${talentProfile.timezone || 'tz N/A'})` : null,
+          `  Remote Preference: ${talentProfile.remotePreference || 'N/A'}`,
+          talentProfile.currentAnnualComp ? `  Current Compensation: ${talentProfile.currency || 'USD'} ${talentProfile.currentAnnualComp.toLocaleString()}/yr` : null,
+          talentProfile.expectedAnnualComp ? `  Expected Compensation: ${talentProfile.currency || 'USD'} ${talentProfile.expectedAnnualComp.toLocaleString()}/yr` : null,
+          `  Equity Interest: ${talentProfile.equityInterest ? 'Yes' : 'No'}`,
+          talentProfile.growthMotivators && Array.isArray(talentProfile.growthMotivators) && talentProfile.growthMotivators.length > 0
+            ? `  Growth Motivators: ${(talentProfile.growthMotivators as Array<{ motivator: string; weight: number }>).map(m => `${m.motivator} (${m.weight})`).join(', ')}`
+            : null,
+        ].filter(Boolean).join('\n')
+        : '  No talent profile set';
+
+      return {
+        content: [{
+          type: "text",
+          text: `**Talent Graph for ${designer.name}** (ID: ${designerId})
+
+**Work Experience:**
+${workExpFormatted}
+
+**Structured Skills:**
+${skillsFormatted}
+
+**Talent Profile:**
+${profileFormatted}`
+        }]
+      };
+    }
+
+    case "set_designer_talent_profile": {
+      const { designerId, ...profileData } = args as {
+        designerId: number;
+        city?: string;
+        country?: string;
+        timezone?: string;
+        remotePreference?: InsertDesignerTalentProfile['remotePreference'];
+        currency?: string;
+        currentAnnualComp?: number;
+        expectedAnnualComp?: number;
+        equityInterest?: boolean;
+        growthMotivators?: Array<{ motivator: string; weight: number }>;
+      };
+
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to update designer profiles." }],
+          isError: true
+        };
+      }
+
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${designerId} not found.` }],
+          isError: true
+        };
+      }
+
+      const existing = await db.query.designerTalentProfile.findFirst({
+        where: and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, authContext.workspaceId)
+        ),
+      });
+
+      if (existing) {
+        const updateData: Partial<InsertDesignerTalentProfile> & { updatedAt: Date } = { updatedAt: new Date() };
+        if (profileData.city !== undefined) updateData.city = profileData.city;
+        if (profileData.country !== undefined) updateData.country = profileData.country;
+        if (profileData.timezone !== undefined) updateData.timezone = profileData.timezone;
+        if (profileData.remotePreference !== undefined) updateData.remotePreference = profileData.remotePreference;
+        if (profileData.currency !== undefined) updateData.currency = profileData.currency;
+        if (profileData.currentAnnualComp !== undefined) updateData.currentAnnualComp = profileData.currentAnnualComp;
+        if (profileData.expectedAnnualComp !== undefined) updateData.expectedAnnualComp = profileData.expectedAnnualComp;
+        if (profileData.equityInterest !== undefined) updateData.equityInterest = profileData.equityInterest;
+        if (profileData.growthMotivators !== undefined) updateData.growthMotivators = profileData.growthMotivators;
+
+        await db.update(designerTalentProfile)
+          .set(updateData)
+          .where(eq(designerTalentProfile.id, existing.id));
+
+        return {
+          content: [{ type: "text", text: `Successfully updated talent profile for "${designer.name}" (ID: ${designerId})` }]
+        };
+      } else {
+        await db.insert(designerTalentProfile).values({
+          workspaceId: authContext.workspaceId,
+          designerId,
+          city: profileData.city ?? null,
+          country: profileData.country ?? null,
+          timezone: profileData.timezone ?? null,
+          remotePreference: profileData.remotePreference ?? 'flexible',
+          currency: profileData.currency ?? 'USD',
+          currentAnnualComp: profileData.currentAnnualComp ?? null,
+          expectedAnnualComp: profileData.expectedAnnualComp ?? null,
+          equityInterest: profileData.equityInterest ?? false,
+          growthMotivators: profileData.growthMotivators ?? [],
+        });
+
+        return {
+          content: [{ type: "text", text: `Successfully created talent profile for "${designer.name}" (ID: ${designerId})` }]
+        };
+      }
+    }
+
+    case "add_work_experience": {
+      const params = args as {
+        designerId: number;
+        employerName: string;
+        title: string;
+        startDate: string;
+        endDate?: string;
+        isCurrent?: boolean;
+        description?: string;
+        employmentType?: InsertDesignerWorkExperience['employmentType'];
+      };
+
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to add work experience." }],
+          isError: true
+        };
+      }
+
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, params.designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${params.designerId} not found.` }],
+          isError: true
+        };
+      }
+
+      const [record] = await db.insert(designerWorkExperience).values({
+        workspaceId: authContext.workspaceId,
+        designerId: params.designerId,
+        employerName: params.employerName,
+        title: params.title,
+        startDate: new Date(params.startDate),
+        endDate: params.endDate ? new Date(params.endDate) : null,
+        isCurrent: params.isCurrent ?? false,
+        description: params.description ?? null,
+        employmentType: params.employmentType ?? 'full_time',
+      }).returning();
+
+      return {
+        content: [{ type: "text", text: `Added work experience: ${params.title} at ${params.employerName} for "${designer.name}" (record ID: ${record.id})` }]
+      };
+    }
+
+    case "add_designer_skill": {
+      const { designerId, name, proficiency, category } = args as {
+        designerId: number;
+        name: string;
+        proficiency?: InsertDesignerSkills['proficiency'];
+        category?: InsertDesignerSkills['category'];
+      };
+
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "You don't have permission to add skills." }],
+          isError: true
+        };
+      }
+
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, authContext.workspaceId)
+        )
+      });
+
+      if (!designer) {
+        return {
+          content: [{ type: "text", text: `Designer with ID ${designerId} not found.` }],
+          isError: true
+        };
+      }
+
+      const existing = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.workspaceId, authContext.workspaceId),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.name, name.trim())
+        )
+      });
+
+      if (existing) {
+        const [updated] = await db.update(designerSkills)
+          .set({
+            proficiency: proficiency ?? existing.proficiency,
+            category: category ?? existing.category,
+            updatedAt: new Date(),
+          })
+          .where(eq(designerSkills.id, existing.id))
+          .returning();
+
+        return {
+          content: [{ type: "text", text: `Updated existing skill "${name}" for "${designer.name}": proficiency=${updated.proficiency}, category=${updated.category}` }]
+        };
+      }
+
+      const [record] = await db.insert(designerSkills).values({
+        workspaceId: authContext.workspaceId,
+        designerId,
+        name: name.trim(),
+        proficiency: proficiency ?? 'intermediate',
+        category: category ?? 'other',
+      }).returning();
+
+      return {
+        content: [{ type: "text", text: `Added skill "${record.name}" (${record.proficiency}, ${record.category}) for "${designer.name}" (record ID: ${record.id})` }]
+      };
+    }
+
     default:
       return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
   }

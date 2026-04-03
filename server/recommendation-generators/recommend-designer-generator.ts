@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "@db";
-import { designers, jobs } from "@db/schema";
+import { designers, jobs, designerWorkExperience, designerSkills, designerTalentProfile } from "@db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { 
   RecommendationGenerator, 
@@ -78,6 +78,77 @@ export class RecommendDesignerGenerator implements RecommendationGenerator {
     return recommendations.slice(0, 20);
   }
 
+  private async fetchTalentGraphContext(designerId: number, workspaceId: number): Promise<string> {
+    const [workExpList, skillsList, talentProfile] = await Promise.all([
+      db.query.designerWorkExperience.findMany({
+        where: and(
+          eq(designerWorkExperience.workspaceId, workspaceId),
+          eq(designerWorkExperience.designerId, designerId)
+        ),
+        orderBy: [desc(designerWorkExperience.startDate)],
+        limit: 5,
+      }),
+      db.query.designerSkills.findMany({
+        where: and(
+          eq(designerSkills.workspaceId, workspaceId),
+          eq(designerSkills.designerId, designerId)
+        ),
+      }),
+      db.query.designerTalentProfile.findFirst({
+        where: and(
+          eq(designerTalentProfile.workspaceId, workspaceId),
+          eq(designerTalentProfile.designerId, designerId)
+        ),
+      }),
+    ]);
+
+    const lines: string[] = [];
+
+    if (workExpList.length > 0) {
+      lines.push('Work History:');
+      for (const exp of workExpList) {
+        const end = exp.isCurrent ? 'Present' : (exp.endDate ? exp.endDate.getFullYear().toString() : '?');
+        lines.push(`  - ${exp.title} at ${exp.employerName} (${exp.startDate.getFullYear()}–${end}, ${exp.employmentType})${exp.description ? ': ' + exp.description.substring(0, 100) : ''}`);
+      }
+    }
+
+    if (skillsList.length > 0) {
+      const grouped: Record<string, string[]> = {};
+      for (const s of skillsList) {
+        const cat = s.category;
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(`${s.name} (${s.proficiency})`);
+      }
+      lines.push('Structured Skills:');
+      for (const [cat, skills] of Object.entries(grouped)) {
+        lines.push(`  ${cat}: ${skills.join(', ')}`);
+      }
+    }
+
+    if (talentProfile) {
+      const location = [talentProfile.city, talentProfile.country].filter(Boolean).join(', ');
+      if (location) lines.push(`Structured Location: ${location} (${talentProfile.timezone || 'tz unknown'})`);
+      if (talentProfile.remotePreference) lines.push(`Remote Preference: ${talentProfile.remotePreference}`);
+      if (talentProfile.currentAnnualComp && talentProfile.expectedAnnualComp) {
+        lines.push(`Compensation Range: ${talentProfile.currency || 'USD'} ${talentProfile.currentAnnualComp.toLocaleString()} (current) → ${talentProfile.expectedAnnualComp.toLocaleString()} (expected)/yr`);
+      } else if (talentProfile.currentAnnualComp) {
+        lines.push(`Current Compensation: ${talentProfile.currency || 'USD'} ${talentProfile.currentAnnualComp.toLocaleString()}/yr`);
+      } else if (talentProfile.expectedAnnualComp) {
+        lines.push(`Expected Compensation: ${talentProfile.currency || 'USD'} ${talentProfile.expectedAnnualComp.toLocaleString()}/yr`);
+      }
+      if (talentProfile.growthMotivators && Array.isArray(talentProfile.growthMotivators) && talentProfile.growthMotivators.length > 0) {
+        const motivators = (talentProfile.growthMotivators as Array<{ motivator: string; weight: number }>)
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, 3)
+          .map(m => m.motivator)
+          .join(', ');
+        lines.push(`Growth Motivators: ${motivators}`);
+      }
+    }
+
+    return lines.length > 0 ? lines.join('\n') : '';
+  }
+
   private async scoreDesignersForJob(
     job: any,
     allDesigners: any[],
@@ -88,7 +159,8 @@ export class RecommendDesignerGenerator implements RecommendationGenerator {
 
     for (const designer of designersToScore) {
       try {
-        const result = await this.scoreDesignerWithAI(designer, job);
+        const talentContext = await this.fetchTalentGraphContext(designer.id, context.workspaceId);
+        const result = await this.scoreDesignerWithAI(designer, job, talentContext);
         if (result.matchScore >= 50) {
           matches.push({
             designer,
@@ -119,7 +191,8 @@ export class RecommendDesignerGenerator implements RecommendationGenerator {
 
   private async scoreDesignerWithAI(
     designer: any,
-    job: any
+    job: any,
+    talentGraphContext: string = ''
   ): Promise<{ matchScore: number; reasoning: string }> {
     const prompt = `Evaluate how well this designer matches the job requirements.
 
@@ -134,6 +207,7 @@ Designer Profile:
 - Location: ${designer.location || 'Not specified'}
 - Available: ${designer.available ? 'Yes' : 'No'}
 - Description: ${designer.description || 'Not specified'}
+${talentGraphContext ? '\nTalent Graph Data:\n' + talentGraphContext : ''}
 
 Respond in JSON format:
 {

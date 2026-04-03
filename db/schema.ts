@@ -541,6 +541,91 @@ export const inboxRecommendationEvents = pgTable("inbox_recommendation_events", 
 });
 
 
+// Talent Graph enums
+export const employmentTypeEnum = pgEnum('employment_type', [
+  'full_time',
+  'contract',
+  'freelance',
+  'part_time',
+  'internship',
+]);
+
+export const skillProficiencyEnum = pgEnum('skill_proficiency', [
+  'beginner',
+  'intermediate',
+  'advanced',
+  'expert',
+]);
+
+export const skillCategoryEnum = pgEnum('skill_category', [
+  'visual',
+  'interaction',
+  'research',
+  'motion',
+  'tooling',
+  'other',
+]);
+
+export const remotePreferenceEnum = pgEnum('remote_preference', [
+  'remote_only',
+  'hybrid',
+  'on_site',
+  'flexible',
+]);
+
+// Talent Graph tables
+export const designerWorkExperience = pgTable("designer_work_experience", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  employerName: text("employer_name").notNull(),
+  title: text("title").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  isCurrent: boolean("is_current").default(false).notNull(),
+  description: text("description"),
+  employmentType: employmentTypeEnum("employment_type").notNull().default('full_time'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("designer_work_experience_workspace_id_idx").on(table.workspaceId),
+  designerIdIdx: index("designer_work_experience_designer_id_idx").on(table.designerId),
+}));
+
+export const designerSkills = pgTable("designer_skills", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull(),
+  name: text("name").notNull(),
+  proficiency: skillProficiencyEnum("proficiency").notNull().default('intermediate'),
+  category: skillCategoryEnum("category").notNull().default('other'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("designer_skills_workspace_id_idx").on(table.workspaceId),
+  designerIdIdx: index("designer_skills_designer_id_idx").on(table.designerId),
+  uniqueSkillIdx: uniqueIndex("designer_skills_unique_idx").on(table.designerId, table.name),
+}));
+
+export const designerTalentProfile = pgTable("designer_talent_profile", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  designerId: integer("designer_id").references(() => designers.id, { onDelete: 'cascade' }).notNull().unique(),
+  city: text("city"),
+  country: text("country"),
+  timezone: text("timezone"),
+  remotePreference: remotePreferenceEnum("remote_preference").default('flexible'),
+  currency: text("currency").default('USD'),
+  currentAnnualComp: integer("current_annual_comp"),
+  expectedAnnualComp: integer("expected_annual_comp"),
+  equityInterest: boolean("equity_interest").default(false),
+  growthMotivators: jsonb("growth_motivators").$type<Array<{ motivator: string; weight: number }>>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  workspaceIdIdx: index("designer_talent_profile_workspace_id_idx").on(table.workspaceId),
+}));
+
 export const userLocationRelations = relations(userLocations, ({ one }) => ({
   user: one(users, {
     fields: [userLocations.userId],
@@ -627,6 +712,12 @@ export const designerRelations = relations(designers, ({ one, many }) => ({
   portfolios: many(portfolios),
   notes: many(designerNotes),
   events: many(designerEvents),
+  workExperience: many(designerWorkExperience),
+  structuredSkills: many(designerSkills),
+  talentProfile: one(designerTalentProfile, {
+    fields: [designers.id],
+    references: [designerTalentProfile.designerId],
+  }),
 }));
 
 export const designerNoteRelations = relations(designerNotes, ({ one }) => ({
@@ -1175,6 +1266,56 @@ export const insertDesignerNoteSchema = createInsertSchema(designerNotes);
 export const selectDesignerNoteSchema = createSelectSchema(designerNotes);
 export type InsertDesignerNote = typeof designerNotes.$inferInsert;
 export type SelectDesignerNote = typeof designerNotes.$inferSelect;
+
+// Talent Graph relations
+export const designerWorkExperienceRelations = relations(designerWorkExperience, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [designerWorkExperience.workspaceId],
+    references: [workspaces.id],
+  }),
+  designer: one(designers, {
+    fields: [designerWorkExperience.designerId],
+    references: [designers.id],
+  }),
+}));
+
+export const designerSkillsRelations = relations(designerSkills, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [designerSkills.workspaceId],
+    references: [workspaces.id],
+  }),
+  designer: one(designers, {
+    fields: [designerSkills.designerId],
+    references: [designers.id],
+  }),
+}));
+
+export const designerTalentProfileRelations = relations(designerTalentProfile, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [designerTalentProfile.workspaceId],
+    references: [workspaces.id],
+  }),
+  designer: one(designers, {
+    fields: [designerTalentProfile.designerId],
+    references: [designers.id],
+  }),
+}));
+
+// Talent Graph insert/select schemas
+export const insertDesignerWorkExperienceSchema = createInsertSchema(designerWorkExperience);
+export const selectDesignerWorkExperienceSchema = createSelectSchema(designerWorkExperience);
+export type InsertDesignerWorkExperience = typeof designerWorkExperience.$inferInsert;
+export type SelectDesignerWorkExperience = typeof designerWorkExperience.$inferSelect;
+
+export const insertDesignerSkillsSchema = createInsertSchema(designerSkills);
+export const selectDesignerSkillsSchema = createSelectSchema(designerSkills);
+export type InsertDesignerSkills = typeof designerSkills.$inferInsert;
+export type SelectDesignerSkills = typeof designerSkills.$inferSelect;
+
+export const insertDesignerTalentProfileSchema = createInsertSchema(designerTalentProfile);
+export const selectDesignerTalentProfileSchema = createSelectSchema(designerTalentProfile);
+export type InsertDesignerTalentProfile = typeof designerTalentProfile.$inferInsert;
+export type SelectDesignerTalentProfile = typeof designerTalentProfile.$inferSelect;
 
 export const insertDesignerEventSchema = createInsertSchema(designerEvents);
 export const selectDesignerEventSchema = createSelectSchema(designerEvents);

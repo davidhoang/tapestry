@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota, designerNotes, designerEvents } from "@db/schema";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota, designerNotes, designerEvents, designerWorkExperience, designerSkills, designerTalentProfile, type InsertDesignerWorkExperience, type InsertDesignerSkills, type InsertDesignerTalentProfile } from "@db/schema";
 import { analyzeCapture } from "./capture-analyzer";
 import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
 import { sendListEmail } from "./email";
@@ -7468,6 +7468,437 @@ Return a JSON object with exactly these fields:
 
     res.json({ success: true });
   }));
+
+  // =========================================================================
+  // Talent Graph Routes
+  // =========================================================================
+
+  // Talent Graph enum validators
+  const VALID_EMPLOYMENT_TYPES = ['full_time', 'contract', 'freelance', 'part_time', 'internship'] as const;
+  const VALID_PROFICIENCIES = ['beginner', 'intermediate', 'advanced', 'expert'] as const;
+  const VALID_SKILL_CATEGORIES = ['visual', 'interaction', 'research', 'motion', 'tooling', 'other'] as const;
+  const VALID_REMOTE_PREFS = ['remote_only', 'hybrid', 'on_site', 'flexible'] as const;
+
+  // Helper: verify designer belongs to workspace
+  const verifyDesignerWorkspaceAccess = async (designerId: number, workspaceId: number, userId: number) => {
+    const designer = await db.query.designers.findFirst({
+      where: and(eq(designers.id, designerId), eq(designers.workspaceId, workspaceId)),
+    });
+    if (!designer) return null;
+
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.workspaceId, workspaceId)),
+    });
+    if (!membership) return null;
+
+    return designer;
+  };
+
+  // --- Work Experience ---
+
+  // GET work experience for a designer
+  app.get(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const experiences = await db.query.designerWorkExperience.findMany({
+        where: and(
+          eq(designerWorkExperience.designerId, designerId),
+          eq(designerWorkExperience.workspaceId, workspaceId)
+        ),
+        orderBy: [desc(designerWorkExperience.startDate)],
+      });
+      res.json(experiences);
+    })
+  );
+
+  // POST create work experience
+  app.post(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const { employerName, title, startDate, endDate, isCurrent, description, employmentType } = req.body;
+
+      if (!employerName || !title || !startDate) {
+        return res.status(400).json({ error: "employerName, title, and startDate are required" });
+      }
+      if (isNaN(Date.parse(startDate))) {
+        return res.status(400).json({ error: "startDate must be a valid ISO 8601 date" });
+      }
+      if (endDate && isNaN(Date.parse(endDate))) {
+        return res.status(400).json({ error: "endDate must be a valid ISO 8601 date" });
+      }
+      if (employmentType && !VALID_EMPLOYMENT_TYPES.includes(employmentType)) {
+        return res.status(400).json({ error: `employmentType must be one of: ${VALID_EMPLOYMENT_TYPES.join(', ')}` });
+      }
+
+      const [record] = await db.insert(designerWorkExperience).values({
+        workspaceId,
+        designerId,
+        employerName,
+        title,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        isCurrent: isCurrent ?? false,
+        description: description || null,
+        employmentType: employmentType || 'full_time',
+      }).returning();
+
+      res.status(201).json(record);
+    })
+  );
+
+  // PATCH update work experience
+  app.patch(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerWorkExperience.findFirst({
+        where: and(
+          eq(designerWorkExperience.id, id),
+          eq(designerWorkExperience.designerId, designerId),
+          eq(designerWorkExperience.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Work experience record not found" });
+
+      const { employerName, title, startDate, endDate, isCurrent, description, employmentType } = req.body;
+
+      if (startDate !== undefined && isNaN(Date.parse(startDate))) {
+        return res.status(400).json({ error: "startDate must be a valid ISO 8601 date" });
+      }
+      if (endDate !== undefined && endDate !== null && isNaN(Date.parse(endDate))) {
+        return res.status(400).json({ error: "endDate must be a valid ISO 8601 date" });
+      }
+      if (employmentType !== undefined && !VALID_EMPLOYMENT_TYPES.includes(employmentType)) {
+        return res.status(400).json({ error: `employmentType must be one of: ${VALID_EMPLOYMENT_TYPES.join(', ')}` });
+      }
+
+      const updateData: Partial<InsertDesignerWorkExperience> & { updatedAt: Date } = { updatedAt: new Date() };
+      if (employerName !== undefined) updateData.employerName = employerName;
+      if (title !== undefined) updateData.title = title;
+      if (startDate !== undefined) updateData.startDate = new Date(startDate);
+      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      if (isCurrent !== undefined) updateData.isCurrent = isCurrent;
+      if (description !== undefined) updateData.description = description;
+      if (employmentType !== undefined) updateData.employmentType = employmentType;
+
+      const [updated] = await db.update(designerWorkExperience)
+        .set(updateData)
+        .where(eq(designerWorkExperience.id, id))
+        .returning();
+
+      res.json(updated);
+    })
+  );
+
+  // DELETE work experience
+  app.delete(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerWorkExperience.findFirst({
+        where: and(
+          eq(designerWorkExperience.id, id),
+          eq(designerWorkExperience.designerId, designerId),
+          eq(designerWorkExperience.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Work experience record not found" });
+
+      await db.delete(designerWorkExperience).where(eq(designerWorkExperience.id, id));
+      res.json({ success: true });
+    })
+  );
+
+  // --- Designer Skills (Talent Graph) ---
+
+  // GET skills for a designer
+  app.get(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const skills = await db.query.designerSkills.findMany({
+        where: and(
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.workspaceId, workspaceId)
+        ),
+        orderBy: [asc(designerSkills.name)],
+      });
+      res.json(skills);
+    })
+  );
+
+  // POST create skill
+  app.post(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const { name, proficiency, category } = req.body;
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Skill name is required" });
+      }
+      if (proficiency && !VALID_PROFICIENCIES.includes(proficiency)) {
+        return res.status(400).json({ error: `proficiency must be one of: ${VALID_PROFICIENCIES.join(', ')}` });
+      }
+      if (category && !VALID_SKILL_CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: `category must be one of: ${VALID_SKILL_CATEGORIES.join(', ')}` });
+      }
+
+      const dupCheck = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.workspaceId, workspaceId),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.name, name.trim())
+        ),
+      });
+      if (dupCheck) {
+        return res.status(409).json({ error: `Skill "${name.trim()}" already exists for this designer. Use PATCH to update it.` });
+      }
+
+      const [record] = await db.insert(designerSkills).values({
+        workspaceId,
+        designerId,
+        name: name.trim(),
+        proficiency: proficiency || 'intermediate',
+        category: category || 'other',
+      }).returning();
+
+      res.status(201).json(record);
+    })
+  );
+
+  // PATCH update skill
+  app.patch(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.id, id),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Skill not found" });
+
+      if (req.body.proficiency !== undefined && !VALID_PROFICIENCIES.includes(req.body.proficiency)) {
+        return res.status(400).json({ error: `proficiency must be one of: ${VALID_PROFICIENCIES.join(', ')}` });
+      }
+      if (req.body.category !== undefined && !VALID_SKILL_CATEGORIES.includes(req.body.category)) {
+        return res.status(400).json({ error: `category must be one of: ${VALID_SKILL_CATEGORIES.join(', ')}` });
+      }
+      if (req.body.name !== undefined && req.body.name.trim() !== existing.name) {
+        const nameConflict = await db.query.designerSkills.findFirst({
+          where: and(
+            eq(designerSkills.workspaceId, workspaceId),
+            eq(designerSkills.designerId, designerId),
+            eq(designerSkills.name, req.body.name.trim())
+          ),
+        });
+        if (nameConflict) {
+          return res.status(409).json({ error: `Skill "${req.body.name.trim()}" already exists for this designer.` });
+        }
+      }
+
+      const updateData: Partial<InsertDesignerSkills> & { updatedAt: Date } = { updatedAt: new Date() };
+      if (req.body.name !== undefined) updateData.name = req.body.name.trim();
+      if (req.body.proficiency !== undefined) updateData.proficiency = req.body.proficiency;
+      if (req.body.category !== undefined) updateData.category = req.body.category;
+
+      const [updated] = await db.update(designerSkills)
+        .set(updateData)
+        .where(eq(designerSkills.id, id))
+        .returning();
+
+      res.json(updated);
+    })
+  );
+
+  // DELETE skill
+  app.delete(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.id, id),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Skill not found" });
+
+      await db.delete(designerSkills).where(eq(designerSkills.id, id));
+      res.json({ success: true });
+    })
+  );
+
+  // --- Talent Profile ---
+
+  // GET talent profile
+  app.get(
+    "/api/workspaces/:workspaceId/designers/:designerId/talent-profile",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const profile = await db.query.designerTalentProfile.findFirst({
+        where: and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, workspaceId)
+        ),
+      });
+      res.json(profile || null);
+    })
+  );
+
+  // PUT upsert talent profile
+  app.put(
+    "/api/workspaces/:workspaceId/designers/:designerId/talent-profile",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const {
+        city, country, timezone, remotePreference,
+        currency, currentAnnualComp, expectedAnnualComp, equityInterest,
+        growthMotivators,
+      } = req.body;
+
+      if (remotePreference && !VALID_REMOTE_PREFS.includes(remotePreference)) {
+        return res.status(400).json({ error: `remotePreference must be one of: ${VALID_REMOTE_PREFS.join(', ')}` });
+      }
+      if (currentAnnualComp !== undefined && (typeof currentAnnualComp !== 'number' || currentAnnualComp < 0)) {
+        return res.status(400).json({ error: "currentAnnualComp must be a non-negative number" });
+      }
+      if (expectedAnnualComp !== undefined && (typeof expectedAnnualComp !== 'number' || expectedAnnualComp < 0)) {
+        return res.status(400).json({ error: "expectedAnnualComp must be a non-negative number" });
+      }
+
+      const existing = await db.query.designerTalentProfile.findFirst({
+        where: and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, workspaceId)
+        ),
+      });
+
+      if (existing) {
+        const [updated] = await db.update(designerTalentProfile)
+          .set({
+            city: city !== undefined ? city : existing.city,
+            country: country !== undefined ? country : existing.country,
+            timezone: timezone !== undefined ? timezone : existing.timezone,
+            remotePreference: remotePreference !== undefined ? remotePreference : existing.remotePreference,
+            currency: currency !== undefined ? currency : existing.currency,
+            currentAnnualComp: currentAnnualComp !== undefined ? currentAnnualComp : existing.currentAnnualComp,
+            expectedAnnualComp: expectedAnnualComp !== undefined ? expectedAnnualComp : existing.expectedAnnualComp,
+            equityInterest: equityInterest !== undefined ? equityInterest : existing.equityInterest,
+            growthMotivators: growthMotivators !== undefined ? growthMotivators : existing.growthMotivators,
+            updatedAt: new Date(),
+          })
+          .where(eq(designerTalentProfile.id, existing.id))
+          .returning();
+        res.json(updated);
+      } else {
+        const [record] = await db.insert(designerTalentProfile).values({
+          workspaceId,
+          designerId,
+          city: city ?? null,
+          country: country ?? null,
+          timezone: timezone ?? null,
+          remotePreference: remotePreference ?? 'flexible',
+          currency: currency ?? 'USD',
+          currentAnnualComp: currentAnnualComp ?? null,
+          expectedAnnualComp: expectedAnnualComp ?? null,
+          equityInterest: equityInterest ?? false,
+          growthMotivators: growthMotivators ?? [],
+        }).returning();
+        res.status(201).json(record);
+      }
+    })
+  );
+
+  // DELETE talent profile
+  app.delete(
+    "/api/workspaces/:workspaceId/designers/:designerId/talent-profile",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      await db.delete(designerTalentProfile).where(
+        and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, workspaceId)
+        )
+      );
+      res.json({ success: true });
+    })
+  );
 
   const httpServer = createServer(app);
   return httpServer;

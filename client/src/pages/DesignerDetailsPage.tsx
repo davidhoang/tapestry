@@ -6,7 +6,7 @@ import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles } from "lucide-react";
 import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { useDesignerBySlug } from "@/hooks/use-designer";
+import { useDesignerBySlug, useDesignerTalentGraph } from "@/hooks/use-designer";
 import { useState, useRef } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
 import { useForm } from "react-hook-form";
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SkillsInput from "@/components/SkillsInput";
 import { useToast } from "@/hooks/use-toast";
 import { getDesignerCoverImage } from "@/utils/coverImages";
@@ -75,6 +77,7 @@ export default function DesignerDetailsPage() {
   
   const { data: designer, isLoading, error, refetch } = useDesignerBySlug(slug || "");
   const updateDesigner = useUpdateDesigner();
+  const { data: talentGraph, isLoading: isTalentGraphLoading, isError: isTalentGraphError } = useDesignerTalentGraph(designer?.workspaceId, designer?.id);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -603,9 +606,49 @@ export default function DesignerDetailsPage() {
                 </div>
               </div>
 
-              {/* Timeline Section (Notes + Activity) */}
+              {/* Timeline + Talent Graph Tabs */}
               <div className="space-y-6 pb-12 border-b">
-                <DesignerTimeline designerId={designer.id} />
+                <Tabs defaultValue="timeline">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                    <TabsTrigger value="talent-graph" className="flex items-center gap-1.5">
+                      Talent Graph
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 leading-none font-mono bg-muted text-muted-foreground">
+                        debug
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="timeline">
+                    <DesignerTimeline designerId={designer.id} />
+                  </TabsContent>
+                  <TabsContent value="talent-graph">
+                    {isTalentGraphLoading ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-64 w-full" />
+                      </div>
+                    ) : isTalentGraphError ? (
+                      <div className="py-8 text-center text-destructive text-sm font-mono">
+                        Failed to load talent graph data. Check the network or API.
+                      </div>
+                    ) : !talentGraph || (
+                      Array.isArray(talentGraph.workExperience) && talentGraph.workExperience.length === 0 &&
+                      Array.isArray(talentGraph.skills) && talentGraph.skills.length === 0 &&
+                      talentGraph.talentProfile === null
+                    ) ? (
+                      <div className="py-8 text-center text-muted-foreground text-sm">
+                        No talent graph data exists yet for this designer.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Raw talent graph payload — internal debug view only
+                        </p>
+                        <JsonHighlight value={talentGraph} />
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
 
               {/* Skills Section */}
@@ -673,6 +716,52 @@ export default function DesignerDetailsPage() {
         />
       )}
     </div>
+  );
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function JsonHighlight({ value }: { value: unknown }) {
+  const json = JSON.stringify(value, null, 2);
+  const escaped = escapeHtml(json);
+
+  const highlighted = escaped.replace(
+    /(&quot;(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&])*&quot;(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    (match) => {
+      if (/^&quot;/.test(match)) {
+        if (/:$/.test(match)) {
+          return `<span style="color:var(--color-key)">${match}</span>`;
+        }
+        return `<span style="color:var(--color-string)">${match}</span>`;
+      }
+      if (/true|false/.test(match)) {
+        return `<span style="color:var(--color-bool)">${match}</span>`;
+      }
+      if (/null/.test(match)) {
+        return `<span style="color:var(--color-null)">${match}</span>`;
+      }
+      return `<span style="color:var(--color-number)">${match}</span>`;
+    }
+  );
+
+  return (
+    <pre
+      className="bg-muted rounded-lg p-4 overflow-auto max-h-[600px] text-xs font-mono leading-relaxed"
+      style={{
+        ["--color-key" as string]: "hsl(var(--primary))",
+        ["--color-string" as string]: "#16a34a",
+        ["--color-bool" as string]: "#7c3aed",
+        ["--color-null" as string]: "#9ca3af",
+        ["--color-number" as string]: "#0284c7",
+      }}
+      dangerouslySetInnerHTML={{ __html: highlighted }}
+    />
   );
 }
 

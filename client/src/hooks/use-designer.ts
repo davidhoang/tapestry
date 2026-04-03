@@ -196,6 +196,39 @@ export function useDeleteDesigners() {
   });
 }
 
+export interface TalentGraph {
+  workExperience: unknown[];
+  skills: unknown[];
+  talentProfile: unknown | null;
+}
+
+export function useDesignerTalentGraph(
+  workspaceId: number | undefined,
+  designerId: number | undefined,
+) {
+  return useQuery<TalentGraph>({
+    queryKey: ["/api/workspaces", workspaceId, "designers", designerId, "talent-graph"],
+    queryFn: async () => {
+      const base = `/api/workspaces/${workspaceId}/designers/${designerId}`;
+      const [weRes, skRes, tpRes] = await Promise.all([
+        fetch(`${base}/work-experience`),
+        fetch(`${base}/skills`),
+        fetch(`${base}/talent-profile`),
+      ]);
+      if (!weRes.ok || !skRes.ok || !tpRes.ok) {
+        throw new Error("Failed to fetch talent graph data");
+      }
+      const [workExperience, skills, talentProfile] = await Promise.all([
+        weRes.json(),
+        skRes.json(),
+        tpRes.json(),
+      ]);
+      return { workExperience, skills, talentProfile };
+    },
+    enabled: !!workspaceId && !!designerId,
+  });
+}
+
 export function useSimilarDesigners(designerId: number | undefined) {
   const [location] = useLocation();
   

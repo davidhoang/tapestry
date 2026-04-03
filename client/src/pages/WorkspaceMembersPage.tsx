@@ -224,7 +224,7 @@ export default function WorkspaceMembersPage() {
 
   if (!permissions.canViewMembersList) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -239,9 +239,9 @@ export default function WorkspaceMembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 pt-24 px-4 sm:px-8 pb-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Workspace Members</h1>
             <p className="text-gray-600 mt-2">

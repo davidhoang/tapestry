@@ -12,7 +12,6 @@ export async function apiRequest(url: string, options: ApiRequestOptions = {}) {
 
   const requestHeaders: Record<string, string> = {
     ...headers,
-    credentials: "include",
   };
 
   // Add workspace slug header if provided

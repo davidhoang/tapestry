@@ -4,7 +4,7 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota, designerNotes, designerEvents, designerWorkExperience, designerSkills, designerTalentProfile, type InsertDesignerWorkExperience, type InsertDesignerSkills, type InsertDesignerTalentProfile } from "@db/schema";
 import { analyzeCapture } from "./capture-analyzer";
-import { eq, desc, and, ne, inArray, asc, isNull, not } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, asc, isNull, not, or, ilike } from "drizzle-orm";
 import { sendListEmail } from "./email";
 import { slugify } from "./utils/slugify";
 import crypto from "crypto";
@@ -590,99 +590,73 @@ export function registerRoutes(app: Express): Server {
 
     try {
       let workspaceId: number | null = null;
-      
-      // Try to get workspace from URL headers (set by frontend)
+
       const workspaceSlug = req.headers['x-workspace-slug'] as string;
-      console.log('GET /api/designers - received x-workspace-slug header:', workspaceSlug);
-      
       if (workspaceSlug) {
         const workspace = await db.query.workspaces.findFirst({
           where: eq(workspaces.slug, workspaceSlug),
         });
-        
-        if (workspace) {
-          workspaceId = workspace.id;
-        }
+        if (workspace) workspaceId = workspace.id;
       }
-      
-      // If no workspace slug header, fall back to user's default workspace
+
       if (!workspaceId) {
         const userWorkspace = await getUserWorkspace(req.user.id);
-        if (userWorkspace) {
-          workspaceId = userWorkspace.id;
-        }
+        if (userWorkspace) workspaceId = userWorkspace.id;
       }
-      
+
       if (!workspaceId) {
         return res.status(403).json({ error: "No workspace access" });
       }
-      
-      // Verify user has access to this workspace
+
       const membership = await db.query.workspaceMembers.findFirst({
         where: and(
           eq(workspaceMembers.userId, req.user.id),
           eq(workspaceMembers.workspaceId, workspaceId)
         ),
       });
-      
       if (!membership) {
         return res.status(403).json({ error: "Not authorized to access this workspace" });
       }
 
-      // Parse pagination parameters
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
-      const search = (req.query.search as string)?.trim().toLowerCase() || '';
+      const search = (req.query.search as string)?.trim() || '';
       const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
 
-      // Build the base query conditions
-      let whereConditions = eq(designers.workspaceId, workspaceId);
+      // Build SQL-level conditions — filter incomplete records and apply search in the database
+      const baseCondition = and(
+        eq(designers.workspaceId, workspaceId),
+        sql`${designers.name} IS NOT NULL AND trim(${designers.name}) != ''`
+      );
 
-      // Get total count first (for pagination metadata)
-      const allDesignersForCount = await db.query.designers.findMany({
-        where: whereConditions,
-        columns: { id: true, name: true, title: true, company: true, skills: true },
-      });
-
-      // Filter out incomplete designers and apply search filter
-      const filteredDesigners = allDesignersForCount.filter(designer => {
-        if (!designer.name || !designer.name.trim()) return false;
-        
-        if (search) {
-          const nameMatch = designer.name.toLowerCase().includes(search);
-          const titleMatch = designer.title?.toLowerCase().includes(search);
-          const companyMatch = designer.company?.toLowerCase().includes(search);
-          const skillsMatch = Array.isArray(designer.skills) && 
-            designer.skills.some((skill: string) => skill.toLowerCase().includes(search));
-          return nameMatch || titleMatch || companyMatch || skillsMatch;
-        }
-        return true;
-      });
-
-      const total = filteredDesigners.length;
+      const whereCondition = search
+        ? and(
+            baseCondition,
+            or(
+              ilike(designers.name, `%${search}%`),
+              ilike(designers.title, `%${search}%`),
+              ilike(designers.company, `%${search}%`),
+              sql`${designers.skills}::text ILIKE ${'%' + search + '%'}`
+            )
+          )
+        : baseCondition;
 
       if (usePagination) {
-        // Paginated response
-        const offset = (page - 1) * limit;
+        // Single COUNT query, then single data query — no JS-level filtering needed
+        const [{ count }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(designers)
+          .where(whereCondition);
+
+        const total = Number(count);
         const totalPages = Math.ceil(total / limit);
-        const hasMore = page < totalPages;
 
-        // Get the IDs for this page from the filtered results
-        const pageIds = filteredDesigners.slice(offset, offset + limit).map(d => d.id);
-
-        // Fetch full designer data for this page
-        let designersPage: any[] = [];
-        if (pageIds.length > 0) {
-          designersPage = await db.query.designers.findMany({
-            where: and(
-              whereConditions,
-              inArray(designers.id, pageIds)
-            ),
-            orderBy: desc(designers.createdAt),
-          });
-          // Sort to maintain order from filtered list
-          designersPage.sort((a, b) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id));
-        }
+        const designersPage = await db.query.designers.findMany({
+          where: whereCondition,
+          orderBy: desc(designers.createdAt),
+          limit,
+          offset: (page - 1) * limit,
+        });
 
         res.json({
           designers: designersPage,
@@ -691,24 +665,16 @@ export function registerRoutes(app: Express): Server {
             limit,
             total,
             totalPages,
-            hasMore,
+            hasMore: page < totalPages,
           },
         });
       } else {
-        // Backward compatible response: return full list with safety cap of 500
-        const cappedIds = filteredDesigners.slice(0, 500).map(d => d.id);
-        
-        let allDesigners: any[] = [];
-        if (cappedIds.length > 0) {
-          allDesigners = await db.query.designers.findMany({
-            where: and(
-              whereConditions,
-              inArray(designers.id, cappedIds)
-            ),
-            orderBy: desc(designers.createdAt),
-          });
-        }
-        
+        // Backward-compatible non-paginated response, capped at 500
+        const allDesigners = await db.query.designers.findMany({
+          where: whereCondition,
+          orderBy: desc(designers.createdAt),
+          limit: 500,
+        });
         res.json(allDesigners);
       }
     } catch (err) {

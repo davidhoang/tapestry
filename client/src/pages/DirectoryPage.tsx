@@ -218,10 +218,16 @@ export default function DirectoryPage() {
   
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+  const resizeLastXRef = useRef<number>(0);
   
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
   const [editingValues, setEditingValues] = useState<{ [key: string]: any }>({});
+
+  // Keep a ref to the current designers list so saveEdit doesn't recreate on every page fetch
+  const designersRef = useRef(designers);
+  useEffect(() => { designersRef.current = designers; }, [designers]);
 
   // Inline editing handlers
   const startEditing = useCallback((id: number, field: string, currentValue: any) => {
@@ -240,7 +246,7 @@ export default function DirectoryPage() {
 
   const saveEdit = useCallback(async (id: number, field: string, newValue: any) => {
     try {
-      const designer = designers?.find(d => d.id === id);
+      const designer = designersRef.current?.find(d => d.id === id);
       if (!designer) return;
 
       // Create the updated designer data
@@ -284,7 +290,7 @@ export default function DirectoryPage() {
         variant: "destructive",
       });
     }
-  }, [designers, updateDesigner, toast]);
+  }, [updateDesigner, toast]);
 
   // Column resizing handlers
   const handleResizeStart = useCallback((column: string, e: React.MouseEvent) => {
@@ -299,21 +305,26 @@ export default function DirectoryPage() {
 
   const handleResizeMove = useCallback((e: MouseEvent) => {
     if (!isResizing || !resizeStartRef.current) return;
-    
     e.preventDefault();
-    const { column, startX, startWidth } = resizeStartRef.current;
-    const deltaX = e.clientX - startX;
-    const newWidth = Math.max(50, startWidth + deltaX);
-    
-    setColumnWidths(prev => ({
-      ...prev,
-      [column]: newWidth,
-    }));
+    resizeLastXRef.current = e.clientX;
+
+    if (resizeRafRef.current !== null) return;
+    resizeRafRef.current = requestAnimationFrame(() => {
+      resizeRafRef.current = null;
+      if (!resizeStartRef.current) return;
+      const { column, startX, startWidth } = resizeStartRef.current;
+      const newWidth = Math.max(50, startWidth + (resizeLastXRef.current - startX));
+      setColumnWidths(prev => ({ ...prev, [column]: newWidth }));
+    });
   }, [isResizing]);
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
     resizeStartRef.current = null;
+    if (resizeRafRef.current !== null) {
+      cancelAnimationFrame(resizeRafRef.current);
+      resizeRafRef.current = null;
+    }
   }, []);
 
   // Double-click auto-fit handler

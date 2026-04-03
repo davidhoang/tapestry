@@ -55,7 +55,6 @@ export async function resolveClerkUser(
           .insert(users)
           .values({
             email,
-            password: '',
             clerkId: clerkUserId,
             isAdmin: email === 'david@davidhoang.com',
           })
@@ -90,10 +89,6 @@ export async function resolveClerkUser(
     req.user = user;
     (req as any).isAuthenticated = () => true;
     (req as any).isUnauthenticated = () => false;
-    (req as any).login = (u: any, cb: any) => cb && cb(null);
-    (req as any).logIn = (u: any, cb: any) => cb && cb(null);
-    (req as any).logout = (cb: any) => cb && cb(null);
-    (req as any).logOut = (cb: any) => cb && cb(null);
   } catch (error) {
     console.error('Clerk user resolution error:', error);
   }

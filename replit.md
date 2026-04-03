@@ -46,7 +46,7 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **Command Palette**: Keyboard-accessible navigation for quick actions.
 - **Bulk Actions**: Multi-select and bulk operations on designers.
 - **MCP Designer Enrichment**: Integration for AI-assisted profile enrichment via external AI tools, supporting token-based authentication and various enrichment tools.
-- **Public API**: REST API with JWT authentication for mobile apps and external integrations. Includes rate limiting (500 requests per 15 min per IP).
+- **Mobile API** (`/api/mobile/*`): REST endpoints for mobile apps authenticated via Clerk Bearer tokens (handled in `server/mobile-routes.ts`). Includes ETag-based caching. Includes rate limiting (500 requests per 15 min per IP).
 - **MCP Server**: Remote Model Context Protocol server at `/mcp` (Streamable HTTP) and `/sse` (legacy SSE) for AI assistants like Claude Desktop. Supports both modern Node 18+ clients and older clients for backward compatibility. Users self-service API tokens via Settings > API Tokens.
 - **CLI Tool** (`cli/`): Standalone npm package (`tapestry-cli`) that lets users manage their workspace from the terminal. Uses `tap_` Bearer token auth via a dedicated `/api/cli/*` REST API. Commands: `login`, `whoami`, `designer search/get/add/update`, `list ls/create/add/remove`.
 

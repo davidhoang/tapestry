@@ -6,7 +6,7 @@ import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { setupAuth, resolveClerkUser } from "./auth";
-import { setupMobileAuth } from "./jwt-auth";
+import { setupMobileAuth } from "./mobile-routes";
 import { setupMcpRoutes } from "./mcp-http";
 import { setupCliRoutes } from "./cli-routes";
 

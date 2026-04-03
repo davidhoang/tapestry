@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designer";
 import { useLocation, useParams } from "wouter";
 import { slugify } from "@/utils/slugify";
+import { getDesignerCoverImage } from "@/utils/coverImages";
 import Navigation from "@/components/Navigation";
 import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -232,9 +233,23 @@ export default function ListsPage() {
             {lists?.map((list) => (
             <Card
               key={list.id}
-              className="group cursor-pointer hover:shadow-lg transition-shadow"
+              className="group cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
               onClick={() => handleListClick(list)}
             >
+              {/* Cover Image */}
+              <div className="relative h-16 overflow-hidden">
+                <img
+                  src={getDesignerCoverImage(list.id)}
+                  alt="Cover"
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform ease-out group-hover:scale-110"
+                  style={{ transitionDuration: '3s' }}
+                />
+                <div
+                  className="absolute inset-0 bg-black/20 transition-opacity ease-out group-hover:bg-black/30"
+                  style={{ transitionDuration: '3s' }}
+                />
+              </div>
               <CardHeader className="relative">
                 <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
                   <DropdownMenu>

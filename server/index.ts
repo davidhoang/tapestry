@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import { setupAuth } from "./auth";
 import { authenticateJWT, setupMobileAuth } from "./jwt-auth";
 import { setupMcpRoutes } from "./mcp-http";
+import { setupCliRoutes } from "./cli-routes";
 
 const app = express();
 
@@ -86,6 +87,9 @@ setupMobileAuth(app);
 
 // Set up MCP HTTP routes for Claude Desktop integration
 setupMcpRoutes(app);
+
+// Set up CLI API routes (Bearer token auth at /api/cli/*)
+setupCliRoutes(app);
 
 // Set up session-based authentication (for web app)
 setupAuth(app);

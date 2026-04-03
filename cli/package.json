@@ -1,0 +1,29 @@
+{
+  "name": "tapestry-cli",
+  "version": "1.0.0",
+  "description": "CLI for Tapestry — manage your designer talent pool from the terminal",
+  "type": "module",
+  "bin": {
+    "tapestry": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["tapestry", "designers", "talent", "cli"],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -32,6 +32,10 @@ export function useUser() {
   const isLoading = !effectivelyLoaded || (!!isSignedIn && isUserLoading);
 
   const login = async (_userData?: any) => {
+    if (!isLoaded) {
+      window.location.href = 'https://accounts.tapestry.design/sign-in';
+      return { ok: true as const };
+    }
     openSignIn();
     return { ok: true as const };
   };

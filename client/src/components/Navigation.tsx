@@ -35,13 +35,11 @@ import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity,
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useClerk } from "@clerk/react";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 export default function Navigation() {
   const [location] = useLocation();
-  const { user, logout } = useUser();
-  const { openSignIn } = useClerk();
+  const { user, logout, login } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -231,7 +229,7 @@ export default function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="default" onClick={() => openSignIn()} className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Button variant="default" onClick={() => login()} className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
                 Sign in
               </Button>
             )}
@@ -371,7 +369,7 @@ export default function Navigation() {
                 <Button 
                   variant="default" 
                   size="sm"
-                  onClick={() => openSignIn()} 
+                  onClick={() => login()} 
                   className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base px-4 py-2"
                 >
                   Sign in

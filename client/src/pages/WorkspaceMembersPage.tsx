@@ -6,12 +6,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Users, UserPlus, Shield, Trash2, Mail, Calendar, Crown, UserCheck, Eye, Settings } from "lucide-react";
 import { useCurrentWorkspace } from "@/hooks/use-permissions";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+const inviteUserSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["member", "editor", "admin"]).default("member"),
+});
+
+type InviteUserForm = z.infer<typeof inviteUserSchema>;
 
 interface WorkspaceMember {
   id: number;
@@ -67,8 +79,17 @@ export default function WorkspaceMembersPage() {
   const permissions = useWorkspacePermissions();
   const currentWorkspace = useCurrentWorkspace();
   const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
   const workspaceId = currentWorkspace?.id;
+
+  const inviteForm = useForm<InviteUserForm>({
+    resolver: zodResolver(inviteUserSchema),
+    defaultValues: {
+      email: "",
+      role: "member",
+    },
+  });
 
   // Fetch workspace members
   const { data: members, isLoading: membersLoading } = useQuery({
@@ -171,6 +192,36 @@ export default function WorkspaceMembersPage() {
     },
   });
 
+  // Invite user mutation
+  const inviteUserMutation = useMutation({
+    mutationFn: async (data: InviteUserForm) => {
+      if (!workspaceId) throw new Error("No workspace available");
+      const response = await fetch(`/api/workspaces/${workspaceId}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send invitation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation sent", description: "The invitation has been sent successfully." });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces', workspaceId, 'invitations'] });
+      setIsInviteDialogOpen(false);
+      inviteForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send invitation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!permissions.canViewMembersList) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -198,10 +249,69 @@ export default function WorkspaceMembersPage() {
             </p>
           </div>
           {permissions.canInviteMembers && (
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite Member
-            </Button>
+            <>
+              <Button onClick={() => setIsInviteDialogOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite Member
+              </Button>
+              <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Team Member</DialogTitle>
+                    <DialogDescription>
+                      Send an invitation to collaborate on this workspace.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...inviteForm}>
+                    <form onSubmit={inviteForm.handleSubmit((data) => inviteUserMutation.mutate(data))} className="space-y-4">
+                      <FormField
+                        control={inviteForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="colleague@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={inviteForm.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="member">Member</SelectItem>
+                                <SelectItem value="editor">Editor</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={inviteUserMutation.isPending}>
+                          {inviteUserMutation.isPending ? "Sending..." : "Send Invitation"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
 

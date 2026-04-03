@@ -2,6 +2,7 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useClerk } from "@clerk/react";
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface AdminRouteProps {
 
 export default function AdminRoute({ children }: AdminRouteProps) {
   const { user, isLoading } = useUser();
+  const { openSignIn } = useClerk();
 
   if (isLoading) {
     return (
@@ -26,9 +28,7 @@ export default function AdminRoute({ children }: AdminRouteProps) {
           <h1 className="text-2xl font-bold">Authentication Required</h1>
           <p className="text-muted-foreground">Please sign in to access this page.</p>
         </div>
-        <Button asChild>
-          <Link href="/auth">Sign In</Link>
-        </Button>
+        <Button onClick={() => openSignIn()}>Sign In</Button>
       </div>
     );
   }

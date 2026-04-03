@@ -1,38 +1,8 @@
-import passport from "passport";
-import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
-import session from "express-session";
-import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { users, workspaces, workspaceMembers, workspaceInvitations, insertUserSchema, type SelectUser } from "@db/schema";
+import { clerkClient, getAuth } from '@clerk/express';
+import { type Express, Request, Response, NextFunction } from "express";
 import { db } from "@db";
-import { eq, and, sql } from "drizzle-orm";
-
-const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-  compare: async (suppliedPassword: string, storedPassword: string) => {
-    if (!storedPassword || !storedPassword.includes('.')) {
-      return false;
-    }
-    const [hashedPassword, salt] = storedPassword.split(".");
-    if (!hashedPassword || !salt) {
-      return false;
-    }
-    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-    const suppliedPasswordBuf = (await scryptAsync(
-      suppliedPassword,
-      salt,
-      64
-    )) as Buffer;
-    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-  },
-};
+import { users, workspaces, workspaceMembers, type SelectUser } from "@db/schema";
+import { eq } from "drizzle-orm";
 
 declare global {
   namespace Express {
@@ -40,217 +10,100 @@ declare global {
   }
 }
 
-export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
-  
-  // Configure proxy trust first - this is critical for Replit production
-  // Replit uses a reverse proxy that terminates HTTPS
-  app.set("trust proxy", 1);
-  
-  const isProduction = app.get("env") === "production";
-  
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || process.env.REPL_ID || "design-matchmaker-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      // With trust proxy enabled, Express will properly detect HTTPS from proxy headers
-      // This allows secure cookies to work correctly in Replit's production environment
-      secure: isProduction,
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    },
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
-  };
+export async function resolveClerkUser(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  // Set safe defaults so req.isAuthenticated() always works
+  (req as any).isAuthenticated = () => false;
+  (req as any).isUnauthenticated = () => true;
 
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
+  const { userId: clerkUserId } = getAuth(req);
 
-  passport.use(
-    new LocalStrategy(
-      {
-        usernameField: 'email',
-      },
-      async (email, password, done) => {
-        try {
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1);
+  if (!clerkUserId) {
+    return next();
+  }
 
-          if (!user) {
-            return done(null, false, { message: "Incorrect email." });
-          }
-          const isMatch = await crypto.compare(password, user.password);
-          if (!isMatch) {
-            return done(null, false, { message: "Incorrect password." });
-          }
-          return done(null, user);
-        } catch (err) {
-          return done(err);
-        }
-      }
-    )
-  );
+  try {
+    let [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUserId))
+      .limit(1);
 
-  passport.serializeUser((user, done) => {
-    done(null, user.id);
-  });
+    if (!user) {
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const email = clerkUser.emailAddresses[0]?.emailAddress;
 
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
+      if (!email) return next();
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const result = insertUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
-      }
-
-      const { email, password } = result.data;
-      const { workspaceName } = req.body;
-
-      const [existingUser] = await db
+      [user] = await db
         .select()
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
 
-      if (existingUser) {
-        // Check if user has pending invitations they should accept instead
-        const pendingInvitations = await db.query.workspaceInvitations.findMany({
-          where: and(
-            eq(workspaceInvitations.email, email),
-            sql`${workspaceInvitations.acceptedAt} IS NULL`
-          ),
-          with: {
-            workspace: true,
-          },
-        });
+      if (user) {
+        [user] = await db
+          .update(users)
+          .set({ clerkId: clerkUserId })
+          .where(eq(users.id, user.id))
+          .returning();
+      } else {
+        [user] = await db
+          .insert(users)
+          .values({
+            email,
+            password: '',
+            clerkId: clerkUserId,
+            isAdmin: email === 'david@davidhoang.com',
+          })
+          .returning();
 
-        const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
-        
-        if (validInvitations.length > 0) {
-          return res.status(409).json({ 
-            error: "An account with this email already exists. Please sign in to accept your pending workspace invitations.",
-            hasInvitations: true,
-            invitations: validInvitations.map(inv => ({
-              workspaceName: inv.workspace.name,
-              role: inv.role
-            }))
-          });
-        }
-        
-        return res.status(400).json({ 
-          error: "An account with this email already exists. Please sign in instead.",
-          hasInvitations: false 
-        });
-      }
-
-      const hashedPassword = await crypto.hash(password);
-
-      // Create user and workspace in a single transaction
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email,
-          password: hashedPassword,
-          isAdmin: email === 'david@davidhoang.com',
-        })
-        .returning();
-
-      // Auto-generate workspace name if not provided
-      let finalWorkspaceName = workspaceName?.trim();
-      if (!finalWorkspaceName) {
         const emailPrefix = email.split('@')[0];
-        finalWorkspaceName = `${emailPrefix}'s Workspace`;
-      }
+        const workspaceName = `${emailPrefix}'s Workspace`;
+        const slug = workspaceName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
 
-      // Create workspace for the new user
-      const [newWorkspace] = await db
-        .insert(workspaces)
-        .values({
-          name: finalWorkspaceName,
-          slug: finalWorkspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
-          description: `Personal workspace for ${email}`,
-          ownerId: newUser.id,
-        })
-        .returning();
+        const [workspace] = await db
+          .insert(workspaces)
+          .values({
+            name: workspaceName,
+            slug,
+            description: `Personal workspace for ${email}`,
+            ownerId: user.id,
+          })
+          .returning();
 
-      // Add user as admin member of the workspace
-      await db
-        .insert(workspaceMembers)
-        .values({
-          workspaceId: newWorkspace.id,
-          userId: newUser.id,
+        await db.insert(workspaceMembers).values({
+          workspaceId: workspace.id,
+          userId: user.id,
           role: 'admin',
         });
-
-      req.login(newUser, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.json({
-          message: "Registration successful",
-          user: { id: newUser.id, email: newUser.email },
-        });
-      });
-    } catch (error) {
-      next(error);
+      }
     }
-  });
 
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: SelectUser | false, info: IVerifyOptions) => {
-      if (err) {
-        return next(err);
-      }
+    req.user = user;
+    (req as any).isAuthenticated = () => true;
+    (req as any).isUnauthenticated = () => false;
+    (req as any).login = (u: any, cb: any) => cb && cb(null);
+    (req as any).logIn = (u: any, cb: any) => cb && cb(null);
+    (req as any).logout = (cb: any) => cb && cb(null);
+    (req as any).logOut = (cb: any) => cb && cb(null);
+  } catch (error) {
+    console.error('Clerk user resolution error:', error);
+  }
 
-      if (!user) {
-        return res.status(400).send(info.message ?? "Login failed");
-      }
+  next();
+}
 
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-
-        return res.json({
-          message: "Login successful",
-          user: { id: user.id, email: user.email },
-        });
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).send("Logout failed");
-      }
-      res.json({ message: "Logout successful" });
-    });
-  });
-
+export function setupAuth(app: Express) {
   app.get("/api/user", (req, res) => {
-    if (req.isAuthenticated()) {
+    if (req.user) {
       return res.json(req.user);
     }
     res.status(401).send("Not logged in");

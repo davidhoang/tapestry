@@ -39,7 +39,8 @@ export const recommendationStatusEnum = pgEnum('recommendation_status', [
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").unique().notNull(),
-  password: text("password").notNull(),
+  password: text("password"),
+  clerkId: text("clerk_id").unique(),
   username: text("username").unique(),
   profilePhotoUrl: text("profile_photo_url"),
   isAdmin: boolean("is_admin").default(false),

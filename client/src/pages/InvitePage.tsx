@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle, AlertCircle, Mail, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
+import { useClerk } from "@clerk/react";
 
 interface InvitationData {
   id: number;
@@ -26,6 +27,7 @@ export default function InvitePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isLoading: userLoading } = useUser();
+  const { openSignIn } = useClerk();
   const [needsAuth, setNeedsAuth] = useState(false);
 
   const token = params?.token;
@@ -224,7 +226,7 @@ export default function InvitePage() {
               Please sign in with the correct account to accept this invitation.
             </p>
             <div className="space-y-2">
-              <Button onClick={() => setLocation("/auth")} className="w-full">
+              <Button onClick={() => openSignIn()} className="w-full">
                 Sign in with different account
               </Button>
               <Button onClick={() => setLocation("/")} variant="outline" className="w-full">

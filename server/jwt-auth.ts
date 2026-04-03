@@ -1,46 +1,8 @@
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { db } from "@db";
-import { users, workspaceMembers, workspaces, designers, lists, listDesigners, designerEvents } from "@db/schema";
+import { workspaceMembers, designers, lists, listDesigners, designerEvents } from "@db/schema";
 import { eq, and, desc, ilike, or, sql, count } from "drizzle-orm";
-import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
-import { promisify } from "util";
-
-const scryptAsync = promisify(scrypt);
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || process.env.REPL_ID || "tapestry-jwt-secret";
-const ACCESS_TOKEN_EXPIRY = "1h";
-const REFRESH_TOKEN_EXPIRY = "30d";
-
-interface TokenPayload {
-  userId: number;
-  email: string;
-  type: "access" | "refresh";
-}
-
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-  compare: async (suppliedPassword: string, storedPassword: string) => {
-    if (!storedPassword || !storedPassword.includes('.')) {
-      return false;
-    }
-    const [hashedPassword, salt] = storedPassword.split(".");
-    if (!hashedPassword || !salt) {
-      return false;
-    }
-    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-    const suppliedPasswordBuf = (await scryptAsync(
-      suppliedPassword,
-      salt,
-      64
-    )) as Buffer;
-    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-  },
-};
+import { createHash } from "crypto";
 
 function generateETag(data: any): string {
   return createHash('md5').update(JSON.stringify(data)).digest('hex');
@@ -61,216 +23,73 @@ function setCacheHeaders(req: Request, res: Response, data: any, maxAge: number 
   return false;
 }
 
-export function generateAccessToken(userId: number, email: string): string {
-  return jwt.sign(
-    { userId, email, type: "access" } as TokenPayload,
-    JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRY }
-  );
-}
-
-export function generateRefreshToken(userId: number, email: string): string {
-  return jwt.sign(
-    { userId, email, type: "refresh" } as TokenPayload,
-    JWT_SECRET,
-    { expiresIn: REFRESH_TOKEN_EXPIRY }
-  );
-}
-
-export function verifyToken(token: string): TokenPayload | null {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
-    return decoded;
-  } catch (error) {
+async function validateAuthAndWorkspace(req: Request, res: Response): Promise<{ userId: number; workspaceId: number } | null> {
+  if (!req.user) {
+    res.status(401).json({ error: "Authentication required. Use a valid Clerk session token." });
     return null;
   }
-}
 
-export async function authenticateJWT(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return next();
+  const workspaceIdParam = req.query.workspaceId;
+  if (!workspaceIdParam) {
+    res.status(400).json({ error: "workspaceId is required" });
+    return null;
   }
 
-  const token = authHeader.substring(7);
-  const payload = verifyToken(token);
-
-  if (!payload || payload.type !== "access") {
-    return next();
+  const workspaceId = parseInt(workspaceIdParam as string, 10);
+  if (isNaN(workspaceId)) {
+    res.status(400).json({ error: "Invalid workspaceId" });
+    return null;
   }
 
-  try {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, payload.userId))
-      .limit(1);
+  const membership = await db.query.workspaceMembers.findFirst({
+    where: and(
+      eq(workspaceMembers.userId, req.user.id),
+      eq(workspaceMembers.workspaceId, workspaceId)
+    ),
+  });
 
-    if (user) {
-      req.user = user;
-      // Mark request as authenticated for Passport compatibility
-      // This allows JWT-authenticated requests to pass isAuthenticated() checks
-      (req as any).isAuthenticated = () => true;
-      (req as any).isUnauthenticated = () => false;
-      (req as any).login = (user: any, cb: any) => cb && cb(null);
-      (req as any).logIn = (user: any, cb: any) => cb && cb(null);
-      (req as any).logout = (cb: any) => cb && cb(null);
-      (req as any).logOut = (cb: any) => cb && cb(null);
-    }
-  } catch (error) {
-    console.error("JWT auth error:", error);
+  if (!membership) {
+    res.status(403).json({ error: "Access denied to this workspace" });
+    return null;
   }
 
-  next();
+  return { userId: req.user.id, workspaceId };
 }
 
 export function setupMobileAuth(app: any) {
-  app.post("/api/mobile/login", async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
-      }
-
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-
-      if (!user) {
-        return res.status(401).json({ error: "Invalid email or password" });
-      }
-
-      const isMatch = await crypto.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ error: "Invalid email or password" });
-      }
-
-      const accessToken = generateAccessToken(user.id, user.email);
-      const refreshToken = generateRefreshToken(user.id, user.email);
-
-      res.json({
-        accessToken,
-        refreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          isAdmin: user.isAdmin,
-        },
-      });
-    } catch (error) {
-      console.error("Mobile login error:", error);
-      res.status(500).json({ error: "Login failed" });
-    }
+  app.post("/api/mobile/login", (_req: Request, res: Response) => {
+    res.status(410).json({
+      error: "This endpoint has been removed. Please use Clerk's mobile SDK (@clerk/expo or @clerk/react-native) to authenticate and send the resulting session token as a Bearer token.",
+    });
   });
 
-  app.post("/api/mobile/refresh", async (req: Request, res: Response) => {
-    try {
-      const { refreshToken } = req.body;
-
-      if (!refreshToken) {
-        return res.status(400).json({ error: "Refresh token is required" });
-      }
-
-      const payload = verifyToken(refreshToken);
-
-      if (!payload || payload.type !== "refresh") {
-        return res.status(401).json({ error: "Invalid refresh token" });
-      }
-
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, payload.userId))
-        .limit(1);
-
-      if (!user) {
-        return res.status(401).json({ error: "User not found" });
-      }
-
-      const newAccessToken = generateAccessToken(user.id, user.email);
-      const newRefreshToken = generateRefreshToken(user.id, user.email);
-
-      res.json({
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          isAdmin: user.isAdmin,
-        },
-      });
-    } catch (error) {
-      console.error("Token refresh error:", error);
-      res.status(500).json({ error: "Token refresh failed" });
-    }
+  app.post("/api/mobile/refresh", (_req: Request, res: Response) => {
+    res.status(410).json({
+      error: "This endpoint has been removed. Clerk manages token refresh automatically via its mobile SDK.",
+    });
   });
 
   app.get("/api/mobile/user", async (req: Request, res: Response) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authorization header required" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Authentication required" });
     }
-
-    const token = authHeader.substring(7);
-    const payload = verifyToken(token);
-
-    if (!payload || payload.type !== "access") {
-      return res.status(401).json({ error: "Invalid or expired token" });
-    }
-
-    try {
-      const [user] = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          isAdmin: users.isAdmin,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.id, payload.userId))
-        .limit(1);
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      res.json(user);
-    } catch (error) {
-      console.error("Get user error:", error);
-      res.status(500).json({ error: "Failed to get user" });
-    }
+    res.json({
+      id: req.user.id,
+      email: req.user.email,
+      isAdmin: req.user.isAdmin,
+      createdAt: req.user.createdAt,
+    });
   });
 
-  // Get user's workspaces
   app.get("/api/mobile/workspaces", async (req: Request, res: Response) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authorization header required" });
-    }
-
-    const token = authHeader.substring(7);
-    const payload = verifyToken(token);
-
-    if (!payload || payload.type !== "access") {
-      return res.status(401).json({ error: "Invalid or expired token" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     try {
       const memberships = await db.query.workspaceMembers.findMany({
-        where: eq(workspaceMembers.userId, payload.userId),
-        with: {
-          workspace: true,
-        },
+        where: eq(workspaceMembers.userId, req.user.id),
+        with: { workspace: true },
       });
 
       const userWorkspaces = memberships.map((m) => ({
@@ -290,46 +109,30 @@ export function setupMobileAuth(app: any) {
     }
   });
 
-  // Get recommendations for mobile (uses user's default workspace)
   app.get("/api/mobile/recommendations", async (req: Request, res: Response) => {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authorization header required" });
-    }
-
-    const token = authHeader.substring(7);
-    const payload = verifyToken(token);
-
-    if (!payload || payload.type !== "access") {
-      return res.status(401).json({ error: "Invalid or expired token" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     try {
-      // Get user's default workspace (first one they own, or first one they're a member of)
       const memberships = await db.query.workspaceMembers.findMany({
-        where: eq(workspaceMembers.userId, payload.userId),
-        with: {
-          workspace: true,
-        },
+        where: eq(workspaceMembers.userId, req.user.id),
+        with: { workspace: true },
       });
 
       if (memberships.length === 0) {
         return res.status(404).json({ error: "No workspace found for user" });
       }
 
-      // Prefer workspace where user is owner, otherwise use first one
       const defaultMembership = memberships.find(m => m.role === 'owner') || memberships[0];
       const workspaceId = defaultMembership.workspace.id;
 
-      // Get designers from the workspace
       const workspaceDesigners = await db.query.designers.findMany({
         where: eq(designers.workspaceId, workspaceId),
         orderBy: desc(designers.createdAt),
         limit: 20,
       });
 
-      // Format recommendations for mobile
       const recommendations = workspaceDesigners.map((designer) => ({
         id: designer.id,
         name: designer.name,
@@ -362,52 +165,6 @@ export function setupMobileAuth(app: any) {
     }
   });
 
-  // Helper function to validate JWT and workspace membership
-  async function validateAuthAndWorkspace(req: Request, res: Response): Promise<{ userId: number; workspaceId: number } | null> {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ error: "Authorization header required" });
-      return null;
-    }
-
-    const token = authHeader.substring(7);
-    const payload = verifyToken(token);
-
-    if (!payload || payload.type !== "access") {
-      res.status(401).json({ error: "Invalid or expired token" });
-      return null;
-    }
-
-    const workspaceIdParam = req.query.workspaceId;
-    if (!workspaceIdParam) {
-      res.status(400).json({ error: "workspaceId is required" });
-      return null;
-    }
-
-    const workspaceId = parseInt(workspaceIdParam as string, 10);
-    if (isNaN(workspaceId)) {
-      res.status(400).json({ error: "Invalid workspaceId" });
-      return null;
-    }
-
-    // Validate user is a member of the workspace
-    const membership = await db.query.workspaceMembers.findFirst({
-      where: and(
-        eq(workspaceMembers.userId, payload.userId),
-        eq(workspaceMembers.workspaceId, workspaceId)
-      ),
-    });
-
-    if (!membership) {
-      res.status(403).json({ error: "Access denied to this workspace" });
-      return null;
-    }
-
-    return { userId: payload.userId, workspaceId };
-  }
-
-  // GET /api/mobile/designers - Search/list designers with pagination
   app.get("/api/mobile/designers", async (req: Request, res: Response) => {
     try {
       const auth = await validateAuthAndWorkspace(req, res);
@@ -420,7 +177,6 @@ export function setupMobileAuth(app: any) {
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
       const offset = parseInt(req.query.offset as string) || 0;
 
-      // Build filter conditions
       const conditions = [eq(designers.workspaceId, workspaceId)];
 
       if (query) {
@@ -438,7 +194,6 @@ export function setupMobileAuth(app: any) {
         conditions.push(ilike(designers.location, `%${location}%`));
       }
 
-      // For skill filtering, we use SQL array contains
       if (skill) {
         conditions.push(
           sql`${designers.skills}::jsonb @> ${JSON.stringify([skill])}::jsonb`
@@ -447,7 +202,6 @@ export function setupMobileAuth(app: any) {
 
       const whereClause = and(...conditions);
 
-      // Get total count
       const [countResult] = await db
         .select({ count: count() })
         .from(designers)
@@ -455,7 +209,6 @@ export function setupMobileAuth(app: any) {
 
       const total = countResult?.count || 0;
 
-      // Get designers with pagination
       const designersList = await db
         .select()
         .from(designers)
@@ -494,7 +247,6 @@ export function setupMobileAuth(app: any) {
     }
   });
 
-  // GET /api/mobile/designers/:id - Get single designer details
   app.get("/api/mobile/designers/:id", async (req: Request, res: Response) => {
     try {
       const auth = await validateAuthAndWorkspace(req, res);
@@ -518,7 +270,6 @@ export function setupMobileAuth(app: any) {
         return res.status(404).json({ error: "Designer not found" });
       }
 
-      // Get timeline event count
       const [eventCountResult] = await db
         .select({ count: count() })
         .from(designerEvents)
@@ -556,7 +307,6 @@ export function setupMobileAuth(app: any) {
     }
   });
 
-  // GET /api/mobile/designers/:id/timeline - Get designer timeline
   app.get("/api/mobile/designers/:id/timeline", async (req: Request, res: Response) => {
     try {
       const auth = await validateAuthAndWorkspace(req, res);
@@ -571,7 +321,6 @@ export function setupMobileAuth(app: any) {
         return res.status(400).json({ error: "Invalid designer ID" });
       }
 
-      // Verify designer exists and belongs to workspace
       const designer = await db.query.designers.findFirst({
         where: and(
           eq(designers.id, designerId),
@@ -583,7 +332,6 @@ export function setupMobileAuth(app: any) {
         return res.status(404).json({ error: "Designer not found" });
       }
 
-      // Get total count
       const [countResult] = await db
         .select({ count: count() })
         .from(designerEvents)
@@ -594,7 +342,6 @@ export function setupMobileAuth(app: any) {
 
       const total = countResult?.count || 0;
 
-      // Get events with pagination
       const events = await db
         .select()
         .from(designerEvents)
@@ -628,7 +375,6 @@ export function setupMobileAuth(app: any) {
     }
   });
 
-  // GET /api/mobile/lists - Get user's lists
   app.get("/api/mobile/lists", async (req: Request, res: Response) => {
     try {
       const auth = await validateAuthAndWorkspace(req, res);
@@ -636,7 +382,6 @@ export function setupMobileAuth(app: any) {
 
       const { workspaceId } = auth;
 
-      // Get lists with designer counts using a subquery
       const userLists = await db
         .select({
           id: lists.id,
@@ -649,7 +394,6 @@ export function setupMobileAuth(app: any) {
         .where(eq(lists.workspaceId, workspaceId))
         .orderBy(desc(lists.createdAt));
 
-      // Get designer counts for each list
       const listsWithCounts = await Promise.all(
         userLists.map(async (list) => {
           const [countResult] = await db
@@ -673,7 +417,6 @@ export function setupMobileAuth(app: any) {
     }
   });
 
-  // GET /api/mobile/lists/:id/designers - Get designers in a list
   app.get("/api/mobile/lists/:id/designers", async (req: Request, res: Response) => {
     try {
       const auth = await validateAuthAndWorkspace(req, res);
@@ -686,7 +429,6 @@ export function setupMobileAuth(app: any) {
         return res.status(400).json({ error: "Invalid list ID" });
       }
 
-      // Verify list exists and belongs to workspace
       const list = await db.query.lists.findFirst({
         where: and(
           eq(lists.id, listId),
@@ -698,7 +440,6 @@ export function setupMobileAuth(app: any) {
         return res.status(404).json({ error: "List not found" });
       }
 
-      // Get designers in the list
       const listDesignersData = await db
         .select({
           designer: designers,
@@ -729,10 +470,7 @@ export function setupMobileAuth(app: any) {
       }));
 
       const responseData = {
-        list: {
-          id: list.id,
-          name: list.name,
-        },
+        list: { id: list.id, name: list.name },
         designers: formattedDesigners,
         total: formattedDesigners.length,
       };

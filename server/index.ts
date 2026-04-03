@@ -1,42 +1,30 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { clerkMiddleware } from "@clerk/express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { setupAuth } from "./auth";
-import { authenticateJWT, setupMobileAuth } from "./jwt-auth";
+import { setupAuth, resolveClerkUser } from "./auth";
+import { setupMobileAuth } from "./jwt-auth";
 import { setupMcpRoutes } from "./mcp-http";
 import { setupCliRoutes } from "./cli-routes";
 
 const app = express();
 
-// Trust proxy for rate limiting behind reverse proxy (Replit deployment)
 app.set('trust proxy', 1);
 
-// Rate limiting for public API endpoints (mobile + MCP)
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requests per 15 minutes per IP
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },
   skip: (req) => {
-    // Skip rate limiting for non-API routes
     return !req.path.startsWith('/api/mobile') && !req.path.startsWith('/mcp');
   },
 });
 
-// Stricter rate limiting for auth endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 login attempts per 15 minutes
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many login attempts, please try again later" },
-});
-
-// Security middleware for production
 if (app.get("env") === "production") {
   app.use(helmet({
     contentSecurityPolicy: {
@@ -51,11 +39,9 @@ if (app.get("env") === "production") {
   }));
 }
 
-// Parse JSON with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// CORS configuration for mobile/iOS app access
 app.use(cors({
   origin: true,
   credentials: true,
@@ -63,38 +49,38 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-workspace-slug'],
 }));
 
-// Cache control for static assets
 app.use((req, res, next) => {
   if (req.url.startsWith('/assets/')) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
   }
   next();
 });
 
-// Apply rate limiting to public API endpoints
 app.use(apiLimiter);
 
-// Apply stricter rate limiting to auth endpoints
-app.use('/api/mobile/login', authLimiter);
-app.use('/api/mobile/refresh', authLimiter);
+// Clerk middleware — validates session tokens from both cookies (web) and Bearer headers (mobile/CLI)
+// The publishable key is stored as VITE_CLERK_PUBLISHABLE_KEY (for frontend access via Vite)
+// so we pass it explicitly here for the backend SDK
+app.use(clerkMiddleware({
+  publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
+  secretKey: process.env.CLERK_SECRET_KEY,
+}));
 
-// JWT authentication middleware (allows Bearer token auth for mobile apps)
-// Must be before session auth so JWT can set req.user before routes run
-app.use(authenticateJWT);
+// Resolve the Clerk userId to a local DB user and set req.user
+app.use(resolveClerkUser);
 
-// Set up mobile auth endpoints (before session auth to avoid conflicts)
+// Set up mobile endpoints (auth now via Clerk instead of custom JWT)
 setupMobileAuth(app);
 
 // Set up MCP HTTP routes for Claude Desktop integration
 setupMcpRoutes(app);
 
-// Set up CLI API routes (Bearer token auth at /api/cli/*)
+// Set up CLI API routes (Bearer token auth at /api/cli/* using tap_ tokens)
 setupCliRoutes(app);
 
-// Set up session-based authentication (for web app)
+// Set up /api/user endpoint
 setupAuth(app);
 
-// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -127,15 +113,12 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Return 404 for OAuth discovery so mcp-remote falls back to direct transport
     app.use("/.well-known", (_req, res) => {
       res.status(404).json({ error: "Not found" });
     });
 
-    // Register API routes BEFORE Vite middleware
     const server = registerRoutes(app);
 
-    // Add Vite middleware after API routes
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
@@ -154,7 +137,6 @@ app.use((req, res, next) => {
       log(`Server running on port ${PORT} in ${app.get("env")} mode`);
     });
 
-    // Graceful shutdown
     const shutdown = () => {
       log('Shutting down gracefully...');
       server.close(() => {

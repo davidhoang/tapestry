@@ -17,13 +17,6 @@ type WorkspaceWithOwner = {
   joinedAt: string;
 };
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -42,13 +35,13 @@ import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity,
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import AuthPage from "../pages/AuthPage";
+import { useClerk } from "@clerk/react";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { user, logout } = useUser();
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const { openSignIn } = useClerk();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -67,22 +60,6 @@ export default function Navigation() {
     });
   };
 
-  // Listen for successful login to close modal
-  useEffect(() => {
-    const handleCloseAuthModal = () => {
-      setShowAuthDialog(false);
-    };
-
-    window.addEventListener('closeAuthModal', handleCloseAuthModal);
-    return () => window.removeEventListener('closeAuthModal', handleCloseAuthModal);
-  }, []);
-
-  // Auto-close modal when user becomes authenticated
-  useEffect(() => {
-    if (user && showAuthDialog) {
-      setShowAuthDialog(false);
-    }
-  }, [user, showAuthDialog]);
 
   // Get user's workspace
   const { data: workspaces } = useQuery({
@@ -254,7 +231,7 @@ export default function Navigation() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="default" onClick={() => setShowAuthDialog(true)} className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Button variant="default" onClick={() => openSignIn()} className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
                 Sign in
               </Button>
             )}
@@ -394,7 +371,7 @@ export default function Navigation() {
                 <Button 
                   variant="default" 
                   size="sm"
-                  onClick={() => setShowAuthDialog(true)} 
+                  onClick={() => openSignIn()} 
                   className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base px-4 py-2"
                 >
                   Sign in
@@ -405,27 +382,6 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* 
-        Auth Modal - WORKING IMPLEMENTATION 
-        DO NOT MODIFY: This custom modal solution works reliably across all devices
-        Uses inline styles in AuthPage to prevent CSS conflicts
-        See replit.md for implementation details and maintenance guidelines
-      */}
-      {showAuthDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
-            <div className="relative p-6">
-              <button
-                onClick={() => setShowAuthDialog(false)}
-                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <AuthPage />
-            </div>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

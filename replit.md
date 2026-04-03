@@ -22,7 +22,7 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 
 ### Backend
 - **Framework**: Express.js with TypeScript
-- **Authentication**: Passport.js (local, session-based) for web, JWT for mobile APIs
+- **Authentication**: Clerk (`@clerk/react` + `@clerk/express`) for web and mobile, API token (`tap_`) auth for CLI/MCP
 - **Database ORM**: Drizzle ORM with PostgreSQL
 - **File Handling**: Multer
 - **Image Processing**: Sharp
@@ -33,7 +33,7 @@ No emojis: Never use emojis in the UI or code - the user strongly dislikes them.
 - **Modal Design System**: Standardized spacing and sizing for all dialogs, including `h-11` height for inputs, `space-y-2` for labels, `space-y-6` for form sections, `resize-none` for textareas, and responsive grid layouts.
 
 ### Key Features
-- **Authentication System**: Session-based with user registration, password hashing, protected routes, and role-based access control.
+- **Authentication System**: Clerk-powered authentication. `clerkMiddleware()` validates sessions on every request; `resolveClerkUser` maps Clerk user IDs to local DB users (auto-creates on first sign-in). Web uses Clerk's hosted modal (`openSignIn()`); mobile apps use Clerk's mobile SDK and send Clerk JWTs as Bearer tokens. CLI/MCP continues to use `tap_` API tokens unchanged. No passwords stored in the DB.
 - **Designer Management**: CRUD operations, skills management, AI enrichment, and bulk import/export.
 - **AI Matchmaking**: OpenAI-powered role analysis, iterative refinement, confidence scoring, and skills matching with an RLHF system.
 - **Workspace System**: Multi-tenant architecture with role-based permissions (Admin, Owner, Editor, Member), granular permissions, server-side enforcement, audit logging, and invitation system.

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../hooks/use-user";
 import { useOnboarding } from "../hooks/use-onboarding";
-import OnboardingModal from "./OnboardingModal";
+import OnboardingFlow from "./OnboardingFlow";
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
@@ -13,7 +13,6 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    // Only show onboarding for authenticated users
     if (user && shouldShowOnboarding) {
       setShowOnboarding(true);
     } else {
@@ -26,23 +25,16 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
       await completeOnboarding();
       setShowOnboarding(false);
     } catch (error) {
-      // Silently handle onboarding completion error
       setShowOnboarding(false);
     }
-  };
-
-  const handleOnboardingClose = () => {
-    setShowOnboarding(false);
   };
 
   return (
     <>
       {children}
-      <OnboardingModal 
-        open={showOnboarding} 
-        onOpenChange={handleOnboardingClose}
-        onComplete={handleOnboardingComplete}
-      />
+      {showOnboarding && (
+        <OnboardingFlow onComplete={handleOnboardingComplete} />
+      )}
     </>
   );
 }

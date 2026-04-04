@@ -3221,6 +3221,37 @@ Please analyze this role and recommend the best matching designers.`
     }
   });
 
+  app.post("/api/onboarding/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { role, company, useCase, workspaceName } = req.body;
+      const onboardingData = { role, company, useCase };
+
+      await db.update(users)
+        .set({ onboardingData })
+        .where(eq(users.id, req.user.id));
+
+      if (workspaceName && workspaceName.trim().length >= 2) {
+        const userWorkspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.ownerId, req.user.id),
+        });
+        if (userWorkspace) {
+          await db.update(workspaces)
+            .set({ name: workspaceName.trim() })
+            .where(eq(workspaces.id, userWorkspace.id));
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to save onboarding profile:', error);
+      res.status(500).json({ error: "Failed to save onboarding profile" });
+    }
+  });
+
   app.put("/api/onboarding/settings", requireAdmin, async (req, res) => {
     try {
       const { debugMode } = req.body;

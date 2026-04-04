@@ -45,6 +45,7 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false),
   hasCompletedOnboarding: boolean("has_completed_onboarding").default(false),
   onboardingDebugMode: boolean("onboarding_debug_mode").default(false),
+  onboardingData: jsonb("onboarding_data"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

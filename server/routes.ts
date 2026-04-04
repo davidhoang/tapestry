@@ -2507,20 +2507,15 @@ Please analyze this role and recommend the best matching designers.`
         expiresAt,
       });
 
-      // Import sendEmail function
-      const { sendEmail } = await import("./email");
-      
-      // Create invite link pointing to invitation page
+      // Send invite via Clerk (no domain verification required)
+      const { sendInviteViaClerk } = await import("./email");
       const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
-      const finalMessage = message.replace('[INVITE_LINK]', inviteLink);
-      
-      // Send the invite email
-      await sendEmail({
-        to: email,
-        from: "david@davidhoang.com", // Using the same verified sender as other emails
-        subject: "Invitation to Test Tapestry Alpha",
-        text: finalMessage,
-        html: finalMessage.replace(/\n/g, '<br>')
+
+      await sendInviteViaClerk({
+        email,
+        redirectUrl: inviteLink,
+        workspaceName: adminWorkspace.name,
+        role: 'member',
       });
 
       res.json({
@@ -3785,33 +3780,20 @@ Please analyze this role and recommend the best matching designers.`
         .returning();
     }
 
-    // Send invitation email
+    // Send invitation email via Clerk (no domain verification required)
     try {
-      const { sendEmail } = await import("./email");
+      const { sendInviteViaClerk } = await import("./email");
       const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
-      
-      const emailContent = `You've been invited to join the workspace "${membership.workspace.name}" on Tapestry.
 
-Click the link below to accept the invitation:
-${inviteLink}
-
-This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}.
-
-If you don't have an account yet, you'll be prompted to create one.
-
-Best regards,
-The Tapestry Team`;
-
-      await sendEmail({
-        to: email,
-        from: "david@davidhoang.com",
-        subject: `Invitation to join ${membership.workspace.name}`,
-        text: emailContent,
-        html: emailContent.replace(/\n/g, '<br>')
+      await sendInviteViaClerk({
+        email,
+        redirectUrl: inviteLink,
+        workspaceName: membership.workspace.name,
+        role,
       });
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError);
-      // Don't fail the request if email fails
+      // Don't fail the request if email fails — the DB token still works as a direct link
     }
 
     await logWorkspaceActivity(

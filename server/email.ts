@@ -1,5 +1,6 @@
 // Resend email integration (migrated from SendGrid)
 import { Resend } from 'resend';
+import { clerkClient } from '@clerk/express';
 import type { SelectList } from "@db/schema";
 
 let connectionSettings: any;
@@ -81,6 +82,33 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     console.error('Resend email error:', error);
     throw error;
   }
+}
+
+/**
+ * Send a workspace invitation email via Clerk.
+ * Clerk handles delivery from its own verified domain — no custom domain setup needed.
+ * After the user authenticates, they are redirected to the invite acceptance URL.
+ *
+ * Returns true on success. Throws if Clerk rejects the invite (e.g. the address
+ * is already registered — in that case the DB token still works as a direct link).
+ */
+export async function sendInviteViaClerk(params: {
+  email: string;
+  redirectUrl: string;
+  workspaceName: string;
+  role: string;
+}): Promise<boolean> {
+  await clerkClient.invitations.createInvitation({
+    emailAddress: params.email,
+    redirectUrl: params.redirectUrl,
+    publicMetadata: {
+      workspaceName: params.workspaceName,
+      role: params.role,
+    },
+    ignoreExisting: true,
+  });
+  console.log(`Clerk invitation sent to ${params.email}`);
+  return true;
 }
 
 export async function sendListEmail(

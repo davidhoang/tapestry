@@ -54,11 +54,16 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    const { client } = await getResendClient();
+    const { client, fromEmail } = await getResendClient();
     
+    // Use the verified from_email configured in the Resend integration.
+    // Fall back to onboarding@resend.dev (Resend's default verified sender)
+    // if neither the integration nor the caller provides a verified address.
+    const senderEmail = fromEmail || params.from || 'onboarding@resend.dev';
+
     const { data, error } = await client.emails.send({
       to: params.to,
-      from: params.from,
+      from: senderEmail,
       subject: params.subject,
       html: params.html || params.text || '',
       text: params.text,

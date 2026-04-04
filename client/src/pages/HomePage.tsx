@@ -450,7 +450,7 @@ export default function HomePage() {
             {/* CTA Content */}
             <div className="w-full md:w-1/2 text-center md:text-left">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                Stop sourcing. Start recruiting the best designers.
+                Stop sourcing, start building relationships.
               </h2>
               <p className="text-lg text-white/90 leading-relaxed mb-8">
                 Tapestry gives design recruiters a living, intelligent talent network so you spend less time hunting for candidates and more time building the relationships that land them.

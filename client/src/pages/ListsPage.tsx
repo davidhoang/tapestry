@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/command";
 import { Command as CommandPrimitive } from "cmdk";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download, GripVertical } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download, GripVertical, Paperclip } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -143,7 +143,7 @@ function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string |
             }}
           >
             <div
-              className="w-24 h-[7.5rem] rounded-2xl border-[2.5px] border-white/90 shadow-xl overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:-translate-y-4 hover:scale-110 hover:shadow-2xl"
+              className="w-24 h-24 rounded-2xl border-[2.5px] border-white/90 shadow-xl overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:-translate-y-4 hover:scale-110 hover:shadow-2xl"
               style={{ background: gradient }}
             >
               {designer.photoUrl ? (
@@ -169,7 +169,6 @@ function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string |
 
 interface SortableDesignerCardProps {
   designer: SelectDesigner & { notes?: string | null };
-  listId: number;
   onEditNotes: (designerId: number, notes: string) => void;
   onSaveNotes: (designerId: number) => void;
   onCancelEditNotes: () => void;
@@ -182,7 +181,6 @@ interface SortableDesignerCardProps {
 
 function SortableDesignerCard({
   designer,
-  listId,
   onEditNotes,
   onSaveNotes,
   onCancelEditNotes,
@@ -193,6 +191,7 @@ function SortableDesignerCard({
   onNavigate,
 }: SortableDesignerCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: designer.id });
+  const [noteOpen, setNoteOpen] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -201,83 +200,129 @@ function SortableDesignerCard({
   };
 
   const notes = designer.notes;
+  const isEditing = editingNotesFor === designer.id;
+
+  useEffect(() => {
+    if (isEditing) setNoteOpen(true);
+  }, [isEditing]);
+
+  const handlePaperclipClick = () => {
+    const next = !noteOpen;
+    setNoteOpen(next);
+    if (next && !isEditing) {
+      onEditNotes(designer.id, notes || "");
+    } else if (!next && isEditing) {
+      onCancelEditNotes();
+    }
+  };
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className={`hover:shadow-lg transition-shadow ${isDragging ? "shadow-2xl ring-2 ring-primary/30" : ""}`}>
-        <CardContent className="flex items-start space-x-3 py-4">
+      <Card className={`group/card transition-shadow overflow-hidden ${isDragging ? "shadow-2xl ring-2 ring-primary/30" : "hover:shadow-md"}`}>
+        {/* Main row */}
+        <CardContent className="flex items-center gap-3 py-3 px-4">
+          {/* Grip handle — only visible on hover */}
           <div
             {...attributes}
             {...listeners}
-            className="flex items-center self-center cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-0.5 flex-shrink-0"
+            className="opacity-0 group-hover/card:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0"
           >
             <GripVertical className="h-4 w-4" />
           </div>
+
           <Avatar
-            className="w-11 h-11 cursor-pointer flex-shrink-0"
+            className="w-10 h-10 flex-shrink-0 cursor-pointer"
             onClick={() => onNavigate(designer)}
           >
             <AvatarImage src={designer.photoUrl || ""} />
-            <AvatarFallback>
+            <AvatarFallback className="text-xs">
               {designer.name.split(" ").map((n: string) => n[0]).join("")}
             </AvatarFallback>
           </Avatar>
+
           <div className="flex-1 min-w-0">
             <h3
-              className="font-medium cursor-pointer hover:underline truncate"
+              className="font-medium cursor-pointer hover:underline truncate text-sm leading-tight"
               onClick={() => onNavigate(designer)}
             >
               {designer.name}
             </h3>
-            <p className="text-sm text-muted-foreground truncate">{designer.title}</p>
-            {editingNotesFor === designer.id ? (
-              <div className="mt-3 space-y-2">
+            <p className="text-xs text-muted-foreground truncate">{designer.title}</p>
+          </div>
+
+          {/* Paper clip toggle */}
+          <button
+            onClick={handlePaperclipClick}
+            title={notes ? "View / edit note" : "Add a note"}
+            className={`flex-shrink-0 p-1.5 rounded-md transition-all duration-200 ${
+              notes
+                ? "text-amber-500 hover:bg-amber-50"
+                : "text-muted-foreground/30 hover:text-muted-foreground/60 hover:bg-muted"
+            } ${noteOpen ? "rotate-[25deg]" : ""}`}
+          >
+            <Paperclip className="h-4 w-4" />
+          </button>
+        </CardContent>
+
+        {/* Paper note panel */}
+        {noteOpen && (
+          <div
+            className="mx-4 mb-3 rounded-lg border border-amber-200/70 shadow-sm relative"
+            style={{
+              background: "#fef9ee",
+              backgroundImage:
+                "repeating-linear-gradient(transparent, transparent 27px, #ede0b4 27px, #ede0b4 28px)",
+              backgroundPositionY: "20px",
+            }}
+          >
+            {/* Decorative paper clip at top-right */}
+            <div className="absolute -top-3 right-4 z-10">
+              <Paperclip className="h-5 w-5 text-zinc-400/80 rotate-[25deg]" />
+            </div>
+
+            {isEditing ? (
+              <div className="p-3 pt-5 space-y-2">
                 <Textarea
                   value={notesValue}
                   onChange={(e) => setNotesValue(e.target.value)}
-                  placeholder="Add notes about this designer..."
-                  className="min-h-[80px]"
+                  placeholder="Jot down your thoughts..."
+                  autoFocus
+                  className="min-h-[72px] bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-0 resize-none leading-7"
                 />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onSaveNotes(designer.id)} disabled={updateNotesPending}>
-                    {updateNotesPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => onSaveNotes(designer.id)}
+                    disabled={updateNotesPending}
+                  >
+                    {updateNotesPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                     Save
                   </Button>
-                  <Button size="sm" variant="outline" onClick={onCancelEditNotes}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => { onCancelEditNotes(); setNoteOpen(false); }}
+                  >
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <>
+              <div
+                className="p-3 pt-5 cursor-text min-h-[56px]"
+                onClick={() => onEditNotes(designer.id, notes || "")}
+              >
                 {notes ? (
-                  <div className="mt-2 text-sm">
-                    <p className="text-muted-foreground">{notes}</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-1 h-7 px-2 text-xs"
-                      onClick={() => onEditNotes(designer.id, notes)}
-                    >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Edit notes
-                    </Button>
-                  </div>
+                  <p className="text-sm text-foreground/75 leading-7 whitespace-pre-wrap">{notes}</p>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 h-7 px-2 text-xs"
-                    onClick={() => onEditNotes(designer.id, "")}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add notes
-                  </Button>
+                  <p className="text-sm text-muted-foreground/40 leading-7 italic">Click to jot a note…</p>
                 )}
-              </>
+              </div>
             )}
           </div>
-        </CardContent>
+        )}
       </Card>
     </div>
   );
@@ -774,7 +819,7 @@ function ViewListDialog({
         <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0 sm:p-0 gap-0">
 
           {/* Cover: full-bleed gradient + fanned designer photos — outside scroll */}
-          <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0">
+          <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0 overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center">
               {coverDesigners.length > 0 ? (
                 <DesignerCardFan designers={coverDesigners} />
@@ -913,7 +958,6 @@ function ViewListDialog({
                       <SortableDesignerCard
                         key={entry.designer.id}
                         designer={{ ...entry.designer, notes: entry.notes }}
-                        listId={list.id}
                         editingNotesFor={editingNotesFor}
                         notesValue={notesValue}
                         setNotesValue={setNotesValue}

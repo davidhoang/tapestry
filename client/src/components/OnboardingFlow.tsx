@@ -137,12 +137,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   const goSkip = () => {
-    if (step === "done") {
-      completeMutation.mutate();
-      return;
-    }
-    const next = STEP_ORDER[currentIndex + 1];
-    if (next) setStep(next);
+    completeMutation.mutate();
   };
 
   const goPrev = () => {

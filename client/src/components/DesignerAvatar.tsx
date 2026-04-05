@@ -1,4 +1,5 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getAvatarColors } from "@/utils/avatarColors";
 
 interface DesignerAvatarProps {
   imageUrl?: string | null;
@@ -21,9 +22,10 @@ export function DesignerAvatar({ imageUrl, name, size = "md", className = "" }: 
   };
 
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const { bg, text } = getAvatarColors(name);
 
   return (
-    <Avatar className={`${sizeClasses[size]} overflow-hidden rounded-none ${className}`}>
+    <Avatar className={`${sizeClasses[size]} overflow-hidden rounded-lg ${className}`}>
       {imageUrl ? (
         <AvatarImage 
           src={imageUrl} 
@@ -31,7 +33,10 @@ export function DesignerAvatar({ imageUrl, name, size = "md", className = "" }: 
           className="object-cover"
         />
       ) : (
-        <AvatarFallback className={`${fallbackSizeClasses[size]} font-bold text-muted-foreground bg-muted rounded-none`}>
+        <AvatarFallback
+          className={`${fallbackSizeClasses[size]} font-bold rounded-lg`}
+          style={{ backgroundColor: bg, color: text }}
+        >
           {initials}
         </AvatarFallback>
       )}

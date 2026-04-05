@@ -1601,6 +1601,67 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  app.get("/api/og-preview", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const { url } = req.query;
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({ error: "url query parameter is required" });
+    }
+
+    try {
+      const targetUrl = new URL(url);
+      const response = await fetch(targetUrl.toString(), {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; OGPreviewBot/1.0)",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!response.ok) {
+        return res.status(400).json({ error: "Failed to fetch URL" });
+      }
+
+      const html = await response.text();
+
+      const getMetaContent = (html: string, property: string): string | undefined => {
+        const patterns = [
+          new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
+          new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${property}["']`, 'i'),
+          new RegExp(`<meta[^>]+name=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
+          new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${property}["']`, 'i'),
+        ];
+        for (const re of patterns) {
+          const match = html.match(re);
+          if (match) return match[1];
+        }
+        return undefined;
+      };
+
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+
+      const ogData = {
+        title: getMetaContent(html, 'og:title') || getMetaContent(html, 'twitter:title') || titleMatch?.[1]?.trim(),
+        description: getMetaContent(html, 'og:description') || getMetaContent(html, 'description') || getMetaContent(html, 'twitter:description'),
+        image: getMetaContent(html, 'og:image') || getMetaContent(html, 'twitter:image'),
+        siteName: getMetaContent(html, 'og:site_name'),
+        favicon: `${targetUrl.protocol}//${targetUrl.hostname}/favicon.ico`,
+        url: targetUrl.toString(),
+      };
+
+      // Resolve relative image URLs
+      if (ogData.image && !ogData.image.startsWith('http')) {
+        ogData.image = `${targetUrl.protocol}//${targetUrl.hostname}${ogData.image.startsWith('/') ? '' : '/'}${ogData.image}`;
+      }
+
+      return res.json(ogData);
+    } catch (error: any) {
+      return res.status(400).json({ error: "Failed to fetch OG data", details: error.message });
+    }
+  }));
+
   app.get("/api/lists", withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Authentication required" });
@@ -1722,7 +1783,7 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const listId = parseInt(req.params.id);
-      const { name, description, summary, isPublic, designerId, notes } = req.body;
+      const { name, description, summary, isPublic, designerId, notes, jobDescriptionUrl, jobDescriptionOgData } = req.body;
 
       // Verify the list exists and belongs to the user
       const list = await db.query.lists.findFirst({
@@ -1768,6 +1829,8 @@ export function registerRoutes(app: Express): Server {
         ...(description !== undefined && { description }),
         ...(summary !== undefined && { summary }),
         ...(isPublic !== undefined && { isPublic }),
+        ...(jobDescriptionUrl !== undefined && { jobDescriptionUrl }),
+        ...(jobDescriptionOgData !== undefined && { jobDescriptionOgData }),
       };
 
       // If name is being updated, regenerate slug

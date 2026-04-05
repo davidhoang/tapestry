@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { HalftoneDots } from "@paper-design/shaders-react";
+import { useState, useEffect, useRef } from "react";
 import {
   useLists,
   useCreateList,
@@ -474,38 +473,59 @@ function ViewListDialog({
     });
   };
 
-  const firstDesignerPhoto = list.designers?.[0]?.designer?.photoUrl;
+  const [jobUrlInput, setJobUrlInput] = useState("");
+  const [isLoadingOg, setIsLoadingOg] = useState(false);
+  const [ogData, setOgData] = useState<{ title?: string; description?: string; image?: string; siteName?: string; favicon?: string; url?: string } | null>(
+    (list as any).jobDescriptionOgData || null
+  );
+  const [savedJobUrl, setSavedJobUrl] = useState<string | null>((list as any).jobDescriptionUrl || null);
+  const jobUrlInputRef = useRef<HTMLInputElement>(null);
+
+  const handleJobUrlSubmit = async (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+
+    let fullUrl = trimmed;
+    if (!/^https?:\/\//i.test(fullUrl)) {
+      fullUrl = `https://${fullUrl}`;
+    }
+
+    setIsLoadingOg(true);
+    try {
+      const res = await fetch(`/api/og-preview?url=${encodeURIComponent(fullUrl)}`, { credentials: "include" });
+      const data = await res.json();
+
+      if (res.ok) {
+        await updateList.mutateAsync({
+          id: list.id,
+          jobDescriptionUrl: fullUrl,
+          jobDescriptionOgData: data,
+        });
+        setOgData(data);
+        setSavedJobUrl(fullUrl);
+        setJobUrlInput("");
+        toast({ title: "Job description linked" });
+      } else {
+        toast({ title: "Couldn't fetch link preview", description: "The URL may not be publicly accessible.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Failed to link job description", variant: "destructive" });
+    } finally {
+      setIsLoadingOg(false);
+    }
+  };
+
+  const handleRemoveJobDescription = async () => {
+    await updateList.mutateAsync({ id: list.id, jobDescriptionUrl: null, jobDescriptionOgData: null });
+    setOgData(null);
+    setSavedJobUrl(null);
+  };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
           <div className="flex-shrink-0 relative">
-            {/* Halftone Dots Shader - kept for future use
-            {firstDesignerPhoto && (
-              <div className="absolute inset-0 h-32 overflow-hidden">
-                <HalftoneDots
-                  width="100%"
-                  height={128}
-                  image={firstDesignerPhoto}
-                  colorBack="#f2f1e8"
-                  colorFront="#2b2b2b"
-                  originalColors={false}
-                  type="gooey"
-                  grid="hex"
-                  inverted={false}
-                  size={0.67}
-                  radius={1.25}
-                  contrast={0.4}
-                  grainMixer={0.2}
-                  grainOverlay={0.2}
-                  grainSize={0.5}
-                  scale={1}
-                  fit="cover"
-                />
-              </div>
-            )}
-            */}
             <div className="h-8 bg-gradient-to-r from-primary/20 to-primary/5" />
           </div>
           <DialogHeader className="flex-shrink-0 px-6 pt-2 mb-4">
@@ -517,6 +537,105 @@ function ViewListDialog({
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <div className="space-y-5">
+
+            {/* Job Description Smart Link */}
+            {ogData && savedJobUrl ? (
+              <div className="group relative">
+                <a
+                  href={savedJobUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-xl border border-border hover:border-primary/40 transition-colors overflow-hidden bg-card"
+                >
+                  <div className="flex gap-4 p-4">
+                    {ogData.image && (
+                      <div className="flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-muted hidden sm:block">
+                        <img
+                          src={ogData.image}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <img
+                          src={ogData.favicon}
+                          alt=""
+                          className="w-4 h-4 rounded-sm flex-shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <span className="text-xs text-muted-foreground font-medium truncate">
+                          {ogData.siteName || new URL(savedJobUrl).hostname}
+                        </span>
+                      </div>
+                      <p className="font-semibold text-sm leading-snug line-clamp-2 text-foreground">
+                        {ogData.title}
+                      </p>
+                      {ogData.description && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {ogData.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </a>
+                <button
+                  onClick={(e) => { e.preventDefault(); handleRemoveJobDescription(); }}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                  title="Remove job description"
+                >
+                  <Trash className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors cursor-text"
+                onClick={() => jobUrlInputRef.current?.focus()}
+              >
+                {isLoadingOg ? (
+                  <div className="flex items-center gap-3 px-4 py-3.5">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">Fetching job details…</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 px-4 py-1">
+                    <UserPlus className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                    <input
+                      ref={jobUrlInputRef}
+                      type="url"
+                      value={jobUrlInput}
+                      onChange={(e) => setJobUrlInput(e.target.value)}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData.getData("text");
+                        if (pasted.trim()) {
+                          e.preventDefault();
+                          setJobUrlInput(pasted.trim());
+                          handleJobUrlSubmit(pasted.trim());
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleJobUrlSubmit(jobUrlInput);
+                      }}
+                      placeholder="Paste a job description URL…"
+                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 py-3"
+                    />
+                    {jobUrlInput && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs"
+                        onClick={() => handleJobUrlSubmit(jobUrlInput)}
+                      >
+                        Add
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-4">
               {list.designers?.map(
                 ({

@@ -183,6 +183,15 @@ export const lists = pgTable("lists", {
   description: text("description"),
   summary: text("summary"),
   isPublic: boolean("is_public").default(false),
+  jobDescriptionUrl: text("job_description_url"),
+  jobDescriptionOgData: jsonb("job_description_og_data").$type<{
+    title?: string;
+    description?: string;
+    image?: string;
+    siteName?: string;
+    favicon?: string;
+    url?: string;
+  }>(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   workspaceIdIdx: index("lists_workspace_id_idx").on(table.workspaceId),

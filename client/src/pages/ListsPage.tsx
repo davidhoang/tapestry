@@ -94,36 +94,75 @@ import {
 import { SelectDesigner, SelectList } from "@db/schema";
 import { UserPlus } from "lucide-react";
 
+const CARD_GRADIENTS = [
+  "linear-gradient(135deg, #f5c6a0 0%, #e8956b 50%, #c0614a 100%)",
+  "linear-gradient(135deg, #f2d7c4 0%, #d4956a 50%, #a0614e 100%)",
+  "linear-gradient(135deg, #c8d8c0 0%, #8aab7e 50%, #5a7a52 100%)",
+  "linear-gradient(135deg, #d4cce8 0%, #9b8ab8 50%, #6b5a8a 100%)",
+  "linear-gradient(135deg, #f0d6b8 0%, #c8a06a 50%, #8a6040 100%)",
+  "linear-gradient(135deg, #e8d0c4 0%, #c09080 50%, #8a5a50 100%)",
+  "linear-gradient(135deg, #c4d4e0 0%, #7a9ab8 50%, #4a6a8a 100%)",
+  "linear-gradient(135deg, #f0e0c0 0%, #d4b080 50%, #a07840 100%)",
+];
+
+function getCardGradient(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    hash |= 0;
+  }
+  return CARD_GRADIENTS[Math.abs(hash) % CARD_GRADIENTS.length];
+}
+
 function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string | null; name: string }> }) {
   const fanDesigners = useMemo(() => {
     const shuffled = [...designers].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
   }, [designers.map(d => d.name).join(",")]);
 
-  const rotations = [-12, -6, 0, 6, 12];
-  const translateY = [8, 4, 0, 4, 8];
-  const zIndexes = [1, 2, 5, 2, 1];
+  const count = fanDesigners.length;
+  const rotations  = [-14, -7, 0, 7, 14].slice(0, count);
+  const dropY      = [12, 5, 0, 5, 12].slice(0, count);
+  const zIndexes   = [1, 3, 5, 3, 1].slice(0, count);
+  const spacing    = 58;
 
   return (
     <div className="relative flex items-center justify-center h-full">
-      {fanDesigners.map((designer, i) => (
-        <div
-          key={i}
-          className="absolute w-16 h-20 rounded-xl border-2 border-white shadow-xl overflow-hidden bg-muted"
-          style={{
-            transform: `rotate(${rotations[i]}deg) translateY(${translateY[i]}px) translateX(${(i - Math.floor(fanDesigners.length / 2)) * 44}px)`,
-            zIndex: zIndexes[i],
-          }}
-        >
-          {designer.photoUrl ? (
-            <img src={designer.photoUrl} alt={designer.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40 text-primary font-semibold text-lg">
-              {designer.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+      {fanDesigners.map((designer, i) => {
+        const offsetX = (i - Math.floor(count / 2)) * spacing;
+        const gradient = getCardGradient(designer.name);
+        const initials = designer.name.split(" ").map(n => n[0]).join("").slice(0, 2);
+
+        return (
+          <div
+            key={i}
+            className="absolute"
+            style={{
+              transform: `rotate(${rotations[i]}deg) translateY(${dropY[i]}px) translateX(${offsetX}px)`,
+              zIndex: zIndexes[i],
+            }}
+          >
+            <div
+              className="w-24 h-[7.5rem] rounded-2xl border-[2.5px] border-white/90 shadow-xl overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:-translate-y-4 hover:scale-110 hover:shadow-2xl"
+              style={{ background: gradient }}
+            >
+              {designer.photoUrl ? (
+                <img
+                  src={designer.photoUrl}
+                  alt={designer.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-end pb-4">
+                  <span className="text-white/90 font-bold text-2xl drop-shadow-md tracking-wide">
+                    {initials}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

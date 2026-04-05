@@ -188,16 +188,16 @@ interface SortableDesignerCardProps {
 function PaperclipSVG({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 20 44"
+      viewBox="0 0 26 56"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.2"
+      strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
       aria-hidden
     >
-      <path d="M10 2C6.686 2 4 4.686 4 8V32C4 37.523 8.477 42 14 42C19.523 42 24 37.523 24 32V6H20V32C20 35.314 17.314 38 14 38C10.686 38 8 35.314 8 32V8C8 6.895 8.895 6 10 6C11.105 6 12 6.895 12 8V30H16V8C16 4.686 13.314 2 10 2Z" />
+      <path d="M12 2C8.686 2 6 4.686 6 8V36C6 41.523 10.477 46 16 46C21.523 46 26 41.523 26 36V6H22V36C22 39.314 19.314 42 16 42C12.686 42 10 39.314 10 36V8C10 6.895 10.895 6 12 6C13.105 6 14 6.895 14 8V32H18V8C18 4.686 15.314 2 12 2Z" />
     </svg>
   );
 }
@@ -259,20 +259,16 @@ function SortableDesignerCard({
           </div>
         </CardContent>
 
-        {/* Paper note — always visible, clipped to bottom of card */}
-        <div className="relative mx-4 mb-3 rounded-b-lg overflow-visible">
-          {/* SVG paperclip attached to top-right of the note */}
-          <div className="absolute -top-4 right-5 z-10 text-zinc-400/70 rotate-[20deg] origin-bottom">
-            <PaperclipSVG className="h-7 w-4" />
+        {/* Paper note — always visible, attached below card */}
+        <div className="relative mx-4 mb-3 overflow-visible">
+          {/* SVG paperclip sitting on the right edge of the note */}
+          <div className="absolute top-2 -right-3 z-10 text-zinc-400/60 rotate-[10deg]">
+            <PaperclipSVG className="h-8 w-5" />
           </div>
 
           <div
-            className="rounded-lg border border-amber-200/80 shadow-sm overflow-hidden"
-            style={{
-              background: "#fef9ee",
-              backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, #e8d8a0 27px, #e8d8a0 28px)",
-              backgroundPositionY: "18px",
-            }}
+            className="rounded-lg border border-amber-200/60 shadow-sm overflow-hidden"
+            style={{ background: "#fef9ee" }}
           >
             {isEditing ? (
               <div className="px-4 pt-4 pb-3 space-y-2">

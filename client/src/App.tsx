@@ -38,6 +38,7 @@ const ApiTokensPage = lazy(() => import("./pages/ApiTokensPage"));
 const RecommendationsPage = lazy(() => import("./pages/RecommendationsPage"));
 const EmailListPage = lazy(() => import("./pages/EmailListPage"));
 const DocsPage = lazy(() => import("./pages/DocsPage"));
+const SharedDesignerPage = lazy(() => import("./pages/SharedDesignerPage"));
 
 // Loading fallback component
 function PageLoader() {
@@ -149,6 +150,21 @@ function App() {
   if (window.location.pathname === '/docs' || window.location.pathname === '/docs/') {
     window.location.replace('/docs/mcp');
     return null;
+  }
+
+  // Handle shared designer profile routes
+  if (window.location.pathname.startsWith('/d/')) {
+    const shareToken = window.location.pathname.split('/')[2];
+    if (shareToken) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<PageLoader />}>
+            <SharedDesignerPage />
+          </Suspense>
+          <Toaster />
+        </QueryClientProvider>
+      );
+    }
   }
 
   // Handle public portfolio routes

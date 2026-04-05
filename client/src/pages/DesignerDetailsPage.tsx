@@ -1,14 +1,15 @@
 import { useParams, useLocation, Link } from "wouter";
 import React from "react";
+import { getAuthHeaders } from "@/lib/queryClient";
 import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles } from "lucide-react";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles, Share2 } from "lucide-react";
 import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useDesignerBySlug, useDesignerTalentGraph } from "@/hooks/use-designer";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useUpdateDesigner } from "@/hooks/use-designer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -76,9 +77,51 @@ export default function DesignerDetailsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
+  const [isSharing, setIsSharing] = useState(false);
+  // localShareToken holds a freshly-minted token that hasn't been refetched yet.
+  // The effective token is always: designer.shareToken ?? localShareToken.
+  // This avoids stale-state bugs when navigating between designers.
+  const [localShareToken, setLocalShareToken] = useState<string | null>(null);
+
   const { data: designer, isLoading, error, refetch } = useDesignerBySlug(slug || "");
+
+  // Clear local token whenever designer changes so we never carry over a token
+  // from a previously viewed designer.
+  useEffect(() => {
+    setLocalShareToken(null);
+  }, [designer?.id]);
+
   const updateDesigner = useUpdateDesigner();
   const { data: talentGraph, isLoading: isTalentGraphLoading, isError: isTalentGraphError } = useDesignerTalentGraph(designer?.workspaceId, designer?.id);
+
+  const handleShare = async () => {
+    if (!designer) return;
+    setIsSharing(true);
+    try {
+      // Always prefer the persisted token from the server-fetched designer.
+      // Fall back to localShareToken only when the server value hasn't refreshed yet.
+      let token: string | null = designer.shareToken ?? localShareToken;
+      if (!token) {
+        const authHeaders = await getAuthHeaders();
+        const resp = await fetch(`/api/designers/${designer.id}/share`, {
+          method: "POST",
+          credentials: "include",
+          headers: authHeaders,
+        });
+        if (!resp.ok) throw new Error("Failed to generate share link");
+        const data = await resp.json();
+        token = data.shareToken as string;
+        setLocalShareToken(token);
+      }
+      const url = `${window.location.origin}/d/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied!", description: "Share link has been copied to your clipboard." });
+    } catch {
+      toast({ title: "Error", description: "Failed to copy share link.", variant: "destructive" });
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -584,6 +627,16 @@ export default function DesignerDetailsPage() {
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                       <AddToListPopover designerId={designer.id} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleShare}
+                        disabled={isSharing}
+                        className="flex items-center gap-2"
+                      >
+                        {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                        Share
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

@@ -792,6 +792,106 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Generate or return existing share token for a designer
+  app.post("/api/designers/:id/share", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const designerId = parseInt(req.params.id);
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Verify the caller is a member of the designer's workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, designer.workspaceId)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to share this designer" });
+      }
+
+      // Return existing token if already set
+      if (designer.shareToken) {
+        return res.json({ shareToken: designer.shareToken });
+      }
+
+      // Generate a new stable share token
+      const shareToken = crypto.randomBytes(12).toString('base64url');
+
+      await db
+        .update(designers)
+        .set({ shareToken })
+        .where(eq(designers.id, designerId));
+
+      res.json({ shareToken });
+    } catch (err) {
+      console.error('Error generating share token:', err);
+      res.status(500).json({ error: "Failed to generate share token" });
+    }
+  });
+
+  // Get designer by share token — requires authentication but not workspace membership
+  app.get("/api/shared/designers/:token", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { token } = req.params;
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.shareToken, token),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Fetch the workspace slug so the client can build a deep-link
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, designer.workspaceId),
+        columns: { slug: true },
+      });
+
+      // Check if the viewer is a member of the designer's workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, designer.workspaceId)
+        ),
+      });
+
+      // Return only public-facing fields, plus workspace slug and viewer membership info
+      res.json({
+        id: designer.id,
+        name: designer.name,
+        title: designer.title,
+        company: designer.company,
+        location: designer.location,
+        photoUrl: designer.photoUrl,
+        skills: designer.skills,
+        available: designer.available,
+        description: designer.description,
+        level: designer.level,
+        workspaceId: designer.workspaceId,
+        workspaceSlug: workspace?.slug ?? null,
+        viewerIsMember: !!membership,
+      });
+    } catch (err) {
+      console.error('Error fetching shared designer:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
   app.put("/api/designers/:id", upload.single('photo'), withErrorHandler(async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");

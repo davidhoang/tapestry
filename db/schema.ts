@@ -202,6 +202,7 @@ export const listDesigners = pgTable("list_designers", {
   listId: integer("list_id").references(() => lists.id, { onDelete: 'cascade' }),
   designerId: integer("designer_id").references(() => designers.id),
   notes: text("notes"),
+  sortOrder: integer("sort_order").default(0),
   addedAt: timestamp("added_at").defaultNow(),
 });
 

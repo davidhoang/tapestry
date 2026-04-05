@@ -2150,6 +2150,30 @@ export function registerRoutes(app: Express): Server {
     }
   }));
 
+  // Reorder designers in a list
+  app.patch("/api/lists/:listId/reorder", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const listId = parseInt(req.params.listId);
+    const { orderedDesignerIds } = req.body as { orderedDesignerIds: number[] };
+
+    if (!Array.isArray(orderedDesignerIds)) {
+      return res.status(400).json({ error: "orderedDesignerIds must be an array" });
+    }
+
+    await Promise.all(
+      orderedDesignerIds.map((designerId, index) =>
+        db.update(listDesigners)
+          .set({ sortOrder: index })
+          .where(and(eq(listDesigners.listId, listId), eq(listDesigners.designerId, designerId)))
+      )
+    );
+
+    res.json({ success: true });
+  }));
+
   // Public list route
   app.get("/api/lists/:slugOrId/public", async (req, res) => {
     try {

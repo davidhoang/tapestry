@@ -211,6 +211,29 @@ export function useBulkAddDesignersToList() {
   });
 }
 
+export function useReorderListDesigners() {
+  const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const pathParts = location.split("/");
+  const workspaceSlug = pathParts[1];
+
+  return useMutation({
+    mutationFn: async ({ listId, orderedDesignerIds }: { listId: number; orderedDesignerIds: number[] }) => {
+      const response = await fetch(`/api/lists/${listId}/reorder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedDesignerIds }),
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lists", workspaceSlug] });
+    },
+  });
+}
+
 export function useUpdateListDesignerNotes() {
   const queryClient = useQueryClient();
   const [location] = useLocation();

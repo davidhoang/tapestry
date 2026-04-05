@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   useLists,
   useCreateList,
@@ -6,6 +6,7 @@ import {
   useUpdateList,
   useAddDesignersToList,
   useUpdateListDesignerNotes,
+  useReorderListDesigners,
 } from "@/hooks/use-lists";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDesigners } from "@/hooks/use-designer";
@@ -53,7 +54,22 @@ import {
 } from "@/components/ui/command";
 import { Command as CommandPrimitive } from "cmdk";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { exportToCSV, designerExportColumns } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +93,156 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SelectDesigner, SelectList } from "@db/schema";
 import { UserPlus } from "lucide-react";
+
+function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string | null; name: string }> }) {
+  const fanDesigners = useMemo(() => {
+    const shuffled = [...designers].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
+  }, [designers.map(d => d.name).join(",")]);
+
+  const rotations = [-12, -6, 0, 6, 12];
+  const translateY = [8, 4, 0, 4, 8];
+  const zIndexes = [1, 2, 5, 2, 1];
+
+  return (
+    <div className="relative flex items-center justify-center h-full">
+      {fanDesigners.map((designer, i) => (
+        <div
+          key={i}
+          className="absolute w-16 h-20 rounded-xl border-2 border-white shadow-xl overflow-hidden bg-muted"
+          style={{
+            transform: `rotate(${rotations[i]}deg) translateY(${translateY[i]}px) translateX(${(i - Math.floor(fanDesigners.length / 2)) * 44}px)`,
+            zIndex: zIndexes[i],
+          }}
+        >
+          {designer.photoUrl ? (
+            <img src={designer.photoUrl} alt={designer.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40 text-primary font-semibold text-lg">
+              {designer.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface SortableDesignerCardProps {
+  designer: SelectDesigner & { notes?: string | null };
+  listId: number;
+  onEditNotes: (designerId: number, notes: string) => void;
+  onSaveNotes: (designerId: number) => void;
+  onCancelEditNotes: () => void;
+  editingNotesFor: number | null;
+  notesValue: string;
+  setNotesValue: (v: string) => void;
+  updateNotesPending: boolean;
+  onNavigate: (designer: SelectDesigner) => void;
+}
+
+function SortableDesignerCard({
+  designer,
+  listId,
+  onEditNotes,
+  onSaveNotes,
+  onCancelEditNotes,
+  editingNotesFor,
+  notesValue,
+  setNotesValue,
+  updateNotesPending,
+  onNavigate,
+}: SortableDesignerCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: designer.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const notes = designer.notes;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className={`hover:shadow-lg transition-shadow ${isDragging ? "shadow-2xl ring-2 ring-primary/30" : ""}`}>
+        <CardContent className="flex items-start space-x-3 pt-5 pb-5">
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex items-center self-center cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-0.5 flex-shrink-0"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+          <Avatar
+            className="w-11 h-11 cursor-pointer flex-shrink-0"
+            onClick={() => onNavigate(designer)}
+          >
+            <AvatarImage src={designer.photoUrl || ""} />
+            <AvatarFallback>
+              {designer.name.split(" ").map((n: string) => n[0]).join("")}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h3
+              className="font-medium cursor-pointer hover:underline truncate"
+              onClick={() => onNavigate(designer)}
+            >
+              {designer.name}
+            </h3>
+            <p className="text-sm text-muted-foreground truncate">{designer.title}</p>
+            {editingNotesFor === designer.id ? (
+              <div className="mt-3 space-y-2">
+                <Textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder="Add notes about this designer..."
+                  className="min-h-[80px]"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => onSaveNotes(designer.id)} disabled={updateNotesPending}>
+                    {updateNotesPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    Save
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={onCancelEditNotes}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {notes ? (
+                  <div className="mt-2 text-sm">
+                    <p className="text-muted-foreground">{notes}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 h-7 px-2 text-xs"
+                      onClick={() => onEditNotes(designer.id, notes)}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit notes
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-7 px-2 text-xs"
+                    onClick={() => onEditNotes(designer.id, "")}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add notes
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function DesignerSelect({
   onSelect,
@@ -473,6 +639,43 @@ function ViewListDialog({
     });
   };
 
+  const reorderDesigners = useReorderListDesigners();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  type ListDesignerEntry = {
+    id: number;
+    designer: SelectDesigner;
+    notes?: string | null;
+    sortOrder?: number | null;
+  };
+
+  const [orderedDesigners, setOrderedDesigners] = useState<ListDesignerEntry[]>(() =>
+    [...(list.designers || [])].sort((a: any, b: any) => (a.sortOrder ?? a.id) - (b.sortOrder ?? b.id))
+  );
+
+  useEffect(() => {
+    setOrderedDesigners(
+      [...(list.designers || [])].sort((a: any, b: any) => (a.sortOrder ?? a.id) - (b.sortOrder ?? b.id))
+    );
+  }, [list.designers]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setOrderedDesigners((prev) => {
+      const oldIndex = prev.findIndex((e) => e.designer.id === active.id);
+      const newIndex = prev.findIndex((e) => e.designer.id === over.id);
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+      reorderDesigners.mutate({
+        listId: list.id,
+        orderedDesignerIds: reordered.map((e) => e.designer.id),
+      });
+      return reordered;
+    });
+  };
+
   const [jobUrlInput, setJobUrlInput] = useState("");
   const [isLoadingOg, setIsLoadingOg] = useState(false);
   const [ogData, setOgData] = useState<{ title?: string; description?: string; image?: string; siteName?: string; favicon?: string; url?: string } | null>(
@@ -521,221 +724,172 @@ function ViewListDialog({
     setSavedJobUrl(null);
   };
 
+  const coverDesigners = useMemo(
+    () => orderedDesigners.map((e) => ({ photoUrl: e.designer.photoUrl, name: e.designer.name })),
+    [orderedDesigners]
+  );
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-          <div className="flex-shrink-0 relative">
-            <div className="h-8 bg-gradient-to-r from-primary/20 to-primary/5" />
-          </div>
-          <DialogHeader className="flex-shrink-0 px-6 pt-2 mb-4">
-            <DialogTitle className="text-2xl">{list.name}</DialogTitle>
-            <p className="text-muted-foreground">{list.description}</p>
-            <p className="text-sm text-muted-foreground">
-              {list.designers?.length || 0} designer{(list.designers?.length || 0) !== 1 ? 's' : ''}
-            </p>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
-          <div className="space-y-5">
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0">
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
 
-            {/* Job Description Smart Link */}
-            {ogData && savedJobUrl ? (
-              <div className="group relative">
-                <a
-                  href={savedJobUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block rounded-xl border border-border hover:border-primary/40 transition-colors overflow-hidden bg-card"
-                >
-                  <div className="flex gap-4 p-4">
-                    {ogData.image && (
-                      <div className="flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-muted hidden sm:block">
-                        <img
-                          src={ogData.image}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <img
-                          src={ogData.favicon}
-                          alt=""
-                          className="w-4 h-4 rounded-sm flex-shrink-0"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                        <span className="text-xs text-muted-foreground font-medium truncate">
-                          {ogData.siteName || new URL(savedJobUrl).hostname}
-                        </span>
-                      </div>
-                      <p className="font-semibold text-sm leading-snug line-clamp-2 text-foreground">
-                        {ogData.title}
-                      </p>
-                      {ogData.description && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {ogData.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </a>
-                <button
-                  onClick={(e) => { e.preventDefault(); handleRemoveJobDescription(); }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                  title="Remove job description"
-                >
-                  <Trash className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <div
-                className="rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors cursor-text"
-                onClick={() => jobUrlInputRef.current?.focus()}
-              >
-                {isLoadingOg ? (
-                  <div className="flex items-center gap-3 px-4 py-3.5">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm text-muted-foreground">Fetching job details…</span>
-                  </div>
+            {/* Cover: gradient + fanned designer photos */}
+            <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0 overflow-hidden">
+              <div className="absolute inset-0 flex items-center justify-center">
+                {coverDesigners.length > 0 ? (
+                  <DesignerCardFan designers={coverDesigners} />
                 ) : (
-                  <div className="flex items-center gap-3 px-4 py-1">
-                    <UserPlus className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
-                    <input
-                      ref={jobUrlInputRef}
-                      type="url"
-                      value={jobUrlInput}
-                      onChange={(e) => setJobUrlInput(e.target.value)}
-                      onPaste={(e) => {
-                        const pasted = e.clipboardData.getData("text");
-                        if (pasted.trim()) {
-                          e.preventDefault();
-                          setJobUrlInput(pasted.trim());
-                          handleJobUrlSubmit(pasted.trim());
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleJobUrlSubmit(jobUrlInput);
-                      }}
-                      placeholder="Paste a job description URL…"
-                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 py-3"
-                    />
-                    {jobUrlInput && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => handleJobUrlSubmit(jobUrlInput)}
-                      >
-                        Add
-                      </Button>
-                    )}
-                  </div>
+                  <div className="text-muted-foreground/30 text-sm">No designers yet</div>
                 )}
               </div>
-            )}
+            </div>
 
-            <div className="space-y-4">
-              {list.designers?.map(
-                ({
-                  designer,
-                  notes,
-                }: {
-                  designer: SelectDesigner;
-                  notes?: string;
-                }) => (
-                  <Card
-                    key={designer.id}
-                    className="hover:shadow-lg transition-shadow"
+            {/* Header */}
+            <div className="px-7 pt-5 pb-1">
+              <DialogTitle className="text-2xl font-bold leading-tight">{list.name}</DialogTitle>
+              {list.description && (
+                <p className="text-muted-foreground mt-1">{list.description}</p>
+              )}
+              <p className="text-sm text-muted-foreground mt-1">
+                {orderedDesigners.length} designer{orderedDesigners.length !== 1 ? 's' : ''}
+                {orderedDesigners.length > 1 && (
+                  <span className="ml-2 text-xs text-muted-foreground/60">· drag to reorder</span>
+                )}
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="px-7 pb-8 mt-5 space-y-5">
+
+              {/* Job Description Smart Link */}
+              {ogData && savedJobUrl ? (
+                <div className="group relative">
+                  <a
+                    href={savedJobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl border border-border hover:border-primary/40 transition-colors overflow-hidden bg-card"
                   >
-                    <CardContent className="flex items-start space-x-4 pt-6">
-                      <Avatar 
-                        className="w-12 h-12 cursor-pointer"
-                        onClick={() => setLocation(`/${workspaceSlug}/designers/${slugify(designer.name)}`)}
-                      >
-                        <AvatarImage src={designer.photoUrl || ""} />
-                        <AvatarFallback>
-                          {designer.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <h3 
-                          className="font-medium cursor-pointer hover:underline"
-                          onClick={() => setLocation(`/${workspaceSlug}/designers/${slugify(designer.name)}`)}
-                        >
-                          {designer.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {designer.title}
+                    <div className="flex gap-4 p-4">
+                      {ogData.image && (
+                        <div className="flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-muted hidden sm:block">
+                          <img
+                            src={ogData.image}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <img
+                            src={ogData.favicon}
+                            alt=""
+                            className="w-4 h-4 rounded-sm flex-shrink-0"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                          <span className="text-xs text-muted-foreground font-medium truncate">
+                            {ogData.siteName || new URL(savedJobUrl).hostname}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-sm leading-snug line-clamp-2 text-foreground">
+                          {ogData.title}
                         </p>
-                        {editingNotesFor === designer.id ? (
-                          <div className="mt-3 space-y-2">
-                            <Textarea
-                              value={notesValue}
-                              onChange={(e) => setNotesValue(e.target.value)}
-                              placeholder="Add notes about this designer..."
-                              className="min-h-[80px]"
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleSaveNotes(designer.id)}
-                                disabled={updateNotes.isPending}
-                              >
-                                {updateNotes.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                ) : null}
-                                Save
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleCancelEditNotes}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            {notes ? (
-                              <div className="mt-2 text-sm">
-                                <p className="font-medium">Notes:</p>
-                                <p className="text-muted-foreground">{notes}</p>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="mt-1 h-7 px-2 text-xs"
-                                  onClick={() => handleStartEditNotes(designer.id, notes)}
-                                >
-                                  <Pencil className="h-3 w-3 mr-1" />
-                                  Edit notes
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="mt-2 h-7 px-2 text-xs"
-                                onClick={() => handleStartEditNotes(designer.id)}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add notes
-                              </Button>
-                            )}
-                          </>
+                        {ogData.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {ogData.description}
+                          </p>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                ),
+                    </div>
+                  </a>
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleRemoveJobDescription(); }}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    title="Remove job description"
+                  >
+                    <Trash className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors cursor-text"
+                  onClick={() => jobUrlInputRef.current?.focus()}
+                >
+                  {isLoadingOg ? (
+                    <div className="flex items-center gap-3 px-4 py-3.5">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">Fetching job details…</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 px-4 py-1">
+                      <UserPlus className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                      <input
+                        ref={jobUrlInputRef}
+                        type="url"
+                        value={jobUrlInput}
+                        onChange={(e) => setJobUrlInput(e.target.value)}
+                        onPaste={(e) => {
+                          const pasted = e.clipboardData.getData("text");
+                          if (pasted.trim()) {
+                            e.preventDefault();
+                            setJobUrlInput(pasted.trim());
+                            handleJobUrlSubmit(pasted.trim());
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleJobUrlSubmit(jobUrlInput);
+                        }}
+                        placeholder="Paste a job description URL…"
+                        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 py-3"
+                      />
+                      {jobUrlInput && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => handleJobUrlSubmit(jobUrlInput)}
+                        >
+                          Add
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
-              <div className="border-t pt-4 mt-4">
+              {/* Designer list with drag-and-drop */}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext
+                  items={orderedDesigners.map((e) => e.designer.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    {orderedDesigners.map((entry) => (
+                      <SortableDesignerCard
+                        key={entry.designer.id}
+                        designer={{ ...entry.designer, notes: entry.notes }}
+                        listId={list.id}
+                        editingNotesFor={editingNotesFor}
+                        notesValue={notesValue}
+                        setNotesValue={setNotesValue}
+                        updateNotesPending={updateNotes.isPending}
+                        onEditNotes={handleStartEditNotes}
+                        onSaveNotes={handleSaveNotes}
+                        onCancelEditNotes={handleCancelEditNotes}
+                        onNavigate={(d) => setLocation(`/${workspaceSlug}/designers/${slugify(d.name)}`)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              {/* Share / visibility footer */}
+              <div className="border-t pt-5 mt-2">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -752,37 +906,30 @@ function ViewListDialog({
                   </div>
 
                   {isPublic && (
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          readOnly
-                          value={shareUrl}
-                          className="font-mono text-sm"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={copyShareUrl}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {
-                            const listIdentifier = list.slug || String(list.id);
-                            setLocation(`/${workspaceSlug}/lists/${listIdentifier}/email`);
-                          }}
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        readOnly
+                        value={shareUrl}
+                        className="font-mono text-sm"
+                      />
+                      <Button variant="outline" size="icon" onClick={copyShareUrl}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const listIdentifier = list.slug || String(list.id);
+                          setLocation(`/${workspaceSlug}/lists/${listIdentifier}/email`);
+                        }}
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </DialogContent>
       </Dialog>

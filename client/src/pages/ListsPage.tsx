@@ -246,13 +246,24 @@ function SortableDesignerCard({
             style={{ background: "#fef9ee" }}
           >
             {isEditing ? (
-              <Textarea
+              <textarea
                 value={notesValue}
-                onChange={(e) => setNotesValue(e.target.value)}
+                onChange={(e) => {
+                  setNotesValue(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = e.target.scrollHeight + "px";
+                }}
                 onBlur={() => onSaveNotes(designer.id)}
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = "auto";
+                    el.style.height = el.scrollHeight + "px";
+                  }
+                }}
                 placeholder="Jot down your thoughts…"
                 autoFocus
-                className="min-h-[64px] bg-transparent border-none shadow-none focus-visible:ring-0 text-sm px-4 py-3 resize-none leading-6 w-full rounded-lg"
+                rows={1}
+                className="w-full bg-transparent border-none outline-none text-sm px-4 py-3 resize-none leading-6 rounded-lg overflow-hidden"
               />
             ) : (
               <div

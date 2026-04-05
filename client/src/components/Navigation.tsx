@@ -92,19 +92,17 @@ export default function Navigation() {
   return (
     <nav className="border-b border-gray-200 bg-nav-cream fixed top-0 left-0 right-0 z-50">
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 mx-auto">
-        {/* Left: Logo + Navigation Links */}
+        {/* Left: Workspace Switcher + Navigation Links */}
         <div className="flex items-center">
-          <Link to={user ? `/${workspaceSlug}/home` : "/"} className="mr-6 flex items-center space-x-2">
-            <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
-          </Link>
+          {user ? (
+            <WorkspaceSwitcher />
+          ) : (
+            <Link to="/" className="mr-6 flex items-center space-x-2">
+              <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
+            </Link>
+          )}
           {user && (
-            <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
-              <Link
-                to={`/${workspaceSlug}/home`}
-                className={location === `/${workspaceSlug}/home` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
-              >
-                Home
-              </Link>
+            <div className="hidden md:flex items-center space-x-6 text-sm font-semibold ml-2 pl-4 border-l border-gray-200">
               <Link
                 to={`/${workspaceSlug}/directory`}
                 className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
@@ -135,10 +133,8 @@ export default function Navigation() {
           )}
         </div>
 
-        {/* Center: Workspace Switcher */}
-        <div className="flex-1 flex items-center justify-center">
-          {user && <WorkspaceSwitcher />}
-        </div>
+        {/* Spacer */}
+        <div className="flex-1" />
         
         {/* Right: User Menu */}
         <div className="flex items-center space-x-4">

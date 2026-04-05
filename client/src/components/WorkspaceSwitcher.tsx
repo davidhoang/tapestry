@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, Building2, Crown, Shield, Edit3, Users } from 'lucide-react';
+import { ChevronDown, Building2, Crown, Shield, Edit3, Users, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Workspace {
@@ -124,13 +124,12 @@ export default function WorkspaceSwitcher({ className = '' }: WorkspaceSwitcherP
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={`${className} justify-between min-w-[140px]`}>
-          <div className="flex items-center">
-            <span className="hidden sm:inline font-medium truncate max-w-[120px]">
-              {displayName}
-            </span>
-          </div>
-          <ChevronDown className="w-3 h-3 ml-2 opacity-60" />
+        <Button variant="ghost" size="sm" className={`${className} flex items-center gap-1.5 px-2 hover:bg-gray-100`}>
+          <Home className="w-4 h-4 text-gray-600 flex-shrink-0" />
+          <span className="hidden sm:inline font-medium text-gray-800 truncate max-w-[140px]">
+            {displayName}
+          </span>
+          <ChevronDown className="w-3 h-3 opacity-50 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       

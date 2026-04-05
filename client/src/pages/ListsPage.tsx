@@ -166,7 +166,7 @@ function SortableDesignerCard({
   return (
     <div ref={setNodeRef} style={style}>
       <Card className={`hover:shadow-lg transition-shadow ${isDragging ? "shadow-2xl ring-2 ring-primary/30" : ""}`}>
-        <CardContent className="flex items-start space-x-3 pt-5 pb-5">
+        <CardContent className="flex items-start space-x-3 py-4">
           <div
             {...attributes}
             {...listeners}
@@ -732,7 +732,7 @@ function ViewListDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0">
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0 sm:p-0 gap-0">
 
           {/* Cover: full-bleed gradient + fanned designer photos — outside scroll */}
           <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0">
@@ -749,21 +749,21 @@ function ViewListDialog({
           <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
 
             {/* Header */}
-            <div className="px-7 pt-5 pb-1">
-              <DialogTitle className="text-2xl font-bold leading-tight">{list.name}</DialogTitle>
+            <div className="px-6 pt-5 pb-0">
+              <DialogTitle className="text-xl font-bold leading-tight">{list.name}</DialogTitle>
               {list.description && (
-                <p className="text-muted-foreground mt-1">{list.description}</p>
+                <p className="text-muted-foreground text-sm mt-1">{list.description}</p>
               )}
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1.5">
                 {orderedDesigners.length} designer{orderedDesigners.length !== 1 ? 's' : ''}
                 {orderedDesigners.length > 1 && (
-                  <span className="ml-2 text-xs text-muted-foreground/60">· drag to reorder</span>
+                  <span className="ml-1.5 text-muted-foreground/50">· drag to reorder</span>
                 )}
               </p>
             </div>
 
             {/* Content */}
-            <div className="px-7 pb-8 mt-5 space-y-5">
+            <div className="px-6 pb-6 mt-4 space-y-3">
 
               {/* Job Description Smart Link */}
               {ogData && savedJobUrl ? (
@@ -890,7 +890,7 @@ function ViewListDialog({
               </DndContext>
 
               {/* Share / visibility footer */}
-              <div className="border-t pt-5 mt-2">
+              <div className="border-t pt-4 mt-1">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox

@@ -177,40 +177,20 @@ interface SortableDesignerCardProps {
   designer: SelectDesigner & { notes?: string | null };
   onEditNotes: (designerId: number, notes: string) => void;
   onSaveNotes: (designerId: number) => void;
-  onCancelEditNotes: () => void;
   editingNotesFor: number | null;
   notesValue: string;
   setNotesValue: (v: string) => void;
-  updateNotesPending: boolean;
   onNavigate: (designer: SelectDesigner) => void;
 }
 
-function PaperclipSVG({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 26 56"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden
-    >
-      <path d="M12 2C8.686 2 6 4.686 6 8V36C6 41.523 10.477 46 16 46C21.523 46 26 41.523 26 36V6H22V36C22 39.314 19.314 42 16 42C12.686 42 10 39.314 10 36V8C10 6.895 10.895 6 12 6C13.105 6 14 6.895 14 8V32H18V8C18 4.686 15.314 2 12 2Z" />
-    </svg>
-  );
-}
 
 function SortableDesignerCard({
   designer,
   onEditNotes,
   onSaveNotes,
-  onCancelEditNotes,
   editingNotesFor,
   notesValue,
   setNotesValue,
-  updateNotesPending,
   onNavigate,
 }: SortableDesignerCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: designer.id });
@@ -259,45 +239,30 @@ function SortableDesignerCard({
           </div>
         </CardContent>
 
-        {/* Paper note — always visible, attached below card */}
-        <div className="relative mx-4 mb-3 overflow-visible">
-          {/* SVG paperclip sitting on the right edge of the note */}
-          <div className="absolute top-2 -right-3 z-10 text-zinc-400/60 rotate-[10deg]">
-            <PaperclipSVG className="h-8 w-5" />
-          </div>
-
+        {/* Note — always visible below the card row */}
+        <div className="mx-4 mb-3">
           <div
             className="rounded-lg border border-amber-200/60 shadow-sm overflow-hidden"
             style={{ background: "#fef9ee" }}
           >
             {isEditing ? (
-              <div className="px-4 pt-4 pb-3 space-y-2">
-                <Textarea
-                  value={notesValue}
-                  onChange={(e) => setNotesValue(e.target.value)}
-                  placeholder="Jot down your thoughts…"
-                  autoFocus
-                  className="min-h-[64px] bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-0 resize-none leading-7 w-full"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" className="h-7 text-xs" onClick={() => onSaveNotes(designer.id)} disabled={updateNotesPending}>
-                    {updateNotesPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Save
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onCancelEditNotes}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
+              <Textarea
+                value={notesValue}
+                onChange={(e) => setNotesValue(e.target.value)}
+                onBlur={() => onSaveNotes(designer.id)}
+                placeholder="Jot down your thoughts…"
+                autoFocus
+                className="min-h-[64px] bg-transparent border-none shadow-none focus-visible:ring-0 text-sm px-4 py-3 resize-none leading-6 w-full rounded-lg"
+              />
             ) : (
               <div
                 className="px-4 py-3 cursor-text min-h-[44px] flex items-center"
                 onClick={() => onEditNotes(designer.id, notes || "")}
               >
                 {notes ? (
-                  <p className="text-sm text-foreground/70 leading-7 line-clamp-2">{notes}</p>
+                  <p className="text-sm text-foreground/70 leading-6 line-clamp-2">{notes}</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground/40 leading-7 italic">Add a note…</p>
+                  <p className="text-sm text-muted-foreground/35 leading-6 italic">Add a note…</p>
                 )}
               </div>
             )}
@@ -650,10 +615,6 @@ function ViewListDialog({
         designerId,
         notes: notesValue,
       });
-      toast({
-        title: "Success",
-        description: "Notes saved successfully",
-      });
       setEditingNotesFor(null);
       setNotesValue("");
     } catch (error: any) {
@@ -941,10 +902,8 @@ function ViewListDialog({
                         editingNotesFor={editingNotesFor}
                         notesValue={notesValue}
                         setNotesValue={setNotesValue}
-                        updateNotesPending={updateNotes.isPending}
                         onEditNotes={handleStartEditNotes}
                         onSaveNotes={handleSaveNotes}
-                        onCancelEditNotes={handleCancelEditNotes}
                         onNavigate={(d) => setLocation(`/${workspaceSlug}/designers/${slugify(d.name)}`)}
                       />
                     ))}

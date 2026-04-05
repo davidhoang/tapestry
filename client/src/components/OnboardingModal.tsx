@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, X, Sparkles, Users, MessageSquare, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, Sparkles, Users, MessageSquare, Search } from "lucide-react";
 
 interface OnboardingSlide {
   id: string;
@@ -103,16 +102,12 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
     }
   };
 
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index);
-  };
-
   const slide = onboardingSlides[currentSlide];
   const Icon = slide.icon;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden flex flex-col" style={{ height: "580px" }}>
         <VisuallyHidden>
           <DialogTitle>Onboarding</DialogTitle>
           <DialogDescription>
@@ -124,7 +119,7 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
         <div className="relative min-h-0 flex-1 flex flex-col">
           {/* Slide content */}
           <div className="flex-1 overflow-y-auto p-8 pt-8 text-center" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
-            <div className="max-w-md mx-auto space-y-6">
+            <div className="max-w-md mx-auto space-y-6 h-full flex flex-col justify-center">
               {/* Icon */}
               <div className="flex justify-center">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -147,22 +142,6 @@ export default function OnboardingModal({ open, onOpenChange, onComplete }: Onbo
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Progress dots - at bottom of content area */}
-          <div className="flex justify-center space-x-2 pb-6">
-            {onboardingSlides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  index === currentSlide
-                    ? "bg-primary"
-                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                )}
-              />
-            ))}
           </div>
 
           {/* Navigation buttons with border-top */}

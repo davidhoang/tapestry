@@ -124,45 +124,51 @@ function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string |
 
   const count = fanDesigners.length;
   const zIndexes = [1, 3, 5, 3, 1].slice(0, count);
-  const spacing = 58;
 
-  const restRotations  = [-14, -7, 0, 7, 14];
-  const restDropY      = [12, 5, 0, 5, 12];
-  const hoverRotations = [-22, -11, 0, 11, 22];
-  const hoverDropY     = [16, 6, -8, 6, 16];
+  // At rest: gentle fan, cards sitting slightly low
+  const restRotations = [-13, -6, 0, 6, 13];
+  const restDropY     = [10, 4, 0, 4, 10];
+  const restSpacing   = 78;
+
+  // On hover: dramatic spread + ALL cards lift up strongly
+  const hoverRotations = [-30, -15, 0, 15, 30];
+  const hoverDropY     = [-48, -60, -70, -60, -48];
+  const hoverSpacing   = 100;
 
   return (
     <div
-      className="relative flex items-center justify-center h-full w-full cursor-default"
+      className="relative flex items-end justify-center w-full cursor-default pb-4"
+      style={{ height: "100%" }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {fanDesigners.map((designer, i) => {
-        const rot   = hovered ? hoverRotations[i] : restRotations[i];
-        const dy    = hovered ? hoverDropY[i]     : restDropY[i];
-        const offsetX = (i - Math.floor(count / 2)) * spacing;
+        const rot      = hovered ? hoverRotations[i] : restRotations[i];
+        const dy       = hovered ? hoverDropY[i]     : restDropY[i];
+        const spacing  = hovered ? hoverSpacing       : restSpacing;
+        const offsetX  = (i - Math.floor(count / 2)) * spacing;
         const gradient = getCardGradient(designer.name);
         const initials = designer.name.split(" ").map(n => n[0]).join("").slice(0, 2);
 
         return (
           <div
             key={i}
-            className="absolute"
+            className="absolute bottom-4"
             style={{
-              transform: `rotate(${rot}deg) translateY(${dy}px) translateX(${offsetX}px)`,
+              transform: `translateX(${offsetX}px) rotate(${rot}deg) translateY(${dy}px)`,
               zIndex: zIndexes[i],
-              transition: "transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1)",
+              transition: "transform 0.5s cubic-bezier(0.34, 1.3, 0.64, 1)",
             }}
           >
             <div
-              className="w-24 h-24 rounded-2xl border-[2.5px] border-white/90 shadow-xl overflow-hidden"
+              className="w-36 h-36 rounded-3xl border-[3px] border-white/90 shadow-2xl overflow-hidden"
               style={{ background: gradient }}
             >
               {designer.photoUrl ? (
                 <img src={designer.photoUrl} alt={designer.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-end justify-center pb-3">
-                  <span className="text-white/90 font-bold text-2xl drop-shadow-md tracking-wide">{initials}</span>
+                <div className="w-full h-full flex items-end justify-center pb-4">
+                  <span className="text-white/90 font-bold text-3xl drop-shadow-md tracking-wide">{initials}</span>
                 </div>
               )}
             </div>
@@ -771,7 +777,7 @@ function ViewListDialog({
         <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0 sm:p-0 gap-0">
 
           {/* Cover: full-bleed gradient + fanned designer photos — outside scroll */}
-          <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0 overflow-hidden">
+          <div className="relative h-60 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0 overflow-visible">
             <div className="absolute inset-0 flex items-center justify-center">
               {coverDesigners.length > 0 ? (
                 <DesignerCardFan designers={coverDesigners} />

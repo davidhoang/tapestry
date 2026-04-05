@@ -733,19 +733,20 @@ function ViewListDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-[900px] max-h-[90vh] flex flex-col overflow-hidden p-0">
+
+          {/* Cover: full-bleed gradient + fanned designer photos — outside scroll */}
+          <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0">
+            <div className="absolute inset-0 flex items-center justify-center">
+              {coverDesigners.length > 0 ? (
+                <DesignerCardFan designers={coverDesigners} />
+              ) : (
+                <div className="text-muted-foreground/30 text-sm">No designers yet</div>
+              )}
+            </div>
+          </div>
+
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
-
-            {/* Cover: gradient + fanned designer photos */}
-            <div className="relative h-44 bg-gradient-to-br from-primary/25 via-primary/10 to-background flex-shrink-0 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                {coverDesigners.length > 0 ? (
-                  <DesignerCardFan designers={coverDesigners} />
-                ) : (
-                  <div className="text-muted-foreground/30 text-sm">No designers yet</div>
-                )}
-              </div>
-            </div>
 
             {/* Header */}
             <div className="px-7 pt-5 pb-1">

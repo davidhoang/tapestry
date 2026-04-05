@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -25,6 +26,7 @@ import {
   Bot,
   Loader2,
   AlertCircle,
+  X,
 } from "lucide-react";
 
 interface OnboardingFlowProps {
@@ -134,6 +136,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     if (next) setStep(next);
   };
 
+  const goSkip = () => {
+    if (step === "done") {
+      completeMutation.mutate();
+      return;
+    }
+    const next = STEP_ORDER[currentIndex + 1];
+    if (next) setStep(next);
+  };
+
   const goPrev = () => {
     const prev = STEP_ORDER[currentIndex - 1];
     if (prev) setStep(prev);
@@ -166,172 +177,166 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setTimeout(() => setCopiedConfig(false), 2000);
   };
 
-  const canContinue = () => {
-    if (step === "about") return !!role && !!useCase;
-    return true;
-  };
+  const isDone = step === "done";
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      {/* Top bar */}
-      <div className="flex-none flex items-center justify-between px-6 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+    <Dialog open>
+      <DialogContent
+        className="p-0 sm:p-0 gap-0 overflow-hidden flex flex-col sm:max-w-2xl md:max-w-3xl max-h-[90vh] sm:max-h-[90vh]"
+        onInteractOutside={(e) => e.preventDefault()}
+        hideClose
+      >
+        {/* Header */}
+        <div className="flex-none flex items-center justify-between px-6 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight">Tapestry</span>
           </div>
-          <span className="text-sm font-semibold tracking-tight">Tapestry</span>
+
+          {/* Step pills */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            {STEP_ORDER.map((s, i) => (
+              <div
+                key={s}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-500",
+                  i < currentIndex
+                    ? "bg-primary w-3"
+                    : i === currentIndex
+                    ? "bg-primary w-5"
+                    : "bg-border w-3"
+                )}
+              />
+            ))}
+          </div>
+
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {currentIndex + 1} / {STEP_ORDER.length}
+          </span>
         </div>
 
-        {/* Step pills */}
-        <div className="hidden sm:flex items-center gap-1.5">
-          {STEP_ORDER.map((s, i) => (
-            <div
-              key={s}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-500",
-                i < currentIndex
-                  ? "bg-primary w-3"
-                  : i === currentIndex
-                  ? "bg-primary w-5"
-                  : "bg-border w-3"
-              )}
-            />
-          ))}
+        {/* Main scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-xl mx-auto px-6 py-8 sm:py-10">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: "easeOut" }}
+              >
+                {step === "welcome" && <WelcomeStep />}
+                {step === "about" && (
+                  <AboutStep
+                    role={role}
+                    setRole={setRole}
+                    company={company}
+                    setCompany={setCompany}
+                    useCase={useCase}
+                    setUseCase={setUseCase}
+                  />
+                )}
+                {step === "workspace" && (
+                  <WorkspaceStep
+                    workspaceName={workspaceName}
+                    setWorkspaceName={setWorkspaceName}
+                  />
+                )}
+                {step === "ai-setup" && (
+                  <AiSetupStep
+                    workspaceSlug={workspaceSlug}
+                    generatedToken={generatedToken}
+                    copiedToken={copiedToken}
+                    copiedConfig={copiedConfig}
+                    isCreating={createTokenMutation.isPending}
+                    onGenerateToken={() => createTokenMutation.mutate()}
+                    onCopyToken={handleCopyToken}
+                    onCopyConfig={handleCopyConfig}
+                    mcpConfig={mcpConfig}
+                  />
+                )}
+                {step === "import" && <ImportStep />}
+                {step === "done" && <DoneStep />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
 
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {currentIndex + 1} / {STEP_ORDER.length}
-        </span>
-      </div>
+        {/* Footer nav */}
+        <div className="flex-none border-t border-border bg-background px-6 py-4 flex items-center justify-between">
+          <div>
+            {currentIndex > 0 && !isDone && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goPrev}
+                className="text-muted-foreground"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+            )}
+          </div>
 
-      {/* Main scrollable content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto px-5 py-10 sm:py-14">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.22, ease: "easeOut" }}
-            >
-              {step === "welcome" && <WelcomeStep />}
-              {step === "about" && (
-                <AboutStep
-                  role={role}
-                  setRole={setRole}
-                  company={company}
-                  setCompany={setCompany}
-                  useCase={useCase}
-                  setUseCase={setUseCase}
-                />
-              )}
-              {step === "workspace" && (
-                <WorkspaceStep
-                  workspaceName={workspaceName}
-                  setWorkspaceName={setWorkspaceName}
-                />
-              )}
-              {step === "ai-setup" && (
-                <AiSetupStep
-                  workspaceSlug={workspaceSlug}
-                  generatedToken={generatedToken}
-                  copiedToken={copiedToken}
-                  copiedConfig={copiedConfig}
-                  isCreating={createTokenMutation.isPending}
-                  onGenerateToken={() => createTokenMutation.mutate()}
-                  onCopyToken={handleCopyToken}
-                  onCopyConfig={handleCopyConfig}
-                  mcpConfig={mcpConfig}
-                />
-              )}
-              {step === "import" && <ImportStep />}
-              {step === "done" && <DoneStep />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+          <div className="flex items-center gap-2">
+            {!isDone && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goSkip}
+                className="text-muted-foreground text-xs"
+              >
+                Skip for now
+              </Button>
+            )}
 
-      {/* Bottom nav */}
-      <div className="flex-none border-t border-border bg-background px-6 py-3.5 flex items-center justify-between">
-        <div>
-          {currentIndex > 0 && step !== "done" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={goPrev}
-              className="text-muted-foreground"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-          )}
+            {!isDone && (
+              <Button
+                size="sm"
+                onClick={goNext}
+                disabled={saveProfileMutation.isPending}
+              >
+                {saveProfileMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  </>
+                )}
+              </Button>
+            )}
+
+            {isDone && (
+              <Button
+                size="sm"
+                onClick={() => completeMutation.mutate()}
+                disabled={completeMutation.isPending}
+              >
+                {completeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  <>
+                    Open Tapestry
+                    <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {step === "ai-setup" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setStep("import")}
-              className="text-muted-foreground text-xs"
-            >
-              Skip for now
-            </Button>
-          )}
-          {step === "import" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setStep("done")}
-              className="text-muted-foreground text-xs"
-            >
-              Skip for now
-            </Button>
-          )}
-          {step !== "done" && (
-            <Button
-              size="sm"
-              onClick={goNext}
-              disabled={
-                !canContinue() || saveProfileMutation.isPending
-              }
-            >
-              {saveProfileMutation.isPending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </>
-              )}
-            </Button>
-          )}
-          {step === "done" && (
-            <Button
-              size="sm"
-              onClick={() => completeMutation.mutate()}
-              disabled={completeMutation.isPending}
-            >
-              {completeMutation.isPending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  Loading…
-                </>
-              ) : (
-                <>
-                  Open Tapestry
-                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -406,7 +411,7 @@ function AboutStep({
         <Badge variant="secondary" className="text-xs font-medium">About you</Badge>
         <h1 className="text-3xl font-bold tracking-tight">Tell us a bit about yourself</h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          This helps us tailor Tapestry to how you actually work.
+          This helps us tailor Tapestry to how you actually work. All optional.
         </p>
       </div>
 

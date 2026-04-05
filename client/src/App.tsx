@@ -130,7 +130,6 @@ function App() {
               <div className="flex-1">
                 <PublicListPage params={{ slugOrId }} />
               </div>
-              <Footer />
             </div>
           </Suspense>
           <Toaster />

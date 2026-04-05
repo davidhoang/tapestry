@@ -327,7 +327,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   </>
                 ) : (
                   <>
-                    Open Tapestry
+                    Start Tapestry
                     <ArrowRight className="h-3.5 w-3.5 ml-1" />
                   </>
                 )}

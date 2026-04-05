@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/command";
 import { Command as CommandPrimitive } from "cmdk";
 import { useForm } from "react-hook-form";
-import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download, GripVertical, Paperclip } from "lucide-react";
+import { Loader2, Plus, Trash, Mail, Pencil, Copy, Search, Check, Download, GripVertical } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -115,20 +115,31 @@ function getCardGradient(name: string): string {
 }
 
 function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string | null; name: string }> }) {
+  const [hovered, setHovered] = useState(false);
+
   const fanDesigners = useMemo(() => {
     const shuffled = [...designers].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
   }, [designers.map(d => d.name).join(",")]);
 
   const count = fanDesigners.length;
-  const rotations  = [-14, -7, 0, 7, 14].slice(0, count);
-  const dropY      = [12, 5, 0, 5, 12].slice(0, count);
-  const zIndexes   = [1, 3, 5, 3, 1].slice(0, count);
-  const spacing    = 58;
+  const zIndexes = [1, 3, 5, 3, 1].slice(0, count);
+  const spacing = 58;
+
+  const restRotations  = [-14, -7, 0, 7, 14];
+  const restDropY      = [12, 5, 0, 5, 12];
+  const hoverRotations = [-22, -11, 0, 11, 22];
+  const hoverDropY     = [16, 6, -8, 6, 16];
 
   return (
-    <div className="relative flex items-center justify-center h-full">
+    <div
+      className="relative flex items-center justify-center h-full w-full cursor-default"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {fanDesigners.map((designer, i) => {
+        const rot   = hovered ? hoverRotations[i] : restRotations[i];
+        const dy    = hovered ? hoverDropY[i]     : restDropY[i];
         const offsetX = (i - Math.floor(count / 2)) * spacing;
         const gradient = getCardGradient(designer.name);
         const initials = designer.name.split(" ").map(n => n[0]).join("").slice(0, 2);
@@ -138,25 +149,20 @@ function DesignerCardFan({ designers }: { designers: Array<{ photoUrl?: string |
             key={i}
             className="absolute"
             style={{
-              transform: `rotate(${rotations[i]}deg) translateY(${dropY[i]}px) translateX(${offsetX}px)`,
+              transform: `rotate(${rot}deg) translateY(${dy}px) translateX(${offsetX}px)`,
               zIndex: zIndexes[i],
+              transition: "transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1)",
             }}
           >
             <div
-              className="w-24 h-24 rounded-2xl border-[2.5px] border-white/90 shadow-xl overflow-hidden cursor-pointer transition-all duration-300 ease-out hover:-translate-y-4 hover:scale-110 hover:shadow-2xl"
+              className="w-24 h-24 rounded-2xl border-[2.5px] border-white/90 shadow-xl overflow-hidden"
               style={{ background: gradient }}
             >
               {designer.photoUrl ? (
-                <img
-                  src={designer.photoUrl}
-                  alt={designer.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={designer.photoUrl} alt={designer.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-end pb-4">
-                  <span className="text-white/90 font-bold text-2xl drop-shadow-md tracking-wide">
-                    {initials}
-                  </span>
+                <div className="w-full h-full flex items-end justify-center pb-3">
+                  <span className="text-white/90 font-bold text-2xl drop-shadow-md tracking-wide">{initials}</span>
                 </div>
               )}
             </div>
@@ -179,6 +185,23 @@ interface SortableDesignerCardProps {
   onNavigate: (designer: SelectDesigner) => void;
 }
 
+function PaperclipSVG({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 44"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M10 2C6.686 2 4 4.686 4 8V32C4 37.523 8.477 42 14 42C19.523 42 24 37.523 24 32V6H20V32C20 35.314 17.314 38 14 38C10.686 38 8 35.314 8 32V8C8 6.895 8.895 6 10 6C11.105 6 12 6.895 12 8V30H16V8C16 4.686 13.314 2 10 2Z" />
+    </svg>
+  );
+}
+
 function SortableDesignerCard({
   designer,
   onEditNotes,
@@ -191,7 +214,6 @@ function SortableDesignerCard({
   onNavigate,
 }: SortableDesignerCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: designer.id });
-  const [noteOpen, setNoteOpen] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -202,23 +224,9 @@ function SortableDesignerCard({
   const notes = designer.notes;
   const isEditing = editingNotesFor === designer.id;
 
-  useEffect(() => {
-    if (isEditing) setNoteOpen(true);
-  }, [isEditing]);
-
-  const handlePaperclipClick = () => {
-    const next = !noteOpen;
-    setNoteOpen(next);
-    if (next && !isEditing) {
-      onEditNotes(designer.id, notes || "");
-    } else if (!next && isEditing) {
-      onCancelEditNotes();
-    }
-  };
-
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className={`group/card transition-shadow overflow-hidden ${isDragging ? "shadow-2xl ring-2 ring-primary/30" : "hover:shadow-md"}`}>
+      <Card className={`group/card transition-shadow overflow-visible ${isDragging ? "shadow-2xl ring-2 ring-primary/30" : "hover:shadow-md"}`}>
         {/* Main row */}
         <CardContent className="flex items-center gap-3 py-3 px-4">
           {/* Grip handle — only visible on hover */}
@@ -249,80 +257,56 @@ function SortableDesignerCard({
             </h3>
             <p className="text-xs text-muted-foreground truncate">{designer.title}</p>
           </div>
-
-          {/* Paper clip toggle */}
-          <button
-            onClick={handlePaperclipClick}
-            title={notes ? "View / edit note" : "Add a note"}
-            className={`flex-shrink-0 p-1.5 rounded-md transition-all duration-200 ${
-              notes
-                ? "text-amber-500 hover:bg-amber-50"
-                : "text-muted-foreground/30 hover:text-muted-foreground/60 hover:bg-muted"
-            } ${noteOpen ? "rotate-[25deg]" : ""}`}
-          >
-            <Paperclip className="h-4 w-4" />
-          </button>
         </CardContent>
 
-        {/* Paper note panel */}
-        {noteOpen && (
+        {/* Paper note — always visible, clipped to bottom of card */}
+        <div className="relative mx-4 mb-3 rounded-b-lg overflow-visible">
+          {/* SVG paperclip attached to top-right of the note */}
+          <div className="absolute -top-4 right-5 z-10 text-zinc-400/70 rotate-[20deg] origin-bottom">
+            <PaperclipSVG className="h-7 w-4" />
+          </div>
+
           <div
-            className="mx-4 mb-3 rounded-lg border border-amber-200/70 shadow-sm relative"
+            className="rounded-lg border border-amber-200/80 shadow-sm overflow-hidden"
             style={{
               background: "#fef9ee",
-              backgroundImage:
-                "repeating-linear-gradient(transparent, transparent 27px, #ede0b4 27px, #ede0b4 28px)",
-              backgroundPositionY: "20px",
+              backgroundImage: "repeating-linear-gradient(transparent, transparent 27px, #e8d8a0 27px, #e8d8a0 28px)",
+              backgroundPositionY: "18px",
             }}
           >
-            {/* Decorative paper clip at top-right */}
-            <div className="absolute -top-3 right-4 z-10">
-              <Paperclip className="h-5 w-5 text-zinc-400/80 rotate-[25deg]" />
-            </div>
-
             {isEditing ? (
-              <div className="p-3 pt-5 space-y-2">
+              <div className="px-4 pt-4 pb-3 space-y-2">
                 <Textarea
                   value={notesValue}
                   onChange={(e) => setNotesValue(e.target.value)}
-                  placeholder="Jot down your thoughts..."
+                  placeholder="Jot down your thoughts…"
                   autoFocus
-                  className="min-h-[72px] bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-0 resize-none leading-7"
+                  className="min-h-[64px] bg-transparent border-none shadow-none focus-visible:ring-0 text-sm p-0 resize-none leading-7 w-full"
                 />
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => onSaveNotes(designer.id)}
-                    disabled={updateNotesPending}
-                  >
+                <div className="flex gap-2">
+                  <Button size="sm" className="h-7 text-xs" onClick={() => onSaveNotes(designer.id)} disabled={updateNotesPending}>
                     {updateNotesPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                     Save
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs"
-                    onClick={() => { onCancelEditNotes(); setNoteOpen(false); }}
-                  >
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onCancelEditNotes}>
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
               <div
-                className="p-3 pt-5 cursor-text min-h-[56px]"
+                className="px-4 py-3 cursor-text min-h-[44px] flex items-center"
                 onClick={() => onEditNotes(designer.id, notes || "")}
               >
                 {notes ? (
-                  <p className="text-sm text-foreground/75 leading-7 whitespace-pre-wrap">{notes}</p>
+                  <p className="text-sm text-foreground/70 leading-7 line-clamp-2">{notes}</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground/40 leading-7 italic">Click to jot a note…</p>
+                  <p className="text-sm text-muted-foreground/40 leading-7 italic">Add a note…</p>
                 )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </Card>
     </div>
   );

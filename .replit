@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-24", "postgresql-16", "javascript"]
 
 [deployment]
 router = "application"
@@ -29,6 +29,10 @@ externalPort = 8080
 [[ports]]
 localPort = 23637
 externalPort = 80
+
+[[ports]]
+localPort = 24858
+externalPort = 3001
 
 [[ports]]
 localPort = 25278

@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "fRQoXXXqX_IW0O3L0iO_F"
+uri = "file://artifacts/tapestry-mobile/assets/images/icon.png"
+type = "image"
+title = "tapestry app icon"

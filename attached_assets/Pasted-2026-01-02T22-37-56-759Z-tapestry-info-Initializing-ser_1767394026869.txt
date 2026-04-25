@@ -1,0 +1,375 @@
+2026-01-02T22:37:56.759Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:37:56.767Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:37:56.767Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:37:56.870Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+npm warn exec The following package was not found and will be installed: tsx@4.21.0
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@modelcontextprotocol/sdk' imported from /Users/davidhoang/Development/tapestry/server/mcp/index.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393479460:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393479460:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393479460:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393479460:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.1.0
+2026-01-02T22:37:59.524Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:37:59.525Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:37:59.525Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:37:59.525Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:37:59.525Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:38:18.172Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:38:18.172Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:38:18.171Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:38:18.174Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:38:18.174Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:38:18.248Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@modelcontextprotocol/sdk' imported from /Users/davidhoang/Development/tapestry/server/mcp/index.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393498768:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393498768:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393498768:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393498768:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.1.0
+2026-01-02T22:38:18.821Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:38:18.821Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:38:18.821Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:38:18.821Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:38:18.821Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:39:29.347Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:39:29.347Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:39:48.871Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:39:48.881Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:39:48.881Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:39:48.945Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+TypeError [ERR_INVALID_MODULE_SPECIFIER]: Invalid module "@db" is not a valid package name imported from /Users/davidhoang/Development/tapestry/server/mcp/index.ts
+    at parsePackageName (node:internal/modules/package_json_reader:211:11)
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:222:53)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393589612:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393589612:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393589612:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393589612:2:5361) {
+  code: 'ERR_INVALID_MODULE_SPECIFIER'
+}
+
+Node.js v24.1.0
+2026-01-02T22:39:49.666Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:39:49.666Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:39:49.666Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:39:49.666Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:39:49.666Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:39:52.107Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:39:52.107Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:39:52.108Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:39:52.110Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:39:52.110Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:39:52.183Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+TypeError [ERR_INVALID_MODULE_SPECIFIER]: Invalid module "@db" is not a valid package name imported from /Users/davidhoang/Development/tapestry/server/mcp/index.ts
+    at parsePackageName (node:internal/modules/package_json_reader:211:11)
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:222:53)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393592651:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393592651:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393592651:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393592651:2:5361) {
+  code: 'ERR_INVALID_MODULE_SPECIFIER'
+}
+
+Node.js v24.1.0
+2026-01-02T22:39:52.700Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:39:52.700Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:39:52.700Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:39:52.700Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:39:52.700Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:42:46.491Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:42:46.491Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:42:51.699Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:42:51.709Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:42:51.709Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:42:51.774Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@db/schema' imported from /Users/davidhoang/Development/tapestry/db/index.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393772438:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393772438:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393772438:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393772438:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.1.0
+2026-01-02T22:42:52.549Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:42:52.549Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:42:52.549Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:42:52.549Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:42:52.549Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:42:53.252Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:42:53.252Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:42:53.252Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:42:53.254Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:42:53.255Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:42:53.267Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@db/schema' imported from /Users/davidhoang/Development/tapestry/db/index.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393773809:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393773809:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393773809:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393773809:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.1.0
+2026-01-02T22:42:53.863Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:42:53.863Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:42:53.863Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:42:53.863Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:42:53.863Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:45:44.780Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:45:44.780Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:45:53.516Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:45:53.526Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:45:53.527Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:45:53.596Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@db/schema' imported from /Users/davidhoang/Development/tapestry/db/index.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393954256:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393954256:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393954256:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393954256:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.1.0
+2026-01-02T22:45:54.323Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:45:54.323Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:45:54.323Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:45:54.323Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:45:54.323Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:45:56.933Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:45:56.933Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-01-02T22:45:56.933Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-01-02T22:45:56.935Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      'tsx',
+      '/Users/davidhoang/Development/tapestry/server/mcp/index.ts',
+      [length]: 2
+    ],
+    paths: [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-01-02T22:45:56.936Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-01-02T22:45:56.941Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@db/schema' imported from /Users/davidhoang/Development/tapestry/db/index.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:255:9)
+    at packageResolve (node:internal/modules/esm/resolve:767:81)
+    at moduleResolve (node:internal/modules/esm/resolve:853:18)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393957468:2:3744)
+    at resolveDirectory (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393957468:2:4243)
+    at resolveTsPaths (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393957468:2:4984)
+    at resolve (file:///Users/davidhoang/.npm/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1767393957468:2:5361)
+    at nextResolve (node:internal/modules/esm/hooks:748:28) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.1.0
+2026-01-02T22:45:57.522Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-01-02T22:45:57.522Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-01-02T22:45:57.522Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-01-02T22:45:57.522Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-01-02T22:45:57.522Z [tapestry] [info] Client transport closed { metadata: undefined }

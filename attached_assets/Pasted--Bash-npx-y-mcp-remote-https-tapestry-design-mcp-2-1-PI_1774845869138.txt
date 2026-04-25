@@ -1,0 +1,156 @@
+
+⏺ Bash(npx -y mcp-remote https://tapestry.design/mcp 2>&1 &
+      PID=$!…)
+  ⎿  Error: Exit code 1
+     [11203] Using automatically selected callback port: 29961
+     [11203] Discovering OAuth server configuration...
+     [11203] [11203] Connecting to remote server: https://tapestry.design/mcp
+     [11203] Using transport strategy: http-first                                   [11203] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE
+     "... is not valid JSON
+         at JSON.parse (<anonymous>)
+         at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+         at successSteps (node:internal/deps/undici/undici:6967:27)
+         at readAllBytes (node:internal/deps/undici/undici:5890:13)
+     … +7 lines (ctrl+o to see all)
+                                                                               ⏺ The issue is that mcp-remote tries OAuth discovery first and the server
+  returns HTML instead of JSON. Let me check how the MCP server is set up in
+  your project.
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+⏺ The server uses Streamable HTTP transport (POST/GET on /mcp) but doesn't
+  handle the OAuth well-known discovery that mcp-remote expects. When
+  mcp-remote hits /.well-known/oauth-authorization-server, it gets back HTML
+  (the app shell) instead of JSON, causing the crash.
+
+  The fix is to tell mcp-remote to skip OAuth. Try updating the Desktop config
+  to:
+
+  {
+    "preferences": {
+      "coworkWebSearchEnabled": true,
+      "ccdScheduledTasksEnabled": true,
+      "coworkScheduledTasksEnabled": true,
+      "sidebarMode": "chat"
+    },
+    "mcpServers": {
+      "tapestry": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "mcp-remote",
+          "https://tapestry.design/mcp",
+          "--allow-http"
+        ],
+        "env": {
+          "MCP_REMOTE_SKIP_AUTH": "true"
+        }
+      }
+    }
+  }
+
+  Let me verify this works first:
+
+⏺ Bash(MCP_REMOTE_SKIP_AUTH=true npx -y mcp-remote https://tapestry.design/mcp
+      2>&1 &
+      PID=$!…)
+  ⎿  Error: Exit code 1
+     [11225] Using automatically selected callback port: 29961
+     [11225] Discovering OAuth server configuration...
+     [11225] [11225] Connecting to remote server: https://tapestry.design/mcp
+     [11225] Using transport strategy: http-first
+     [11225] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE
+     "... is not valid JSON
+         at JSON.parse (<anonymous>)
+         at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+         at successSteps (node:internal/deps/undici/undici:6967:27)
+         at readAllBytes (node:internal/deps/undici/undici:5890:13)
+     … +7 lines (ctrl+o to see all)
+
+⏺ Bash(npx -y mcp-remote@latest 2>&1 | head -5; echo "---"; npm view mcp-remote
+       version 2>&1)
+  ⎿  [11242] Usage: npx tsx proxy.ts <https://server-url> [callback-port]
+     [--debug]
+     ---
+     0.1.38
+
+⏺ Bash(# The issue is the GET /.well-known/oauth-authorization-server request
+      returns HTML
+      # Let's check what the server returns for different requests…)
+  ⎿  401
+
+⏺ Bash(# The POST works (401 = needs auth, not HTML). The problem is
+      mcp-remote's OAuth discovery hitting a catch-all route.
+      # Let's check what /.well-known returns…)
+  ⎿  200
+
+⏺ Bash(curl -s https://tapestry.design/.well-known/oauth-authorization-server |
+       head -5)
+  ⎿  <!DOCTYPE html>
+     <html lang="en">
+       <head>
+     … +2 lines (ctrl+o to expand)
+
+⏺ That confirms it — /.well-known/oauth-authorization-server returns the app's
+  HTML instead of a 404 or JSON, and mcp-remote chokes on it. The fix needs to
+  happen server-side. Your Express app's catch-all route is serving the SPA for
+   that path.
+
+  Let me add a quick fix to the server to return proper 404s for .well-known
+  routes:
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+⏺ Found it. The catch-all app.use("*") in both setupVite and serveStatic serves
+   index.html for everything, including /.well-known/*. I need to exclude that
+  path. Let me also check where MCP routes are registered relative to the
+  catch-all:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ The issue is clear. The SPA catch-all in vite.ts serves index.html for
+  /.well-known/*, which mcp-remote tries to parse as JSON. I need to add a 404
+  for .well-known requests before the catch-all. The simplest fix is in
+  vite.ts:
+
+⏺ Update(tapestry/server/vite.ts)
+  ⎿  Added 4 lines
+      53    });
+      54
+      55    app.use(vite.middlewares);
+      56 +  // Return 404 for .well-known requests so MCP clients don't
+         +get HTML
+      57 +  app.use("/.well-known/*", (_req, res) => {
+      58 +    res.status(404).json({ error: "Not found" });
+      59 +  });
+      60    app.use("*", async (req, res, next) => {
+      61      const url = req.originalUrl;
+      62
+
+⏺ Update(tapestry/server/vite.ts)
+  ⎿  Added 5 lines
+       90
+       91    app.use(express.static(distPath));
+       92
+       93 +  // Return 404 for .well-known requests so MCP clients don't
+          + get HTML
+       94 +  app.use("/.well-known/*", (_req, res) => {
+       95 +    res.status(404).json({ error: "Not found" });
+       96 +  });
+       97 +
+       98    // fall through to index.html if the file doesn't exist
+       99    app.use("*", (_req, res) => {
+      100      res.sendFile(path.resolve(distPath, "index.html"));
+
+⏺ This fix makes /.well-known/* return a proper 404 JSON response instead of
+  HTML, which is what mcp-remote needs to skip OAuth and connect directly via
+  Streamable HTTP.
+
+  Next steps:
+  1. Deploy this change to tapestry.design (push to your repo / redeploy on
+  Replit)
+  2. Restart Claude Desktop
+
+  Once deployed, mcp-remote will see the 404 for OAuth discovery, fall back to
+  direct transport, and connect to /mcp successfully. Want me to check if this
+  repo has a git remote so you can push the fix?

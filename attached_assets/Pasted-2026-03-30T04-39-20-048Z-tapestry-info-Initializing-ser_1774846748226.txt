@@ -1,0 +1,198 @@
+2026-03-30T04:39:20.048Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-03-30T04:39:20.056Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [ '-y', 'mcp-remote', 'https://tapestry.design/mcp', [length]: 3 ],
+    paths: [
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/usr/local/bin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-03-30T04:39:20.056Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-03-30T04:39:20.748Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[11149] Using automatically selected callback port: 29961
+[11149] Discovering OAuth server configuration...
+[11149] [11149] Connecting to remote server: https://tapestry.design/mcp
+[11149] Using transport strategy: http-first
+[11149] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[11149] Fatal error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-03-30T04:39:24.047Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-03-30T04:39:24.047Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-03-30T04:39:24.047Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-03-30T04:39:24.047Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:39:24.047Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:46:37.117Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:46:37.117Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-03-30T04:46:39.799Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-03-30T04:46:39.810Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [ '-y', 'mcp-remote', 'https://tapestry.design/mcp', [length]: 3 ],
+    paths: [
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/usr/local/bin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-03-30T04:46:39.811Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-03-30T04:46:39.968Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[11354] Using automatically selected callback port: 29961
+[11354] Discovering OAuth server configuration...
+[11354] [11354] Connecting to remote server: https://tapestry.design/mcp
+[11354] Using transport strategy: http-first
+[11354] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[11354] Fatal error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-03-30T04:46:41.882Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-03-30T04:46:41.882Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-03-30T04:46:41.883Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-03-30T04:46:41.883Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:46:41.883Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:52:44.799Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:52:44.799Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-03-30T04:52:47.194Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-03-30T04:52:47.200Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [ '-y', 'mcp-remote', 'https://tapestry.design/mcp', [length]: 3 ],
+    paths: [
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/usr/local/bin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-03-30T04:52:47.203Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-03-30T04:52:47.340Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[11502] Using automatically selected callback port: 29961
+[11502] Discovering OAuth server configuration...
+[11502] [11502] Connecting to remote server: https://tapestry.design/mcp
+[11502] Using transport strategy: http-first
+[11502] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[11502] Fatal error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-03-30T04:52:49.426Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-03-30T04:52:49.426Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-03-30T04:52:49.426Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-03-30T04:52:49.427Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:52:49.427Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:56:28.572Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:56:28.572Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-03-30T04:56:31.034Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-03-30T04:56:31.042Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [ '-y', 'mcp-remote', 'https://tapestry.design/mcp', [length]: 3 ],
+    paths: [
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/usr/local/bin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-03-30T04:56:31.043Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-03-30T04:56:31.193Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[11628] Using automatically selected callback port: 29961
+[11628] Discovering OAuth server configuration...
+[11628] [11628] Connecting to remote server: https://tapestry.design/mcp
+[11628] Using transport strategy: http-first
+[11628] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[11628] Fatal error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-03-30T04:56:33.038Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-03-30T04:56:33.039Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-03-30T04:56:33.039Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-03-30T04:56:33.039Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:56:33.039Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:58:47.412Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:58:47.412Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-03-30T04:58:51.202Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-03-30T04:58:51.209Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [ '-y', 'mcp-remote', 'https://tapestry.design/mcp', [length]: 3 ],
+    paths: [
+      '/opt/homebrew/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/usr/local/bin',
+      [length]: 6
+    ]
+  }
+} %o
+2026-03-30T04:58:51.209Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-03-30T04:58:51.336Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[11694] Using automatically selected callback port: 29961
+[11694] Discovering OAuth server configuration...
+[11694] [11694] Connecting to remote server: https://tapestry.design/mcp
+[11694] Using transport strategy: http-first
+[11694] Connection error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[11694] Fatal error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:4319:19)
+    at successSteps (node:internal/deps/undici/undici:6967:27)
+    at readAllBytes (node:internal/deps/undici/undici:5890:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-03-30T04:58:53.316Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-03-30T04:58:53.316Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-03-30T04:58:53.317Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-03-30T04:58:53.317Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-03-30T04:58:53.317Z [tapestry] [info] Client transport closed { metadata: undefined }

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { fonts } from "@/constants/typography";
@@ -12,39 +12,18 @@ export function TapestryLogo({ size = "md", color }: Props) {
   const colors = useColors();
   const tone = color ?? colors.foreground;
 
-  const sizes = {
-    sm: { word: 18, dot: 4 },
-    md: { word: 24, dot: 6 },
-    lg: { word: 36, dot: 8 },
-  } as const;
-  const s = sizes[size];
+  const sizes = { sm: 18, md: 24, lg: 36 } as const;
 
   return (
-    <View style={styles.row}>
-      <Text style={[styles.word, { fontSize: s.word, color: tone }]}>
-        Tapestry
-      </Text>
-      <View
-        style={[
-          styles.dot,
-          {
-            width: s.dot,
-            height: s.dot,
-            borderRadius: s.dot / 2,
-            backgroundColor: colors.primary,
-          },
-        ]}
-      />
-    </View>
+    <Text style={[styles.word, { fontSize: sizes[size], color: tone }]}>
+      Tapestry
+    </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "flex-end", gap: 4 },
   word: {
     fontFamily: fonts.serifBold,
     letterSpacing: -0.4,
-    lineHeight: 28,
   },
-  dot: { marginBottom: 8 },
 });

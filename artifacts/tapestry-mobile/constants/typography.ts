@@ -3,10 +3,6 @@ export const fonts = {
   serifSemiBold: "CrimsonText_600SemiBold",
   serifBold: "CrimsonText_700Bold",
   serifItalic: "CrimsonText_400Regular_Italic",
-  sansRegular: "Inter_400Regular",
-  sansMedium: "Inter_500Medium",
-  sansSemiBold: "Inter_600SemiBold",
-  sansBold: "Inter_700Bold",
 };
 
 export const type = {
@@ -17,7 +13,13 @@ export const type = {
   bodyLarge: { fontFamily: fonts.serifRegular, fontSize: 17, lineHeight: 26 },
   body: { fontFamily: fonts.serifRegular, fontSize: 16, lineHeight: 24 },
   small: { fontFamily: fonts.serifRegular, fontSize: 14, lineHeight: 20 },
-  caption: { fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 16, letterSpacing: 0.4, textTransform: "uppercase" as const },
-  label: { fontFamily: fonts.sansSemiBold, fontSize: 13, lineHeight: 18 },
-  button: { fontFamily: fonts.sansSemiBold, fontSize: 15, lineHeight: 20 },
+  caption: {
+    fontFamily: fonts.serifSemiBold,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 1.2,
+    textTransform: "uppercase" as const,
+  },
+  label: { fontFamily: fonts.serifSemiBold, fontSize: 13, lineHeight: 18 },
+  button: { fontFamily: fonts.serifSemiBold, fontSize: 15, lineHeight: 20 },
 };

@@ -237,6 +237,8 @@ export default function SignInScreen() {
   );
 }
 
+type TextInputAutoComplete = React.ComponentProps<typeof TextInput>["autoComplete"];
+
 type FieldProps = {
   label: string;
   value: string;
@@ -245,7 +247,7 @@ type FieldProps = {
   secureTextEntry?: boolean;
   keyboardType?: "default" | "email-address" | "number-pad";
   autoCapitalize?: "none" | "sentences";
-  autoComplete?: string;
+  autoComplete?: TextInputAutoComplete;
   colors: ReturnType<typeof useColors>;
 };
 
@@ -260,8 +262,7 @@ function Field({
       <Text style={[type.label, { color: colors.textSecondary }]}>{label}</Text>
       <TextInput
         {...rest}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        autoComplete={autoComplete as any}
+        autoComplete={autoComplete}
         placeholderTextColor={colors.textMuted}
         style={[
           styles.input,

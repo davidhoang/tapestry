@@ -27,5 +27,5 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  text: { fontFamily: fonts.sansMedium, fontSize: 12, letterSpacing: 0.2 },
+  text: { fontFamily: fonts.serifSemiBold, fontSize: 13, letterSpacing: 0.3 },
 });

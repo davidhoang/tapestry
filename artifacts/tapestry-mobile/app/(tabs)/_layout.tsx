@@ -20,9 +20,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         headerShown: false,
         tabBarLabelStyle: {
-          fontFamily: "Inter_600SemiBold",
-          fontSize: 11,
-          letterSpacing: 0.2,
+          fontFamily: "CrimsonText_600SemiBold",
+          fontSize: 12,
+          letterSpacing: 0.3,
         },
         tabBarStyle: {
           position: "absolute",

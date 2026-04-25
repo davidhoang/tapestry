@@ -3,14 +3,8 @@ import {
   CrimsonText_400Regular_Italic,
   CrimsonText_600SemiBold,
   CrimsonText_700Bold,
-} from "@expo-google-fonts/crimson-text";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
   useFonts,
-} from "@expo-google-fonts/inter";
+} from "@expo-google-fonts/crimson-text";
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -60,8 +54,6 @@ function AuthGate() {
     }
   }, [isLoaded, isSignedIn, segments, router]);
 
-  if (!isLoaded) return null;
-
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
@@ -80,10 +72,6 @@ function AuthGate() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
     CrimsonText_400Regular,
     CrimsonText_400Regular_Italic,
     CrimsonText_600SemiBold,

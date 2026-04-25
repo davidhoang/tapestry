@@ -1,0 +1,955 @@
+import { useParams, useLocation, Link } from "wouter";
+import React from "react";
+import { getAuthHeaders } from "@/lib/queryClient";
+import PageLayout from "@/components/layouts/PageLayout";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { SelectDesigner } from "@db/schema";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles, Share2 } from "lucide-react";
+import { RichTextPreview } from "@/components/ui/rich-text-preview";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { useDesignerBySlug, useDesignerTalentGraph } from "@/hooks/use-designer";
+import { useState, useRef, useEffect } from "react";
+import { useUpdateDesigner } from "@/hooks/use-designer";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertDesignerSchema } from "@db/schema";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import SkillsInput from "@/components/SkillsInput";
+import { useToast } from "@/hooks/use-toast";
+import { getDesignerCoverImage } from "@/utils/coverImages";
+import PortfolioManager from "@/components/PortfolioManager";
+import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-lists";
+import { DesignerAvatar } from "@/components/DesignerAvatar";
+import SimilarDesigners from "@/components/SimilarDesigners";
+import { EnrichmentModal } from "@/components/EnrichmentModal";
+import DesignerTimeline from "@/components/DesignerTimeline";
+
+const EXPERIENCE_LEVELS = [
+  "Mid-level",
+  "Senior", 
+  "Staff",
+  "Senior Staff",
+  "Principal",
+  "Manager",
+  "Director",
+  "Senior Director",
+  "VP"
+];
+
+const formSchema = insertDesignerSchema.omit({ id: true, userId: true, createdAt: true, workspaceId: true });
+type FormData = z.infer<typeof formSchema>;
+
+export default function DesignerDetailsPage() {
+  const { slug, workspaceSlug } = useParams<{ slug: string; workspaceSlug: string }>();
+  const [, setLocation] = useLocation();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isEnrichmentModalOpen, setIsEnrichmentModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  
+  const [isSharing, setIsSharing] = useState(false);
+  // localShareToken holds a freshly-minted token that hasn't been refetched yet.
+  // The effective token is always: designer.shareToken ?? localShareToken.
+  // This avoids stale-state bugs when navigating between designers.
+  const [localShareToken, setLocalShareToken] = useState<string | null>(null);
+
+  const { data: designer, isLoading, error, refetch } = useDesignerBySlug(slug || "");
+
+  // Clear local token whenever designer changes so we never carry over a token
+  // from a previously viewed designer.
+  useEffect(() => {
+    setLocalShareToken(null);
+  }, [designer?.id]);
+
+  const updateDesigner = useUpdateDesigner();
+  const { data: talentGraph, isLoading: isTalentGraphLoading, isError: isTalentGraphError } = useDesignerTalentGraph(designer?.workspaceId, designer?.id);
+
+  const handleShare = async () => {
+    if (!designer) return;
+    setIsSharing(true);
+    try {
+      // Always prefer the persisted token from the server-fetched designer.
+      // Fall back to localShareToken only when the server value hasn't refreshed yet.
+      let token: string | null = designer.shareToken ?? localShareToken;
+      if (!token) {
+        const authHeaders = await getAuthHeaders();
+        const resp = await fetch(`/api/designers/${designer.id}/share`, {
+          method: "POST",
+          credentials: "include",
+          headers: authHeaders,
+        });
+        if (!resp.ok) throw new Error("Failed to generate share link");
+        const data = await resp.json();
+        token = data.shareToken as string;
+        setLocalShareToken(token);
+      }
+      const url = `${window.location.origin}/d/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied!", description: "Share link has been copied to your clipboard." });
+    } catch {
+      toast({ title: "Error", description: "Failed to copy share link.", variant: "destructive" });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      email: "",
+      company: "",
+      location: "",
+      level: "",
+      website: "",
+      linkedIn: "",
+      skills: [],
+      notes: "",
+      available: false,
+      photoUrl: "",
+    },
+  });
+
+  const handleEdit = () => {
+    if (designer) {
+      form.reset({
+        name: designer.name || "",
+        title: designer.title || "",
+        email: designer.email || "",
+        company: designer.company || "",
+        location: designer.location || "",
+        level: designer.level || "",
+        website: designer.website || "",
+        linkedIn: designer.linkedIn || "",
+        skills: Array.isArray(designer.skills) ? designer.skills : [],
+        notes: designer.notes || "",
+        available: designer.available || false,
+        photoUrl: designer.photoUrl || "",
+      });
+      setIsEditMode(true);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditMode(false);
+    form.reset();
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    if (!designer) return;
+
+    try {
+
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(data));
+      
+      if (selectedPhoto) {
+        formData.append('photo', selectedPhoto);
+      }
+
+      await updateDesigner.mutateAsync({ 
+        id: designer.id, 
+        formData 
+      });
+
+      toast({
+        title: "Designer updated",
+        description: "The designer information has been updated successfully.",
+      });
+      
+      setIsEditMode(false);
+      setSelectedPhoto(null);
+      setPhotoPreview(null);
+    } catch (error: any) {
+
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update designer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <PageLayout className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <div className="h-48 bg-muted rounded-2xl mb-8"></div>
+            <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+            <div className="h-4 bg-muted rounded w-1/4 mb-8"></div>
+            <div className="space-y-4">
+              <div className="h-4 bg-muted rounded w-full"></div>
+              <div className="h-4 bg-muted rounded w-3/4"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (error || !designer) {
+    return (
+      <PageLayout className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation(`/${workspaceSlug}/directory`)}
+            className="mb-8"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to directory
+          </Button>
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold mb-4">Designer Not Found</h1>
+            <p className="text-muted-foreground">The designer you're looking for doesn't exist.</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  return (
+    <PageLayout className="min-h-screen bg-background">
+      {/* Cover Photo Section */}
+      <div className="relative h-64 overflow-hidden">
+        <img 
+          src={getDesignerCoverImage(designer.id)} 
+          alt="Cover"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/30" />
+        
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => setLocation(`/${workspaceSlug}/directory`)}
+          className="absolute top-6 left-6 bg-background/80 backdrop-blur-sm hover:bg-background/90 text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to directory
+        </Button>
+
+        {/* Available badge */}
+        {designer.available && (
+          <div className="absolute top-6 right-6">
+            <Badge variant="secondary" className="text-sm px-4 py-2 bg-green-500 text-white border-0 shadow-lg">
+              Open to Roles
+            </Badge>
+          </div>
+        )}
+        
+      </div>
+
+      {/* Content Section */}
+      <div className="container mx-auto px-8 pt-8 pb-12">
+        <div className="max-w-4xl mx-auto space-y-12">
+          {isEditMode ? (
+            /* Edit Mode */
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Profile Photo */}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="relative">
+                      {photoPreview || designer.photoUrl ? (
+                        <img
+                          src={photoPreview || designer.photoUrl || undefined}
+                          alt={designer.name}
+                          className="h-32 w-32 rounded-2xl object-cover bg-background border-4 border-background shadow-xl"
+                        />
+                      ) : (
+                        <div className="h-32 w-32 rounded-2xl bg-background border-4 border-background shadow-xl flex items-center justify-center">
+                          <span className="text-4xl font-bold text-muted-foreground">
+                            {designer.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {photoPreview && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                          onClick={removePhoto}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {photoPreview || designer.photoUrl ? "Change photo" : "Upload photo"}
+                      </Button>
+                      
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                      
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG or GIF (max 5MB)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit Header */}
+                <div className="flex items-center justify-between border-b pb-4">
+                  <div>
+                    <h2 className="text-3xl font-bold">Edit Designer</h2>
+                    <p className="text-muted-foreground">Update the designer's information below</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={updateDesigner.isPending}
+                    >
+                      {updateDesigner.isPending ? "Saving..." : "Save changes"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="grid grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Job title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email *</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="email@example.com" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Level *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {EXPERIENCE_LEVELS.map((level) => (
+                              <SelectItem key={level} value={level}>
+                                {level}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="company"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Company name" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                          <Input placeholder="City, State/Country" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                          <Input type="url" placeholder="https://..." {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="linkedIn"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>LinkedIn</FormLabel>
+                        <FormControl>
+                          <Input type="url" placeholder="https://linkedin.com/in/..." {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="skills"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Skills</FormLabel>
+                      <FormControl>
+                        <SkillsInput 
+                          value={Array.isArray(field.value) ? (field.value as string[]) : []} 
+                          onChange={field.onChange} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+
+                <FormField
+                  control={form.control}
+                  name="available"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Switch
+                          checked={field.value || false}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal">
+                        Open to roles
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
+          ) : (
+            /* View Mode */
+            <>
+              {/* Profile Photo, Name and Title with Buttons */}
+              <div className="flex items-start gap-6">
+                {/* Profile Photo */}
+                <div className="flex-shrink-0">
+                  <DesignerAvatar 
+                    imageUrl={designer.photoUrl}
+                    name={designer.name}
+                    size="lg"
+                  />
+                </div>
+
+                {/* Name, Title, and Buttons */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-3xl font-bold leading-tight tracking-tight">{designer.name}</h1>
+                      <p className="text-xl text-muted-foreground font-light mt-2">
+                        {designer.level}{' '}
+                        <Link 
+                          href={`/${workspaceSlug}/search?type=title&value=${encodeURIComponent(designer.title)}`}
+                          className="hover:underline hover:text-foreground cursor-pointer transition-colors"
+                        >
+                          {designer.title}
+                        </Link>
+                        {' '}at {designer.company}
+                      </p>
+                      {designer.location && (
+                        <p className="text-lg text-muted-foreground designer-meta mt-1">
+                          <Link 
+                            href={`/${workspaceSlug}/search?type=location&value=${encodeURIComponent(designer.location)}`}
+                            className="hover:underline hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            {designer.location}
+                          </Link>
+                        </p>
+                      )}
+                      {/* Contact Icons */}
+                      <div className="flex items-center gap-2 mt-3">
+                        {designer.website && (
+                          <a 
+                            href={designer.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                          >
+                            <Globe className="h-4 w-4" />
+                          </a>
+                        )}
+                        {designer.linkedIn && (
+                          <a 
+                            href={designer.linkedIn} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                          >
+                            <Linkedin className="h-4 w-4" />
+                          </a>
+                        )}
+                        {designer.email && (
+                          <a 
+                            href={`mailto:${designer.email}`}
+                            className="p-2 hover:bg-secondary/50 transition-colors inline-flex items-center justify-center"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <AddToListPopover designerId={designer.id} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleShare}
+                        disabled={isSharing}
+                        className="flex items-center gap-2"
+                      >
+                        {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                        Share
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEnrichmentModalOpen(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Enrich
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEdit}
+                        className="flex items-center gap-2"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline + Talent Graph Tabs */}
+              <div className="space-y-6 pb-12 border-b">
+                <Tabs defaultValue="timeline">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                    <TabsTrigger value="talent-graph" className="flex items-center gap-1.5">
+                      Talent Graph
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 leading-none font-mono bg-muted text-muted-foreground">
+                        debug
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="timeline">
+                    <DesignerTimeline designerId={designer.id} />
+                  </TabsContent>
+                  <TabsContent value="talent-graph">
+                    {isTalentGraphLoading ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-64 w-full" />
+                      </div>
+                    ) : isTalentGraphError ? (
+                      <div className="py-8 text-center text-destructive text-sm font-mono">
+                        Failed to load talent graph data. Check the network or API.
+                      </div>
+                    ) : !talentGraph || (
+                      Array.isArray(talentGraph.workExperience) && talentGraph.workExperience.length === 0 &&
+                      Array.isArray(talentGraph.skills) && talentGraph.skills.length === 0 &&
+                      talentGraph.talentProfile === null
+                    ) ? (
+                      <div className="py-8 text-center text-muted-foreground text-sm">
+                        No talent graph data exists yet for this designer.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Raw talent graph payload — internal debug view only
+                        </p>
+                        <JsonHighlight value={talentGraph} />
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* Skills Section */}
+              <div className="space-y-6 pb-12 border-b">
+                <h2 className="text-3xl font-bold">Tags</h2>
+                <div className="flex flex-wrap gap-3">
+                  {(() => {
+                    let skillsArray: string[] = [];
+                    const skills = designer.skills;
+                    if (skills) {
+                      if (typeof skills === 'string') {
+                        skillsArray = (skills as string).split(',').map((s: string) => s.trim()).filter((s: string) => s);
+                      } else if (Array.isArray(skills)) {
+                        skillsArray = (skills as string[]).filter((s: string) => s);
+                      }
+                    }
+                    
+                    if (skillsArray.length === 0) {
+                      return <p className="text-muted-foreground text-sm">No skills listed</p>;
+                    }
+                    
+                    return skillsArray.map((skill: string, i: number) => (
+                      <Link
+                        key={i}
+                        href={`/${workspaceSlug}/search?type=skill&value=${encodeURIComponent(skill)}`}
+                      >
+                        <Badge 
+                          variant="secondary"
+                          className="text-sm px-3 py-1 cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                        >
+                          {skill}
+                        </Badge>
+                      </Link>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* Similar Designers Section */}
+              <SimilarDesigners designerId={designer.id} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Enrichment Modal */}
+      {designer && (
+        <EnrichmentModal
+          open={isEnrichmentModalOpen}
+          onOpenChange={setIsEnrichmentModalOpen}
+          designerId={designer.id}
+          currentData={{
+            email: designer.email,
+            phoneNumber: (designer as any).phoneNumber,
+            location: designer.location,
+            company: designer.company,
+            title: designer.title,
+            linkedIn: designer.linkedIn,
+            website: designer.website,
+            skills: Array.isArray(designer.skills) ? designer.skills : [],
+          }}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
+    </PageLayout>
+  );
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function JsonHighlight({ value }: { value: unknown }) {
+  const json = JSON.stringify(value, null, 2);
+  const escaped = escapeHtml(json);
+
+  const highlighted = escaped.replace(
+    /(&quot;(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&])*&quot;(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    (match) => {
+      if (/^&quot;/.test(match)) {
+        if (/:$/.test(match)) {
+          return `<span style="color:var(--color-key)">${match}</span>`;
+        }
+        return `<span style="color:var(--color-string)">${match}</span>`;
+      }
+      if (/true|false/.test(match)) {
+        return `<span style="color:var(--color-bool)">${match}</span>`;
+      }
+      if (/null/.test(match)) {
+        return `<span style="color:var(--color-null)">${match}</span>`;
+      }
+      return `<span style="color:var(--color-number)">${match}</span>`;
+    }
+  );
+
+  return (
+    <pre
+      className="bg-muted rounded-lg p-4 overflow-auto max-h-[600px] text-xs font-mono leading-relaxed"
+      style={{
+        ["--color-key" as string]: "hsl(var(--primary))",
+        ["--color-string" as string]: "#16a34a",
+        ["--color-bool" as string]: "#7c3aed",
+        ["--color-null" as string]: "#9ca3af",
+        ["--color-number" as string]: "#0284c7",
+      }}
+      dangerouslySetInnerHTML={{ __html: highlighted }}
+    />
+  );
+}
+
+interface AddToListPopoverProps {
+  designerId: number;
+}
+
+function AddToListPopover({ designerId }: AddToListPopoverProps) {
+  const { data: lists } = useLists();
+  const addDesignersToList = useAddDesignersToList();
+  const { toast } = useToast();
+  
+  const [selectedListIds, setSelectedListIds] = useState<number[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleListToggle = (listId: number) => {
+    setSelectedListIds(prev => 
+      prev.includes(listId) 
+        ? prev.filter(id => id !== listId)
+        : [...prev, listId]
+    );
+  };
+
+  const handleAddToSelectedLists = async () => {
+    if (selectedListIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one list",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const results = await Promise.allSettled(
+        selectedListIds.map((listId) =>
+          addDesignersToList.mutateAsync({
+            listId,
+            designerId,
+          }),
+        ),
+      );
+
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const alreadyInList = results.filter(result => 
+        result.status === 'rejected' && 
+        result.reason?.message?.includes('already in list')
+      ).length;
+
+      if (successful > 0 || alreadyInList > 0) {
+        toast({
+          title: "Success",
+          description: successful > 0 
+            ? `Added designer to ${successful} list${successful > 1 ? 's' : ''}${alreadyInList > 0 ? ` (already in ${alreadyInList})` : ''}`
+            : `Designer already in all selected lists`,
+        });
+        setIsOpen(false);
+        setSelectedListIds([]);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add designer to lists",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add designer to lists",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <ListPlus className="h-4 w-4" />
+          Add to list
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <div className="p-4">
+          <h4 className="font-medium text-sm mb-3">Add to list</h4>
+          <div className="space-y-2 max-h-60 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+            {lists && lists.length > 0 ? (
+              lists.map((list) => (
+                <div key={list.id} className="flex items-center space-x-3 p-2 hover:bg-accent/50 rounded transition-colors">
+                  <Checkbox
+                    id={`popover-list-${list.id}`}
+                    checked={selectedListIds.includes(list.id)}
+                    onCheckedChange={() => handleListToggle(list.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <label
+                      htmlFor={`popover-list-${list.id}`}
+                      className="text-sm cursor-pointer block"
+                    >
+                      {list.name}
+                    </label>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No lists available</p>
+            )}
+          </div>
+          {lists && lists.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <Button
+                onClick={handleAddToSelectedLists}
+                disabled={isProcessing || selectedListIds.length === 0}
+                className="w-full"
+                size="sm"
+              >
+                {isProcessing && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Add to {selectedListIds.length} list{selectedListIds.length !== 1 ? 's' : ''}
+              </Button>
+            </>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

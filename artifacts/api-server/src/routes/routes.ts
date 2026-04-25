@@ -1,0 +1,8081 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import healthRouter from "./health";
+import { setupAuth } from "../auth";
+import { db } from "@workspace/db";
+import { users, designers, lists, listDesigners, conversations, messages, workspaces, workspaceMembers, workspaceInvitations, jobs, recommendationFeedback, aiSystemPrompts, portfolios, portfolioProjects, portfolioMedia, portfolioViews, portfolioInquiries, inboxRecommendations, inboxRecommendationEvents, inboxRecommendationCandidates, recommendationStatusEnum, recommendationTypeEnum, savedSearches, workspaceActivities, captureEntries, captureAssets, captureAnnotations, apiTokens, userLocations, designerOutreach, dailyRecommendationQuota, designerNotes, designerEvents, designerWorkExperience, designerSkills, designerTalentProfile, type InsertDesignerWorkExperience, type InsertDesignerSkills, type InsertDesignerTalentProfile } from "@workspace/db";
+import { analyzeCapture } from "../capture-analyzer";
+import { eq, desc, and, ne, inArray, asc, isNull, not, or, ilike } from "drizzle-orm";
+import { sendListEmail } from "../email";
+import { slugify } from "../utils/slugify";
+import crypto from "crypto";
+import { enrichDesignerProfile, generateDesignerSkills, type DesignerEnrichmentData } from "../enrichment";
+import { 
+  requirePermission, 
+  requireWorkspaceMembership, 
+  requireRole,
+  getUserWorkspaceContext,
+  logPermissionAction,
+  calculatePermissions,
+  type WorkspaceRole 
+} from "../permissions";
+import multer from "multer";
+import sharp from "sharp";
+import path from "path";
+import fs from "fs/promises";
+import express from "express";
+import { sql } from "drizzle-orm";
+import { Client } from "@replit/object-storage";
+import OpenAI from "openai";
+import { RecommendationEngine } from "../recommendation-engine";
+
+// Initialize Object Storage client — pass bucket ID directly to avoid sidecar fetch
+const _objStorageBucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+let objectStorage: Client | null = null;
+if (_objStorageBucketId) {
+  objectStorage = new Client({ bucketId: _objStorageBucketId });
+} else {
+  console.warn("Object storage not available: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
+}
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Initialize Recommendation Engine
+const recommendationEngine = new RecommendationEngine();
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG and WebP are allowed.'));
+    }
+  },
+});
+
+// Configure multer for CSV uploads
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit for CSV files
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV files are allowed.'));
+    }
+  },
+});
+
+// Configure multer for PDF uploads
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for PDF files
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF files are allowed.'));
+    }
+  },
+});
+
+// Middleware to check if user is admin
+const requireAdmin = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  next();
+};
+
+// Add error handler for database operations
+const withErrorHandler = (handler: (req: any, res: any) => Promise<any>) => {
+  return async (req: any, res: any) => {
+    try {
+      await handler(req, res);
+    } catch (error: any) {
+      console.error('Operation failed:', error);
+
+      // Check for specific database errors
+      if (error.code === '23505') { // Unique violation
+        return res.status(409).json({ 
+          error: "This record already exists",
+          details: error.detail 
+        });
+      }
+
+      if (error.code === '23503') { // Foreign key violation
+        return res.status(400).json({ 
+          error: "Referenced record does not exist",
+          details: error.detail 
+        });
+      }
+
+      // Image processing error
+      if (error.message === 'Failed to process image') {
+        return res.status(400).json({ 
+          error: "Failed to process image",
+          details: "Please make sure you're uploading a valid image file"
+        });
+      }
+
+      // Generic error
+      res.status(500).json({ 
+        error: "Operation failed",
+        message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  };
+};
+
+// Handle photo upload with Object Storage for persistence across deployments
+const handlePhotoUpload = async (buffer: Buffer, oldFilename?: string) => {
+  const filename = `uploads/${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+
+  try {
+    console.log('Starting photo upload process...');
+
+    // Process image
+    const processedBuffer = await sharp(buffer, {
+      failOnError: false,
+      limitInputPixels: 50000000
+    })
+      .resize(800, 800, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    console.log('Image processed successfully, size:', processedBuffer.length);
+
+    // Delete old file if it exists
+    if (oldFilename) {
+      try {
+        const oldKey = oldFilename.replace('/api/uploads/', '');
+        await objectStorage.delete(oldKey);
+        console.log('Old file deleted successfully');
+      } catch (err) {
+        console.error('Failed to delete old image:', err);
+        // Continue even if delete fails
+      }
+    }
+
+    // Upload to Object Storage
+    const uploadResult = await objectStorage.uploadFromBytes(filename, processedBuffer);
+    if (uploadResult.error) {
+      throw new Error(`Upload failed: ${uploadResult.error.message}`);
+    }
+    
+    console.log('File uploaded successfully to Object Storage:', filename);
+
+    return `/api/uploads/${filename}`;
+  } catch (err) {
+    console.error('File operation error:', err);
+    throw new Error('Failed to process or save image');
+  }
+};
+
+export function registerRoutes(app: Express): Server {
+  // Health check route
+  app.use("/api", healthRouter);
+
+  setupAuth(app);
+
+  // Serve images from Object Storage
+  app.get('/api/uploads/{*path}', async (req, res) => {
+    try {
+      const key = req.path.replace('/api/uploads/', '');
+      const result = await objectStorage.downloadAsBytes(key);
+      
+      if (result.error) {
+        return res.status(404).send('Image not found');
+      }
+      
+      res.set({
+        'Content-Type': 'image/webp',
+        'Cache-Control': 'public, max-age=86400', // Cache for 1 day
+        'ETag': `"${key}"`,
+      });
+      
+      res.send(Buffer.from(result.value[0]));
+    } catch (error) {
+      console.error('Error serving image:', error);
+      res.status(404).send('Image not found');
+    }
+  });
+
+  // Get user's default workspace (prioritize owned/admin workspace)
+  const getUserWorkspace = async (userId: number) => {
+    // Get all memberships ordered by role priority (owner > admin > member > viewer)
+    const memberships = await db.query.workspaceMembers.findMany({
+      where: eq(workspaceMembers.userId, userId),
+      with: {
+        workspace: true,
+      },
+      orderBy: [desc(workspaceMembers.joinedAt)],
+    });
+    
+    if (!memberships.length) {
+      return null;
+    }
+    
+    // Prioritize by role: owner first, then admin (for personal workspaces), then editor, member, viewer
+    const roleOrder = { 'owner': 5, 'admin': 4, 'editor': 3, 'member': 2, 'viewer': 1 };
+    
+    memberships.sort((a, b) => {
+      const roleA = roleOrder[a.role as keyof typeof roleOrder] || 0;
+      const roleB = roleOrder[b.role as keyof typeof roleOrder] || 0;
+      
+      if (roleA !== roleB) {
+        return roleB - roleA; // Higher role first
+      }
+      
+      // Same role, prefer earlier joined (original workspace)
+      return new Date(a.joinedAt || 0).getTime() - new Date(b.joinedAt || 0).getTime();
+    });
+    
+    return memberships[0].workspace;
+  };
+
+  // Get user's role in a workspace
+  const getUserWorkspaceRole = async (userId: number, workspaceId?: number) => {
+    const targetWorkspaceId = workspaceId || (await getUserWorkspace(userId))?.id;
+    if (!targetWorkspaceId) return null;
+
+    const member = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, userId),
+        eq(workspaceMembers.workspaceId, targetWorkspaceId)
+      ),
+    });
+    return member?.role || null;
+  };
+
+  // Check if user has permission for specific actions
+  const hasPermission = (userRole: string | null, requiredRoles: string[]) => {
+    return userRole && requiredRoles.includes(userRole);
+  };
+
+  // Helper function to log workspace activities
+  const logWorkspaceActivity = async (
+    workspaceId: number,
+    userId: number,
+    activityType: string,
+    entityType: string,
+    entityId?: number,
+    entityName?: string,
+    metadata?: Record<string, any>
+  ) => {
+    try {
+      await db.insert(workspaceActivities).values({
+        workspaceId,
+        userId,
+        activityType,
+        entityType,
+        entityId,
+        entityName,
+        metadata,
+      });
+    } catch (error) {
+      console.error('Failed to log workspace activity:', error);
+    }
+  };
+
+  // Get workspace activities
+  app.get("/api/activities", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      let workspaceId: number;
+      
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      // If slug provided, verify workspace exists and user is a member
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (!workspace) {
+          return res.status(404).json({ error: "Workspace not found" });
+        }
+        
+        // Check membership
+        const membership = await db.query.workspaceMembers.findFirst({
+          where: and(
+            eq(workspaceMembers.userId, req.user.id),
+            eq(workspaceMembers.workspaceId, workspace.id)
+          ),
+        });
+        
+        if (!membership) {
+          return res.status(403).json({ error: "Not authorized to access this workspace" });
+        }
+        
+        workspaceId = workspace.id;
+      } else {
+        // No slug provided, use default workspace
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (!userWorkspace) {
+          return res.status(403).json({ error: "No workspace access" });
+        }
+        workspaceId = userWorkspace.id;
+      }
+
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : null;
+
+      // Build where condition
+      let whereCondition: any = eq(workspaceActivities.workspaceId, workspaceId);
+      if (cursor) {
+        // Get activities older than the cursor (lower IDs)
+        whereCondition = and(
+          eq(workspaceActivities.workspaceId, workspaceId),
+          sql`${workspaceActivities.id} < ${cursor}`
+        );
+      }
+
+      const activities = await db.query.workspaceActivities.findMany({
+        where: whereCondition,
+        orderBy: desc(workspaceActivities.id),
+        limit: limit,
+        with: {
+          user: {
+            columns: {
+              id: true,
+              email: true,
+              username: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+      });
+
+      // Return cursor for next page
+      const nextCursor = activities.length > 0 ? activities[activities.length - 1].id : null;
+
+      res.json({
+        activities,
+        nextCursor,
+        hasMore: activities.length >= limit,
+      });
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+      res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
+
+  // Designer routes with workspace support
+  app.post("/api/designers", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    console.log(`POST /api/designers - User ${req.user.id} default workspace:`, userWorkspace ? `${userWorkspace.name} (${userWorkspace.slug})` : 'none');
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const result = await db.transaction(async (tx) => {
+      if (!req.body.data) {
+        throw new Error("Designer data is required");
+      }
+
+      let designerData;
+      try {
+        designerData = JSON.parse(req.body.data);
+      } catch (err) {
+        throw new Error("Invalid designer data format");
+      }
+
+      // Check if email already exists within workspace
+      if (designerData.email && designerData.email.trim()) {
+        const existingDesigner = await tx.query.designers.findFirst({
+          where: and(
+            eq(designers.email, designerData.email.trim()),
+            eq(designers.workspaceId, userWorkspace.id)
+          ),
+        });
+
+        if (existingDesigner) {
+          throw new Error("A designer with this email address already exists in this workspace.");
+        }
+      }
+
+      let photoUrl;
+      if (req.file?.buffer) {
+        photoUrl = await handlePhotoUpload(req.file.buffer);
+      }
+
+      const [designer] = await tx
+        .insert(designers)
+        .values({
+          ...designerData,
+          userId: req.user.id,
+          workspaceId: userWorkspace.id,
+          photoUrl,
+        })
+        .returning();
+
+      return designer;
+    });
+
+    await logWorkspaceActivity(
+      userWorkspace.id,
+      req.user.id,
+      'designer_added',
+      'designer',
+      result.id,
+      result.name
+    );
+
+    res.json(result);
+  }));
+
+
+  // Get all unique skills
+  app.get("/api/skills", withErrorHandler(async (_req, res) => {
+    try {
+      // Fetch all designers with skills and process in JavaScript
+      const designers = await db.query.designers.findMany({
+        columns: {
+          skills: true,
+        },
+      });
+
+      const allSkills = new Set<string>();
+
+      designers.forEach(designer => {
+        if (designer.skills) {
+          // Handle both array and string formats
+          if (Array.isArray(designer.skills)) {
+            designer.skills.forEach(skill => {
+              if (skill && typeof skill === 'string') {
+                allSkills.add(skill.trim());
+              }
+            });
+          } else if (typeof designer.skills === 'string') {
+            // Handle comma-separated string format
+            (designer.skills as string).split(',').forEach((skill: string) => {
+              const trimmedSkill = skill.trim();
+              if (trimmedSkill) {
+                allSkills.add(trimmedSkill);
+              }
+            });
+          }
+        }
+      });
+
+      const skills = Array.from(allSkills).sort();
+      res.json(skills);
+    } catch (err) {
+      console.error('Error fetching skills:', err);
+      res.status(500).json({ error: "Failed to fetch skills" });
+    }
+  }));
+
+  // Search designers by skill, title, or location
+  app.get("/api/designers/search", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { type, value } = req.query;
+      
+      if (!type || !value) {
+        return res.status(400).json({ error: "Search type and value are required" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      // Get all designers in workspace
+      const allDesigners = await db.query.designers.findMany({
+        where: eq(designers.workspaceId, workspaceId),
+        orderBy: desc(designers.createdAt),
+      });
+
+      // Filter designers based on search type
+      const filteredDesigners = allDesigners.filter(designer => {
+        if (!designer.name || !designer.name.trim()) {
+          return false;
+        }
+
+        const searchValue = (value as string).toLowerCase();
+
+        switch (type) {
+          case 'skill': {
+            // Check if designer has the skill
+            const skills = designer.skills;
+            if (Array.isArray(skills)) {
+              return skills.some((skill: string) => 
+                skill.toLowerCase() === searchValue
+              );
+            }
+            return false;
+          }
+          case 'title': {
+            // Match title exactly (case-insensitive)
+            return designer.title?.toLowerCase() === searchValue;
+          }
+          case 'location': {
+            // Match location exactly (case-insensitive)
+            return designer.location?.toLowerCase() === searchValue;
+          }
+          default:
+            return false;
+        }
+      });
+
+      res.json(filteredDesigners);
+    } catch (err) {
+      console.error('Error searching designers:', err);
+      res.status(500).json({ error: "Failed to search designers" });
+    }
+  });
+
+  // Get designers in user's workspace with optional pagination
+  app.get("/api/designers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      let workspaceId: number | null = null;
+
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        if (workspace) workspaceId = workspace.id;
+      }
+
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) workspaceId = userWorkspace.id;
+      }
+
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const search = (req.query.search as string)?.trim() || '';
+      const usePagination = req.query.page !== undefined || req.query.limit !== undefined;
+
+      // Build SQL-level conditions — filter incomplete records and apply search in the database
+      const baseCondition = and(
+        eq(designers.workspaceId, workspaceId),
+        sql`${designers.name} IS NOT NULL AND trim(${designers.name}) != ''`
+      );
+
+      const whereCondition = search
+        ? and(
+            baseCondition,
+            or(
+              ilike(designers.name, `%${search}%`),
+              ilike(designers.title, `%${search}%`),
+              ilike(designers.company, `%${search}%`),
+              sql`${designers.skills}::text ILIKE ${'%' + search + '%'}`
+            )
+          )
+        : baseCondition;
+
+      if (usePagination) {
+        // Single COUNT query, then single data query — no JS-level filtering needed
+        const [{ count }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(designers)
+          .where(whereCondition);
+
+        const total = Number(count);
+        const totalPages = Math.ceil(total / limit);
+
+        const designersPage = await db.query.designers.findMany({
+          where: whereCondition,
+          orderBy: desc(designers.createdAt),
+          limit,
+          offset: (page - 1) * limit,
+        });
+
+        res.json({
+          designers: designersPage,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasMore: page < totalPages,
+          },
+        });
+      } else {
+        // Backward-compatible non-paginated response, capped at 500
+        const allDesigners = await db.query.designers.findMany({
+          where: whereCondition,
+          orderBy: desc(designers.createdAt),
+          limit: 500,
+        });
+        res.json(allDesigners);
+      }
+    } catch (err) {
+      console.error('Error fetching designers:', err);
+      res.status(500).json({ error: "Failed to fetch designers" });
+    }
+  });
+
+  // Get designer by slug
+  app.get("/api/designers/slug/:slug", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { slug } = req.params;
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.workspaceId, workspaceId),
+          sql`LOWER(REPLACE(REPLACE(${designers.name}, ' ', '-'), '.', '')) = ${slug.toLowerCase()}`
+        ),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      res.json(designer);
+    } catch (err) {
+      console.error('Error fetching designer by slug:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
+  app.get("/api/designers/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const designerId = parseInt(req.params.id);
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+      
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+      
+      res.json(designer);
+    } catch (err) {
+      console.error('Error fetching designer:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
+  app.get("/api/designers/slug/:slug", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const slug = req.params.slug;
+      // Find designer by matching slugified name
+      const allDesigners = await db.query.designers.findMany();
+      const designer = allDesigners.find(d => slugify(d.name) === slug);
+      
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+      
+      res.json(designer);
+    } catch (err) {
+      console.error('Error fetching designer by slug:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
+  // Generate or return existing share token for a designer
+  app.post("/api/designers/:id/share", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const designerId = parseInt(req.params.id);
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Verify the caller is a member of the designer's workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, designer.workspaceId)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to share this designer" });
+      }
+
+      // Return existing token if already set
+      if (designer.shareToken) {
+        return res.json({ shareToken: designer.shareToken });
+      }
+
+      // Generate a new stable share token
+      const shareToken = crypto.randomBytes(12).toString('base64url');
+
+      await db
+        .update(designers)
+        .set({ shareToken })
+        .where(eq(designers.id, designerId));
+
+      res.json({ shareToken });
+    } catch (err) {
+      console.error('Error generating share token:', err);
+      res.status(500).json({ error: "Failed to generate share token" });
+    }
+  });
+
+  // Get designer by share token — requires authentication but not workspace membership
+  app.get("/api/shared/designers/:token", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { token } = req.params;
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.shareToken, token),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Fetch the workspace slug so the client can build a deep-link
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.id, designer.workspaceId),
+        columns: { slug: true },
+      });
+
+      // Check if the viewer is a member of the designer's workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, designer.workspaceId)
+        ),
+      });
+
+      // Return only public-facing fields, plus workspace slug and viewer membership info
+      res.json({
+        id: designer.id,
+        name: designer.name,
+        title: designer.title,
+        company: designer.company,
+        location: designer.location,
+        photoUrl: designer.photoUrl,
+        skills: designer.skills,
+        available: designer.available,
+        description: designer.description,
+        level: designer.level,
+        workspaceId: designer.workspaceId,
+        workspaceSlug: workspace?.slug ?? null,
+        viewerIsMember: !!membership,
+      });
+    } catch (err) {
+      console.error('Error fetching shared designer:', err);
+      res.status(500).json({ error: "Failed to fetch designer" });
+    }
+  });
+
+  app.put("/api/designers/:id", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+
+    let photoUrl;
+    if (req.file?.buffer) {
+      // Get existing designer to clean up old image
+      const existingDesigner = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      const oldFilename = existingDesigner?.photoUrl?.split('/').pop();
+      photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
+    }
+
+    let designerData;
+    try {
+      designerData = JSON.parse(req.body.data);
+    } catch (err) {
+      throw new Error("Invalid designer data format");
+    }
+
+    const [designer] = await db
+      .update(designers)
+      .set({
+        ...designerData,
+        ...(photoUrl && { photoUrl }),
+      })
+      .where(eq(designers.id, designerId))
+      .returning();
+
+    await logWorkspaceActivity(
+      designer.workspaceId,
+      req.user.id,
+      'designer_updated',
+      'designer',
+      designer.id,
+      designer.name
+    );
+
+    res.json(designer);
+  }));
+
+  // Partial update endpoint for quick profile edits from inbox
+  app.patch("/api/designers/:id/quick-update", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+
+    // Verify designer exists and user has access
+    const existingDesigner = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!existingDesigner) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, existingDesigner.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to update this designer" });
+    }
+
+    // Verify user has edit permissions
+    const canEdit = ['owner', 'admin', 'editor'].includes(membership.role);
+    if (!canEdit) {
+      return res.status(403).json({ error: "You do not have permission to edit designers" });
+    }
+
+    // Handle photo upload if provided
+    let photoUrl;
+    if (req.file?.buffer) {
+      const oldFilename = existingDesigner.photoUrl?.split('/').pop();
+      photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
+    }
+
+    // Parse update data (can be form data or JSON)
+    let updateData: any = {};
+    if (req.body.data) {
+      try {
+        updateData = JSON.parse(req.body.data);
+      } catch (err) {
+        throw new Error("Invalid data format");
+      }
+    } else {
+      // Direct form fields
+      updateData = req.body;
+    }
+
+    // Only update non-empty fields
+    const fieldsToUpdate: any = {};
+    
+    if (updateData.description !== undefined && updateData.description !== null) {
+      fieldsToUpdate.description = updateData.description;
+    }
+    if (updateData.website !== undefined && updateData.website !== null) {
+      fieldsToUpdate.website = updateData.website;
+    }
+    if (updateData.linkedIn !== undefined && updateData.linkedIn !== null) {
+      fieldsToUpdate.linkedIn = updateData.linkedIn;
+    }
+    if (updateData.location !== undefined && updateData.location !== null) {
+      fieldsToUpdate.location = updateData.location;
+    }
+    if (updateData.skills !== undefined && updateData.skills !== null) {
+      fieldsToUpdate.skills = Array.isArray(updateData.skills) ? updateData.skills : updateData.skills;
+    }
+    if (photoUrl) {
+      fieldsToUpdate.photoUrl = photoUrl;
+    }
+
+    if (Object.keys(fieldsToUpdate).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    // Add timestamp
+    fieldsToUpdate.updatedAt = new Date();
+
+    // Calculate profile completeness
+    const updatedData = { ...existingDesigner, ...fieldsToUpdate };
+    const requiredFields = ['name', 'description', 'photoUrl'];
+    const optionalFields = ['title', 'company', 'website', 'linkedIn', 'location'];
+    
+    const completedRequired = requiredFields.filter(f => updatedData[f as keyof typeof updatedData]).length;
+    const completedOptional = optionalFields.filter(f => updatedData[f as keyof typeof updatedData]).length;
+    const hasSkills = (updatedData.skills as string[] || []).length > 0;
+    
+    fieldsToUpdate.profileCompleteness = Math.round(
+      (completedRequired / requiredFields.length) * 50 +
+      (completedOptional / optionalFields.length) * 30 +
+      (hasSkills ? 20 : 0)
+    );
+
+    const [updatedDesigner] = await db
+      .update(designers)
+      .set(fieldsToUpdate)
+      .where(eq(designers.id, designerId))
+      .returning();
+
+    await logWorkspaceActivity(
+      updatedDesigner.workspaceId,
+      req.user.id,
+      'designer_updated',
+      'designer',
+      updatedDesigner.id,
+      updatedDesigner.name
+    );
+
+    res.json(updatedDesigner);
+  }));
+
+  app.delete("/api/designers/batch", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids)) {
+        return res.status(400).json({ error: "Invalid request format" });
+      }
+
+      const result = await db
+        .delete(designers)
+        .where(inArray(designers.id, ids))
+        .returning();
+
+      // Log activity for each deleted designer
+      for (const deletedDesigner of result) {
+        await logWorkspaceActivity(
+          deletedDesigner.workspaceId,
+          req.user.id,
+          'designer_deleted',
+          'designer',
+          deletedDesigner.id,
+          deletedDesigner.name
+        );
+      }
+
+      res.json(result);
+    } catch (err) {
+      console.error('Error deleting designers:', err);
+      res.status(500).json({ error: "Failed to delete designers" });
+    }
+  }));
+
+  // Enrich designer profile with People Data Labs
+  app.post("/api/designers/:id/enrich", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+
+    // Get the designer
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Import enrichment function
+    const { enrichWithPeopleDataLabs } = await import('../enrichment');
+
+    // Call People Data Labs API
+    const enrichmentResult = await enrichWithPeopleDataLabs({
+      name: designer.name,
+      email: designer.email || undefined,
+      linkedin: designer.linkedIn || undefined,
+      company: designer.company || undefined,
+    });
+
+    if (!enrichmentResult.success) {
+      return res.status(400).json({ 
+        error: enrichmentResult.error || 'Failed to enrich profile'
+      });
+    }
+
+    res.json({
+      success: true,
+      suggestions: enrichmentResult.data,
+      likelihood: enrichmentResult.likelihood
+    });
+  }));
+
+  // Apply enrichment suggestions to designer profile
+  app.patch("/api/designers/:id/apply-enrichment", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const designerId = parseInt(req.params.id);
+    const { suggestions } = req.body;
+
+    if (!suggestions || typeof suggestions !== 'object') {
+      return res.status(400).json({ error: "Invalid suggestions data" });
+    }
+
+    // Get the designer
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to update this designer" });
+    }
+
+    // Verify user has edit permissions
+    const canEdit = ['owner', 'admin', 'editor'].includes(membership.role);
+    if (!canEdit) {
+      return res.status(403).json({ error: "You do not have permission to edit designers" });
+    }
+
+    // Build update object with only provided suggestions
+    const updateData: any = {
+      enrichedAt: new Date(),
+      enrichmentSource: 'peopledatalabs'
+    };
+
+    if (suggestions.email) updateData.email = suggestions.email;
+    if (suggestions.phoneNumber) updateData.phoneNumber = suggestions.phoneNumber;
+    if (suggestions.location) updateData.location = suggestions.location;
+    if (suggestions.company) updateData.company = suggestions.company;
+    if (suggestions.title) updateData.title = suggestions.title;
+    if (suggestions.linkedin) updateData.linkedIn = suggestions.linkedin;
+    if (suggestions.website) updateData.website = suggestions.website;
+    if (suggestions.skills && Array.isArray(suggestions.skills)) {
+      // Merge with existing skills, avoiding duplicates
+      const existingSkills = designer.skills || [];
+      const skillSet = new Set([...existingSkills, ...suggestions.skills]);
+      updateData.skills = Array.from(skillSet);
+    }
+
+    // Update the designer
+    const [updatedDesigner] = await db
+      .update(designers)
+      .set(updateData)
+      .where(eq(designers.id, designerId))
+      .returning();
+
+    res.json(updatedDesigner);
+  }));
+
+  // Get similar designers
+  app.get("/api/designers/:id/similar", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const designerId = parseInt(req.params.id);
+      
+      // Get the target designer
+      const targetDesigner = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      if (!targetDesigner) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to target designer's workspace
+      if (!workspaceId) {
+        workspaceId = targetDesigner.workspaceId;
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      // Get all designers in the same workspace, excluding the target designer
+      const allDesigners = await db.query.designers.findMany({
+        where: and(
+          eq(designers.workspaceId, workspaceId),
+          sql`${designers.id} != ${designerId}`
+        ),
+      });
+
+      // Calculate similarity scores for each designer
+      const targetSkills = Array.isArray(targetDesigner.skills) ? targetDesigner.skills : [];
+      const targetLocation = targetDesigner.location?.toLowerCase().trim();
+      const targetLevel = targetDesigner.level?.toLowerCase().trim();
+
+      const designersWithScores = allDesigners
+        .filter(designer => designer.name && designer.name.trim()) // Only complete profiles
+        .map(designer => {
+          let score = 0;
+          const reasons: string[] = [];
+
+          // Location match (high weight: +3 points)
+          const designerLocation = designer.location?.toLowerCase().trim();
+          if (targetLocation && designerLocation && designerLocation === targetLocation) {
+            score += 3;
+            reasons.push(`Same location: ${designer.location}`);
+          }
+
+          // Level match (medium weight: +2 points)
+          const designerLevel = designer.level?.toLowerCase().trim();
+          if (targetLevel && designerLevel && designerLevel === targetLevel) {
+            score += 2;
+            reasons.push(`Same level: ${designer.level}`);
+          }
+
+          // Skill overlap (high weight: +1 point per matching skill)
+          const designerSkills = Array.isArray(designer.skills) ? designer.skills : [];
+          const commonSkills = designerSkills.filter(skill => 
+            targetSkills.some(targetSkill => 
+              targetSkill.toLowerCase() === skill.toLowerCase()
+            )
+          );
+          if (commonSkills.length > 0) {
+            score += commonSkills.length;
+            reasons.push(`${commonSkills.length} shared skill${commonSkills.length > 1 ? 's' : ''}`);
+          }
+
+          return {
+            ...designer,
+            similarityScore: score,
+            similarityReasons: reasons,
+          };
+        })
+        .filter(designer => designer.similarityScore > 0) // Only include designers with some similarity
+        .sort((a, b) => b.similarityScore - a.similarityScore) // Sort by similarity score
+        .slice(0, 6); // Return top 6 similar designers
+
+      res.json(designersWithScores);
+    } catch (err) {
+      console.error('Error fetching similar designers:', err);
+      res.status(500).json({ error: "Failed to fetch similar designers" });
+    }
+  });
+
+  // Designer Timeline Routes (Notes + Activity Log)
+  app.get("/api/designers/:id/timeline", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const filter = req.query.filter as string || 'all'; // 'all', 'notes', 'activity'
+
+    // Verify designer exists and user has access
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Fetch notes and events based on filter
+    let notes: any[] = [];
+    let events: any[] = [];
+
+    if (filter === 'all' || filter === 'notes') {
+      notes = await db.query.designerNotes.findMany({
+        where: and(
+          eq(designerNotes.designerId, designerId),
+          eq(designerNotes.workspaceId, designer.workspaceId)
+        ),
+        with: {
+          author: {
+            columns: {
+              id: true,
+              username: true,
+              email: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+        orderBy: [desc(designerNotes.createdAt)],
+      });
+    }
+
+    if (filter === 'all' || filter === 'activity') {
+      events = await db.query.designerEvents.findMany({
+        where: and(
+          eq(designerEvents.designerId, designerId),
+          eq(designerEvents.workspaceId, designer.workspaceId)
+        ),
+        with: {
+          actor: {
+            columns: {
+              id: true,
+              username: true,
+              email: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+        orderBy: [desc(designerEvents.createdAt)],
+      });
+    }
+
+    // Combine and sort by date
+    const timeline = [
+      ...notes.map(note => ({
+        id: `note-${note.id}`,
+        type: 'note' as const,
+        content: note.content,
+        contentPlain: note.contentPlain,
+        isPinned: note.isPinned,
+        author: note.author,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        noteId: note.id,
+      })),
+      ...events.map(event => ({
+        id: `event-${event.id}`,
+        type: 'event' as const,
+        eventType: event.eventType,
+        source: event.source,
+        summary: event.summary,
+        details: event.details,
+        actor: event.actor,
+        createdAt: event.createdAt,
+        eventId: event.id,
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(offset, offset + limit);
+
+    // Get total counts
+    const totalNotes = notes.length;
+    const totalEvents = events.length;
+
+    res.json({
+      timeline,
+      pagination: {
+        total: totalNotes + totalEvents,
+        totalNotes,
+        totalEvents,
+        limit,
+        offset,
+      },
+    });
+  }));
+
+  // Create a note for a designer
+  app.post("/api/designers/:id/notes", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const { content, contentPlain } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: "Content is required" });
+    }
+
+    // Verify designer exists and user has access
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Create the note
+    const [newNote] = await db.insert(designerNotes).values({
+      workspaceId: designer.workspaceId,
+      designerId,
+      authorUserId: req.user!.id,
+      content: content.trim(),
+      contentPlain: contentPlain?.trim() || null,
+    }).returning();
+
+    // Also create an event for the activity log
+    await db.insert(designerEvents).values({
+      workspaceId: designer.workspaceId,
+      designerId,
+      eventType: 'note_added',
+      source: 'web',
+      actorUserId: req.user!.id,
+      summary: 'Added a note',
+      details: { noteId: newNote.id },
+    });
+
+    // Fetch the note with author info
+    const noteWithAuthor = await db.query.designerNotes.findFirst({
+      where: eq(designerNotes.id, newNote.id),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            username: true,
+            email: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json(noteWithAuthor);
+  }));
+
+  // Update a note
+  app.patch("/api/designers/:id/notes/:noteId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const noteId = parseInt(req.params.noteId);
+    const { content, contentPlain, isPinned } = req.body;
+
+    // Verify designer exists
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify note exists and belongs to this designer and workspace
+    const existingNote = await db.query.designerNotes.findFirst({
+      where: and(
+        eq(designerNotes.id, noteId),
+        eq(designerNotes.designerId, designerId),
+        eq(designerNotes.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!existingNote) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Build update object
+    const updateData: any = { updatedAt: new Date() };
+    if (content !== undefined) {
+      updateData.content = content.trim();
+    }
+    if (contentPlain !== undefined) {
+      updateData.contentPlain = contentPlain?.trim() || null;
+    }
+    if (isPinned !== undefined) {
+      updateData.isPinned = isPinned;
+    }
+
+    // Update the note
+    const [updatedNote] = await db.update(designerNotes)
+      .set(updateData)
+      .where(eq(designerNotes.id, noteId))
+      .returning();
+
+    // Fetch with author info
+    const noteWithAuthor = await db.query.designerNotes.findFirst({
+      where: eq(designerNotes.id, updatedNote.id),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            username: true,
+            email: true,
+            profilePhotoUrl: true,
+          },
+        },
+      },
+    });
+
+    res.json(noteWithAuthor);
+  }));
+
+  // Delete a note
+  app.delete("/api/designers/:id/notes/:noteId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const designerId = parseInt(req.params.id);
+    const noteId = parseInt(req.params.noteId);
+
+    // Verify designer exists
+    const designer = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify note exists and belongs to this designer and workspace
+    const existingNote = await db.query.designerNotes.findFirst({
+      where: and(
+        eq(designerNotes.id, noteId),
+        eq(designerNotes.designerId, designerId),
+        eq(designerNotes.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!existingNote) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    // Check workspace access
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user!.id),
+        eq(workspaceMembers.workspaceId, designer.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this designer" });
+    }
+
+    // Delete the note
+    await db.delete(designerNotes).where(eq(designerNotes.id, noteId));
+
+    res.json({ success: true, message: "Note deleted" });
+  }));
+
+  // List routes with workspace support
+  app.post("/api/lists", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to create lists
+      if (!permissions.canCreateLists) {
+        return res.status(403).json({ error: "Permission denied: Cannot create lists" });
+      }
+
+      const result = await db.transaction(async (tx) => {
+        const { designerIds, ...listData } = req.body;
+        
+        // Import slug utility
+        const { generateSlug, generateUniqueSlug } = await import('../utils/slug');
+        
+        // Generate slug from name
+        let slug = generateSlug(listData.name);
+        
+        // Check if slug already exists
+        const existingList = await tx.query.lists.findFirst({
+          where: eq(lists.slug, slug),
+        });
+        
+        // If slug exists, generate a unique one
+        if (existingList) {
+          slug = generateUniqueSlug(slug);
+        }
+        
+        const [list] = await tx
+          .insert(lists)
+          .values({
+            ...listData,
+            userId: req.user.id,
+            workspaceId: workspaceContext.workspaceId,
+            slug,
+          })
+          .returning();
+
+        // If designerIds are provided, add them to the list
+        if (designerIds?.length) {
+          await tx.insert(listDesigners)
+            .values(
+              designerIds.map((designerId: number) => ({
+                listId: list.id,
+                designerId,
+              }))
+            );
+        }
+
+        return list;
+      });
+
+      await logWorkspaceActivity(
+        workspaceContext.workspaceId,
+        req.user.id,
+        'list_created',
+        'list',
+        result.id,
+        result.name
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error creating list:', error);
+      res.status(500).json({ error: "Failed to create list" });
+    }
+  }));
+
+  app.get("/api/og-preview", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const { url } = req.query;
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({ error: "url query parameter is required" });
+    }
+
+    try {
+      const targetUrl = new URL(url);
+      const response = await fetch(targetUrl.toString(), {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; OGPreviewBot/1.0)",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!response.ok) {
+        return res.status(400).json({ error: "Failed to fetch URL" });
+      }
+
+      const html = await response.text();
+
+      const getMetaContent = (html: string, property: string): string | undefined => {
+        const patterns = [
+          new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
+          new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${property}["']`, 'i'),
+          new RegExp(`<meta[^>]+name=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
+          new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${property}["']`, 'i'),
+        ];
+        for (const re of patterns) {
+          const match = html.match(re);
+          if (match) return match[1];
+        }
+        return undefined;
+      };
+
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+
+      const ogData = {
+        title: getMetaContent(html, 'og:title') || getMetaContent(html, 'twitter:title') || titleMatch?.[1]?.trim(),
+        description: getMetaContent(html, 'og:description') || getMetaContent(html, 'description') || getMetaContent(html, 'twitter:description'),
+        image: getMetaContent(html, 'og:image') || getMetaContent(html, 'twitter:image'),
+        siteName: getMetaContent(html, 'og:site_name'),
+        favicon: `${targetUrl.protocol}//${targetUrl.hostname}/favicon.ico`,
+        url: targetUrl.toString(),
+      };
+
+      // Resolve relative image URLs
+      if (ogData.image && !ogData.image.startsWith('http')) {
+        ogData.image = `${targetUrl.protocol}//${targetUrl.hostname}${ogData.image.startsWith('/') ? '' : '/'}${ogData.image}`;
+      }
+
+      return res.json(ogData);
+    } catch (error: any) {
+      return res.status(400).json({ error: "Failed to fetch OG data", details: error.message });
+    }
+  }));
+
+  app.get("/api/lists", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Get user's workspace context and permissions
+      const context = await getUserWorkspaceContext(req.user.id, workspaceId);
+      
+      if (!context) {
+        return res.status(403).json({ error: "Not a member of this workspace" });
+      }
+
+      const permissions = calculatePermissions(context.role);
+      
+      // Check if user has permission to view lists
+      if (!permissions.canViewLists) {
+        return res.status(403).json({ error: "Permission denied: Cannot view lists" });
+      }
+
+      const userLists = await db.query.lists.findMany({
+        where: eq(lists.workspaceId, workspaceId),
+        orderBy: desc(lists.createdAt),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+      res.json(userLists);
+    } catch (error: any) {
+      console.error('Error fetching lists:', error);
+      res.status(500).json({ error: "Failed to fetch lists" });
+    }
+  }));
+
+  // Get single list by ID (for authenticated users)
+  app.get("/api/lists/:id", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const listId = parseInt(req.params.id);
+      
+      if (isNaN(listId)) {
+        return res.status(400).json({ error: "Invalid list ID" });
+      }
+
+      // First get the list to check workspace
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      // Check workspace membership
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, list.workspaceId)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not a member of this workspace" });
+      }
+
+      res.json(list);
+    } catch (error: any) {
+      console.error('Error fetching list:', error);
+      res.status(500).json({ error: "Failed to fetch list" });
+    }
+  }));
+
+  // Update list route (modified to handle notes)
+  app.put("/api/lists/:id", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.id);
+      const { name, description, summary, isPublic, designerId, notes, jobDescriptionUrl, jobDescriptionOgData } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // If we're updating designer notes
+      if (designerId !== undefined && notes !== undefined) {
+        await db
+          .update(listDesigners)
+          .set({ notes })
+          .where(
+            and(
+              eq(listDesigners.listId, listId),
+              eq(listDesigners.designerId, designerId)
+            )
+          );
+
+        const updatedList = await db.query.lists.findFirst({
+          where: eq(lists.id, listId),
+          with: {
+            designers: {
+              with: {
+                designer: true,
+              },
+            },
+          },
+        });
+
+        return res.json(updatedList);
+      }
+
+      // Otherwise, update list details
+      const updateData: any = {
+        ...(description !== undefined && { description }),
+        ...(summary !== undefined && { summary }),
+        ...(isPublic !== undefined && { isPublic }),
+        ...(jobDescriptionUrl !== undefined && { jobDescriptionUrl }),
+        ...(jobDescriptionOgData !== undefined && { jobDescriptionOgData }),
+      };
+
+      // If name is being updated, regenerate slug
+      if (name && name !== list.name) {
+        const { generateSlug, generateUniqueSlug } = await import('../utils/slug');
+        let slug = generateSlug(name);
+        
+        // Check if slug already exists for a different list
+        const existingList = await db.query.lists.findFirst({
+          where: and(
+            eq(lists.slug, slug),
+            not(eq(lists.id, listId))
+          ),
+        });
+        
+        // If slug exists, generate a unique one
+        if (existingList) {
+          slug = generateUniqueSlug(slug);
+        }
+        
+        updateData.name = name;
+        updateData.slug = slug;
+      }
+
+      const [updatedList] = await db
+        .update(lists)
+        .set(updateData)
+        .where(eq(lists.id, listId))
+        .returning();
+
+      // Log activity for list update
+      await logWorkspaceActivity(
+        updatedList.workspaceId,
+        req.user.id,
+        'list_updated',
+        'list',
+        updatedList.id,
+        updatedList.name
+      );
+
+      res.json(updatedList);
+    } catch (err) {
+      console.error('Error updating list:', err);
+      res.status(500).json({ error: "Failed to update list" });
+    }
+  }));
+
+  // Delete list route
+  app.delete("/api/lists/:listId", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to delete this list" });
+      }
+
+      // Delete the list (list_designers will be automatically deleted due to ON DELETE CASCADE)
+      const [deletedList] = await db
+        .delete(lists)
+        .where(eq(lists.id, listId))
+        .returning();
+
+      // Log activity for list deletion
+      await logWorkspaceActivity(
+        deletedList.workspaceId,
+        req.user.id,
+        'list_deleted',
+        'list',
+        deletedList.id,
+        deletedList.name
+      );
+
+      res.json({ message: "List deleted successfully", list: deletedList });
+    } catch (err) {
+      console.error('Error deleting list:', err);
+      res.status(500).json({ error: "Failed to delete list" });
+    }
+  }));
+
+  app.post("/api/lists/:listId/designers", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const { designerId } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Check if the designer exists
+      const designer = await db.query.designers.findFirst({
+        where: eq(designers.id, designerId),
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Check if the designer is already in the list
+      const existingEntry = await db.query.listDesigners.findFirst({
+        where: and(
+          eq(listDesigners.listId, listId),
+          eq(listDesigners.designerId, designerId)
+        ),
+      });
+
+      if (existingEntry) {
+        return res.status(400).json({ error: "Designer already in list" });
+      }
+
+      // Add the designer to the list
+      const [listDesigner] = await db
+        .insert(listDesigners)
+        .values({
+          listId,
+          designerId,
+        })
+        .returning();
+
+      await logWorkspaceActivity(
+        list.workspaceId,
+        req.user.id,
+        'designer_added_to_list',
+        'list',
+        listId,
+        list.name,
+        { designerId, designerName: designer.name }
+      );
+
+      res.json(listDesigner);
+    } catch (err) {
+      console.error('Error adding designer to list:', err);
+      res.status(500).json({ error: "Failed to add designer to list" });
+    }
+  }));
+
+  // Bulk add designers to list
+  app.post("/api/lists/:listId/designers/bulk", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const { designerIds } = req.body;
+
+      if (!Array.isArray(designerIds) || designerIds.length === 0) {
+        return res.status(400).json({ error: "designerIds must be a non-empty array" });
+      }
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Get existing entries to avoid duplicates
+      const existingEntries = await db.query.listDesigners.findMany({
+        where: and(
+          eq(listDesigners.listId, listId),
+          inArray(listDesigners.designerId, designerIds)
+        ),
+      });
+
+      const existingDesignerIds = new Set(existingEntries.map(e => e.designerId));
+      const newDesignerIds = designerIds.filter((id: number) => !existingDesignerIds.has(id));
+
+      if (newDesignerIds.length === 0) {
+        return res.json({ 
+          message: "All designers are already in the list", 
+          added: 0,
+          skipped: designerIds.length 
+        });
+      }
+
+      // Add all new designers to the list
+      const insertedEntries = await db
+        .insert(listDesigners)
+        .values(newDesignerIds.map((designerId: number) => ({
+          listId,
+          designerId,
+        })))
+        .returning();
+
+      res.json({ 
+        message: `Added ${insertedEntries.length} designer(s) to list`,
+        added: insertedEntries.length,
+        skipped: designerIds.length - insertedEntries.length
+      });
+    } catch (err) {
+      console.error('Error bulk adding designers to list:', err);
+      res.status(500).json({ error: "Failed to add designers to list" });
+    }
+  }));
+
+  // Remove designer from list route
+  app.delete("/api/lists/:listId/designers/:designerId", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const designerId = parseInt(req.params.designerId);
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Remove the designer from the list
+      const deletedEntry = await db
+        .delete(listDesigners)
+        .where(
+          and(
+            eq(listDesigners.listId, listId),
+            eq(listDesigners.designerId, designerId)
+          )
+        )
+        .returning();
+
+      if (deletedEntry.length === 0) {
+        return res.status(404).json({ error: "Designer not found in this list" });
+      }
+
+      res.json({ message: "Designer removed from list successfully" });
+    } catch (err) {
+      console.error('Error removing designer from list:', err);
+      res.status(500).json({ error: "Failed to remove designer from list" });
+    }
+  }));
+
+  // Update notes for a designer in a list
+  app.patch("/api/lists/:listId/designers/:designerId", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.listId);
+      const designerId = parseInt(req.params.designerId);
+      const { notes } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Update the notes for this designer in the list
+      const updatedEntry = await db
+        .update(listDesigners)
+        .set({ notes })
+        .where(
+          and(
+            eq(listDesigners.listId, listId),
+            eq(listDesigners.designerId, designerId)
+          )
+        )
+        .returning();
+
+      if (updatedEntry.length === 0) {
+        return res.status(404).json({ error: "Designer not found in this list" });
+      }
+
+      res.json(updatedEntry[0]);
+    } catch (err) {
+      console.error('Error updating designer notes:', err);
+      res.status(500).json({ error: "Failed to update designer notes" });
+    }
+  }));
+
+  // Reorder designers in a list
+  app.patch("/api/lists/:listId/reorder", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const listId = parseInt(req.params.listId);
+    const { orderedDesignerIds } = req.body as { orderedDesignerIds: number[] };
+
+    if (!Array.isArray(orderedDesignerIds)) {
+      return res.status(400).json({ error: "orderedDesignerIds must be an array" });
+    }
+
+    await Promise.all(
+      orderedDesignerIds.map((designerId, index) =>
+        db.update(listDesigners)
+          .set({ sortOrder: index })
+          .where(and(eq(listDesigners.listId, listId), eq(listDesigners.designerId, designerId)))
+      )
+    );
+
+    res.json({ success: true });
+  }));
+
+  // Public list route
+  app.get("/api/lists/:slugOrId/public", async (req, res) => {
+    try {
+      const slugOrId = req.params.slugOrId;
+      let list;
+
+      // Check if it's a numeric ID or a slug
+      const isNumericId = /^\d+$/.test(slugOrId);
+
+      if (isNumericId) {
+        // Fetch by ID
+        const listId = parseInt(slugOrId);
+        [list] = await db
+          .select()
+          .from(lists)
+          .where(
+            and(
+              eq(lists.id, listId),
+              eq(lists.isPublic, true)
+            )
+          )
+          .limit(1);
+      } else {
+        // Fetch by slug
+        [list] = await db
+          .select()
+          .from(lists)
+          .where(
+            and(
+              eq(lists.slug, slugOrId),
+              eq(lists.isPublic, true)
+            )
+          )
+          .limit(1);
+      }
+
+      if (!list) {
+        return res.status(404).send("List not found or is private");
+      }
+
+      // Get designers for the list
+      const listWithDesigners = await db.query.lists.findFirst({
+        where: eq(lists.id, list.id),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+
+      res.json(listWithDesigners);
+    } catch (err) {
+      console.error('Error fetching public list:', err);
+      res.status(500).json({ error: "Failed to fetch list" });
+    }
+  });
+
+  // Add backup status endpoint
+  app.get("/api/system/backup-status", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin (you may want to add an admin field to your user table)
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    // Get last backup time from pg_stat_archiver
+    const backupStatusResult = await db.execute(sql`
+      SELECT 
+        last_archived_time,
+        last_archived_wal,
+        last_failed_time,
+        last_failed_wal,
+        stats_reset
+      FROM pg_stat_archiver;
+    `);
+
+    res.json(backupStatusResult.rows[0] || {});
+  }));
+
+  // Add health check endpoint
+  app.get("/api/system/health", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const healthStatusResult = await db.execute(sql`
+      SELECT * FROM db_health_check;
+    `);
+
+    // Add connection pool status
+    const poolStatusResult = await db.execute(sql`
+      SELECT count(*) as active_connections 
+      FROM pg_stat_activity 
+      WHERE state = 'active';
+    `);
+
+    res.json({
+      health: healthStatusResult.rows[0] || {},
+      connections: poolStatusResult.rows[0] || {},
+      status: 'healthy'
+    });
+  }));
+
+  // Add email endpoint
+  app.post("/api/lists/:id/email", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const listId = parseInt(req.params.id);
+      const { email, subject, summary } = req.body;
+
+      // Verify the list exists and belongs to the user
+      const list = await db.query.lists.findFirst({
+        where: eq(lists.id, listId),
+        with: {
+          designers: {
+            with: {
+              designer: true,
+            },
+          },
+        },
+      });
+
+      if (!list) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      if (list.userId !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to share this list" });
+      }
+
+      // Transform the list to match SelectList type expected by sendListEmail
+      const emailList = {
+        ...list!,
+        designers: list!.designers?.map(ld => ({
+          designer: ld.designer!,
+          notes: ld.notes || undefined
+        })) || []
+      };
+      await sendListEmail(emailList, email, subject, summary);
+      res.json({ message: "Email sent successfully" });
+    } catch (err: any) {
+      console.error('Error sending email:', err);
+      res.status(500).json({ error: err.message || "Failed to send email" });
+    }
+  }));
+
+  // AI Matchmaker endpoint
+  app.post("/api/matchmaker/analyze", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { roleDescription } = req.body;
+
+    if (!roleDescription || roleDescription.trim().length === 0) {
+      return res.status(400).json({ error: "Role description is required" });
+    }
+
+    // Get all designers from user's workspace
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const allDesigners = await db.query.designers.findMany({
+      where: eq(designers.workspaceId, userWorkspace.id),
+      orderBy: desc(designers.createdAt),
+    });
+
+    if (allDesigners.length === 0) {
+      return res.json({ 
+        recommendations: [],
+        analysis: "No designers found in database to match against."
+      });
+    }
+
+    // Create a summary of all designers for OpenAI
+    const designerSummaries = allDesigners.map(designer => ({
+      id: designer.id,
+      name: designer.name,
+      title: designer.title,
+      company: designer.company,
+      skills: designer.skills,
+      description: designer.description,
+      level: designer.level,
+      location: designer.location
+    }));
+
+    // Use OpenAI to analyze and recommend matches
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert design recruiter and talent matcher. Your job is to analyze a role description and recommend the best designers from a given pool based on their skills, experience, and background.
+
+          Return your response as a JSON object with this structure:
+          {
+            "analysis": "Brief analysis of the role requirements",
+            "recommendations": [
+              {
+                "designerId": number,
+                "matchScore": number (0-100),
+                "reasoning": "Explanation of why this designer is a good match",
+                "matchedSkills": ["skill1", "skill2"],
+                "concerns": "Any potential concerns or gaps (optional)"
+              }
+            ]
+          }
+
+          Rank designers by match quality and only include those with a match score of 60 or higher. Limit to top 10 matches.`
+        },
+        {
+          role: "user",
+          content: `Role Description:
+${roleDescription}
+
+Available Designers:
+${JSON.stringify(designerSummaries, null, 2)}
+
+Please analyze this role and recommend the best matching designers.`
+        }
+      ],
+      temperature: 0.3,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      return res.status(500).json({ error: "Failed to get AI analysis" });
+    }
+
+    try {
+      // Strip markdown code blocks if present
+      let jsonContent = aiResponse.trim();
+      if (jsonContent.startsWith('```')) {
+        // Remove opening ```json or ```
+        jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/, '');
+        // Remove closing ```
+        jsonContent = jsonContent.replace(/\n?```\s*$/, '');
+      }
+      
+      const analysis = JSON.parse(jsonContent);
+      
+      // Enrich recommendations with full designer data
+      const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+        const designer = allDesigners.find(d => d.id === rec.designerId);
+        return {
+          ...rec,
+          designer
+        };
+      }).filter((rec: any) => rec.designer); // Remove any recommendations where designer wasn't found
+
+      res.json({
+        analysis: analysis.analysis,
+        recommendations: enrichedRecommendations,
+        roleDescription
+      });
+    } catch (error) {
+      console.error('Failed to parse AI response:', error);
+      res.status(500).json({ error: "Failed to parse AI analysis" });
+    }
+  }));
+
+
+
+  // Admin API routes
+  app.get("/api/admin/db/tables", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const result = await db.execute(sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name;
+    `);
+
+    // Drizzle returns a QueryResult object with rows property
+    const tables = result.rows || result;
+    res.json(tables);
+  }));
+
+  app.post("/api/admin/db/query", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const { query } = req.body;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Query is required and must be a string" 
+      });
+    }
+
+    // Basic safety checks - prevent destructive operations without explicit confirmation
+    const lowerQuery = query.toLowerCase().trim();
+    const destructiveKeywords = ['drop', 'truncate', 'delete from users', 'delete from designers', 'delete from lists'];
+    
+    const isDestructive = destructiveKeywords.some(keyword => 
+      lowerQuery.includes(keyword)
+    );
+
+    if (isDestructive && !req.body.confirmDestructive) {
+      return res.status(400).json({
+        success: false,
+        error: "Destructive operation detected. This query could delete or modify data. Please review carefully."
+      });
+    }
+
+    try {
+      const result = await db.execute(sql.raw(query));
+      
+      // Extract rows from the result object
+      const data = result.rows || result;
+      
+      res.json({
+        success: true,
+        data: Array.isArray(data) ? data : [data],
+        rowCount: Array.isArray(data) ? data.length : (data ? 1 : 0)
+      });
+    } catch (error: any) {
+      res.json({
+        success: false,
+        error: error.message || "Query execution failed"
+      });
+    }
+  }));
+
+  // Admin invite endpoint
+  app.post("/api/admin/send-invite", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    // Check if user is admin
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Not authorized");
+    }
+
+    const { email, message } = req.body;
+
+    if (!email || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Email and message are required" 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid email format" 
+      });
+    }
+
+    try {
+      // Check if user already exists
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.email, email)
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ 
+          success: false, 
+          error: "User already exists" 
+        });
+      }
+
+      // Get admin's workspace to invite to
+      const adminWorkspace = await getUserWorkspace(req.user.id);
+      if (!adminWorkspace) {
+        return res.status(403).json({ 
+          success: false, 
+          error: "Admin has no workspace access" 
+        });
+      }
+
+      // Generate invitation token
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+
+      // Create invitation record
+      await db.insert(workspaceInvitations).values({
+        workspaceId: adminWorkspace.id,
+        email,
+        role: 'member',
+        token,
+        invitedBy: req.user.id,
+        expiresAt,
+      });
+
+      // Send invite via Clerk (no domain verification required)
+      const { sendInviteViaClerk } = await import("../email");
+      const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
+
+      await sendInviteViaClerk({
+        email,
+        redirectUrl: inviteLink,
+        workspaceName: adminWorkspace.name,
+        role: 'member',
+      });
+
+      res.json({
+        success: true,
+        message: `Alpha invite successfully sent to ${email}`
+      });
+
+    } catch (error: any) {
+      console.error("Invite email error:", error);
+      
+      // Parse SendGrid error details if available
+      let errorMessage = "Failed to send invite";
+      if (error.response && error.response.body && error.response.body.errors) {
+        errorMessage = error.response.body.errors[0]?.message || errorMessage;
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+        emailPreview: {
+          to: email,
+          subject: "Invitation to Test Tapestry Alpha",
+          content: message.replace('[INVITE_LINK]', `${req.protocol}://${req.get('host')}/auth`)
+        }
+      });
+    }
+  }));
+
+  // Profile enrichment endpoints
+  app.post("/api/designers/:id/enrich", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    try {
+      const { id } = req.params;
+      
+      // Get user workspace
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      // Get existing designer data
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, parseInt(id)), 
+          eq(designers.workspaceId, userWorkspace.id)
+        )
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Prepare existing data for enrichment
+      const existingData = {
+        name: designer.name,
+        title: designer.title || undefined,
+        company: designer.company || undefined,
+        bio: designer.description || undefined,
+        skills: designer.skills || undefined,
+        email: designer.email || undefined,
+        location: designer.location || undefined
+      };
+
+      // Enrich the profile
+      const enrichmentResult = await enrichDesignerProfile(designer.name, existingData);
+
+      if (!enrichmentResult.success) {
+        return res.status(500).json({ error: enrichmentResult.error });
+      }
+
+      res.json(enrichmentResult);
+    } catch (error: any) {
+      console.error("Profile enrichment error:", error);
+      res.status(500).json({ error: error.message || "Failed to enrich profile" });
+    }
+  });
+
+  app.post("/api/designers/enrich-new", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    try {
+      const { name } = req.body;
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Designer name is required" });
+      }
+
+      // Enrich the profile for a new designer
+      const enrichmentResult = await enrichDesignerProfile(name.trim());
+
+      if (!enrichmentResult.success) {
+        return res.status(500).json({ error: enrichmentResult.error });
+      }
+
+      res.json(enrichmentResult);
+    } catch (error: any) {
+      console.error("New profile enrichment error:", error);
+      res.status(500).json({ error: error.message || "Failed to enrich profile" });
+    }
+  });
+
+  app.post("/api/designers/:id/apply-enrichment", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    try {
+      const { id } = req.params;
+      const enrichmentData: DesignerEnrichmentData = req.body;
+
+      // Get user workspace
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      // Verify designer exists and belongs to workspace
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, parseInt(id)), 
+          eq(designers.workspaceId, userWorkspace.id)
+        )
+      });
+
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      // Apply enrichment data
+      const updatedDesigner = await db.update(designers)
+        .set({
+          name: enrichmentData.name || designer.name,
+          title: enrichmentData.title || designer.title,
+          company: enrichmentData.company || designer.company,
+          description: enrichmentData.bio || designer.description,
+          skills: enrichmentData.skills || designer.skills,
+          email: enrichmentData.email || designer.email,
+          location: enrichmentData.location || designer.location
+        })
+        .where(eq(designers.id, parseInt(id)))
+        .returning();
+
+      res.json(updatedDesigner[0]);
+    } catch (error: any) {
+      console.error("Apply enrichment error:", error);
+      res.status(500).json({ error: error.message || "Failed to apply enrichment" });
+    }
+  });
+
+  app.post("/api/designers/generate-skills", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    try {
+      const { bio, experience } = req.body;
+
+      if (!bio && !experience) {
+        return res.status(400).json({ error: "Bio or experience is required" });
+      }
+
+      const skills = await generateDesignerSkills(bio || "", experience || "");
+      res.json({ skills });
+    } catch (error: any) {
+      console.error("Skills generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate skills" });
+    }
+  });
+
+  // CSV Import endpoint for admins
+  app.post("/api/admin/import-designers", requireAdmin, csvUpload.single('csv'), withErrorHandler(async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "No CSV file uploaded" 
+      });
+    }
+
+    if (!req.body.mappings) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Field mappings are required" 
+      });
+    }
+
+    try {
+      const csvContent = req.file.buffer.toString('utf-8');
+      const mappings = JSON.parse(req.body.mappings);
+      
+      // Parse CSV content
+      const lines = csvContent.split('\n').filter((line: string) => line.trim());
+      if (lines.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "CSV file is empty" 
+        });
+      }
+
+      const headers = lines[0].split(',').map((h: string) => h.trim().replace(/"/g, ''));
+      const dataRows = lines.slice(1);
+
+      const results = {
+        success: true,
+        imported: 0,
+        errors: [] as Array<{ row: number; error: string }>
+      };
+
+      // Process each row
+      for (let i = 0; i < dataRows.length; i++) {
+        const rowNumber = i + 2; // +2 because we skip header and array is 0-indexed
+        const values = dataRows[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+        
+        try {
+          const designerData: any = {
+            userId: req.user.id
+          };
+
+          // Map CSV values to database fields
+          mappings.forEach(({ csvColumn, dbField }: { csvColumn: string; dbField: string }) => {
+            if (!dbField) return;
+            
+            const headerIndex = headers.indexOf(csvColumn);
+            if (headerIndex === -1) return;
+            
+            const value = values[headerIndex] || '';
+            
+            if (dbField === 'skills') {
+              // Parse skills as comma-separated values
+              designerData.skills = value ? value.split(',').map((s: string) => s.trim()).filter((s: string) => s) : [];
+            } else if (dbField === 'available') {
+              // Parse boolean values
+              designerData.available = value.toLowerCase() === 'true' || value === '1';
+            } else {
+              designerData[dbField] = value || null;
+            }
+          });
+
+          // Validate required fields
+          const requiredFields = ['name', 'title', 'email', 'level'];
+          const missingFields = requiredFields.filter(field => !designerData[field]);
+          
+          if (missingFields.length > 0) {
+            results.errors.push({
+              row: rowNumber,
+              error: `Missing required fields: ${missingFields.join(', ')}`
+            });
+            continue;
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(designerData.email)) {
+            results.errors.push({
+              row: rowNumber,
+              error: 'Invalid email format'
+            });
+            continue;
+          }
+
+          // Check if email already exists
+          const existingDesigner = await db.query.designers.findFirst({
+            where: eq(designers.email, designerData.email)
+          });
+
+          if (existingDesigner) {
+            results.errors.push({
+              row: rowNumber,
+              error: `Email ${designerData.email} already exists`
+            });
+            continue;
+          }
+
+          // Insert the designer
+          await db.insert(designers).values(designerData);
+          results.imported++;
+
+        } catch (error: any) {
+          results.errors.push({
+            row: rowNumber,
+            error: error.message || 'Failed to import row'
+          });
+        }
+      }
+
+      // Set success based on whether any records were imported
+      results.success = results.imported > 0;
+      
+      if (results.errors.length > 0 && results.imported === 0) {
+        results.success = false;
+      }
+
+      res.json(results);
+
+    } catch (error: any) {
+      console.error('CSV import error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to process CSV file'
+      });
+    }
+  }));
+
+  // PDF processing route for LinkedIn exports
+  app.post("/api/import/pdf/process", pdfUpload.single('pdf'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: "No PDF file uploaded" });
+    }
+
+    try {
+      const pdfBuffer = req.file.buffer;
+      
+      // Parse PDF text content
+      const pdfParse = (await import("pdf-parse")).default;
+      const pdfData = await pdfParse(pdfBuffer);
+      const textContent = pdfData.text;
+      const totalPages = pdfData.numpages;
+
+      // Use OpenAI to extract contact information from the PDF text
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert at extracting contact information from LinkedIn export PDFs. 
+            
+            Your task is to parse the text content and extract individual contact profiles. Look for patterns that indicate LinkedIn profiles such as:
+            - Names (usually the first line or prominently displayed)
+            - Job titles and companies
+            - Locations
+            - LinkedIn profile URLs
+            - Skills and experience information
+            - Contact information (emails, phone numbers)
+            
+            Return a JSON array of contacts with the following structure:
+            {
+              "contacts": [
+                {
+                  "name": "Full Name",
+                  "title": "Job Title",
+                  "company": "Company Name",
+                  "location": "City, State/Country",
+                  "email": "email@example.com",
+                  "linkedIn": "linkedin.com/in/profile",
+                  "skills": ["skill1", "skill2", "skill3"],
+                  "experience": "Brief experience summary",
+                  "confidence": 0.85
+                }
+              ]
+            }
+            
+            - Set confidence between 0-1 based on how complete the information is
+            - Only include contacts where you have at least a name and title
+            - Extract skills from job descriptions and experience sections
+            - Be conservative with confidence scores - only use 0.8+ for very complete profiles
+            - If you can't extract meaningful contact information, return an empty array`
+          },
+          {
+            role: "user",
+            content: `Please extract contact information from this LinkedIn export PDF content:\n\n${textContent}`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 4000,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content;
+      if (!aiResponse) {
+        throw new Error("No response from AI");
+      }
+
+      let extractedContacts = [];
+      let errors: string[] = [];
+
+      try {
+        // Clean the response to extract JSON
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[0];
+          const parsed = JSON.parse(jsonStr);
+          extractedContacts = parsed.contacts || [];
+        } else {
+          throw new Error("No valid JSON found in response");
+        }
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        errors.push("Failed to parse extracted contact information");
+      }
+
+      // Validate and clean contacts
+      const validContacts = extractedContacts
+        .filter((contact: any) => contact.name && contact.title)
+        .map((contact: any) => ({
+          name: contact.name.trim(),
+          title: contact.title?.trim() || '',
+          company: contact.company?.trim() || null,
+          location: contact.location?.trim() || null,
+          email: contact.email?.trim() || null,
+          linkedIn: contact.linkedIn?.trim() || null,
+          skills: Array.isArray(contact.skills) ? contact.skills.slice(0, 10) : [],
+          experience: contact.experience?.trim() || null,
+          confidence: Math.min(Math.max(contact.confidence || 0.5, 0), 1)
+        }));
+
+      const result = {
+        success: validContacts.length > 0 || errors.length === 0,
+        contacts: validContacts,
+        totalPages,
+        errors: errors.length > 0 ? errors : undefined,
+        message: validContacts.length === 0 ? "No contacts could be extracted from the PDF" : undefined
+      };
+
+      res.json(result);
+
+    } catch (error: any) {
+      console.error('PDF processing error:', error);
+      res.status(500).json({ 
+        error: "Failed to process PDF file",
+        details: error.message 
+      });
+    }
+  }));
+
+  // PDF import route - imports processed contacts into database
+  app.post("/api/import/pdf/import", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const { contacts } = req.body;
+
+    if (!contacts || !Array.isArray(contacts)) {
+      return res.status(400).json({ error: "Invalid contacts data" });
+    }
+
+    try {
+      const results = {
+        success: true,
+        imported: 0,
+        skipped: 0,
+        errors: [] as Array<{ contact: string; error: string }>,
+      };
+
+      for (const contact of contacts) {
+        try {
+          // Check if designer already exists by email or name+company
+          let existingDesigner = null;
+          
+          if (contact.email) {
+            existingDesigner = await db.query.designers.findFirst({
+              where: and(
+                eq(designers.email, contact.email),
+                eq(designers.workspaceId, userWorkspace.id)
+              ),
+            });
+          }
+          
+          if (!existingDesigner && contact.name && contact.company) {
+            existingDesigner = await db.query.designers.findFirst({
+              where: and(
+                eq(designers.name, contact.name),
+                eq(designers.company, contact.company),
+                eq(designers.workspaceId, userWorkspace.id)
+              ),
+            });
+          }
+
+          if (existingDesigner) {
+            results.skipped++;
+            continue;
+          }
+
+          // Determine level based on title
+          let level = 'Mid-level';
+          const titleLower = (contact.title || '').toLowerCase();
+          if (titleLower.includes('senior') || titleLower.includes('lead') || titleLower.includes('principal')) {
+            level = 'Senior';
+          } else if (titleLower.includes('junior') || titleLower.includes('intern') || titleLower.includes('entry')) {
+            level = 'Junior';
+          } else if (titleLower.includes('director') || titleLower.includes('vp') || titleLower.includes('head')) {
+            level = 'Director';
+          }
+
+          // Normalize LinkedIn URL
+          const normalizeLinkedInUrl = (url: string): string => {
+            if (!url || url.trim() === '') return '';
+            const trimmed = url.trim();
+            if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+            if (trimmed.startsWith('linkedin.com') || trimmed.startsWith('www.linkedin.com')) return `https://${trimmed}`;
+            if (trimmed.startsWith('/in/')) return `https://www.linkedin.com${trimmed}`;
+            if (!trimmed.includes('/') && !trimmed.includes('.')) return `https://www.linkedin.com/in/${trimmed}`;
+            return `https://${trimmed}`;
+          };
+
+          // Create designer record
+          const designerData = {
+            name: contact.name,
+            title: contact.title,
+            email: contact.email || `${contact.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+            level,
+            company: contact.company,
+            location: contact.location,
+            website: null,
+            linkedIn: normalizeLinkedInUrl(contact.linkedIn || ''),
+            skills: contact.skills?.join(', ') || null,
+            bio: contact.experience,
+            available: false,
+            notes: `Imported from LinkedIn PDF - Confidence: ${Math.round(contact.confidence * 100)}%`,
+            userId: req.user.id,
+            workspaceId: userWorkspace.id,
+          };
+
+          await db.insert(designers).values(designerData);
+          results.imported++;
+
+        } catch (error: any) {
+          results.errors.push({
+            contact: contact.name,
+            error: error.message
+          });
+        }
+      }
+
+      res.json(results);
+
+    } catch (error: any) {
+      console.error('PDF import error:', error);
+      res.status(500).json({ 
+        error: "Failed to import contacts",
+        details: error.message 
+      });
+    }
+  }));
+
+  // Profile management routes
+  app.put("/api/profile", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { profilePhotoUrl } = req.body;
+      const userId = req.user.id;
+
+      // Update user profile
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          ...(profilePhotoUrl !== undefined && { profilePhotoUrl }),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error: any) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  }));
+
+  // Workspace management routes
+  app.put("/api/workspaces/update", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    try {
+      const { name } = req.body;
+      const userId = req.user.id;
+
+      if (!name || name.trim().length < 2) {
+        return res.status(400).json({ error: "Workspace name must be at least 2 characters long" });
+      }
+
+      // Get user's workspace
+      const userWorkspace = await getUserWorkspace(userId);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+
+      // Check if user is owner or admin of the workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, userWorkspace.id),
+          eq(workspaceMembers.userId, userId)
+        ),
+      });
+
+      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+        return res.status(403).json({ error: "Not authorized to update workspace" });
+      }
+
+      // Update workspace name
+      const [updatedWorkspace] = await db
+        .update(workspaces)
+        .set({
+          name: name.trim(),
+        })
+        .where(eq(workspaces.id, userWorkspace.id))
+        .returning();
+
+      res.json(updatedWorkspace);
+    } catch (error: any) {
+      console.error("Workspace update error:", error);
+      res.status(500).json({ error: "Failed to update workspace" });
+    }
+  }));
+
+  app.post("/api/profile/photo", upload.single('photo'), withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "No photo file provided" });
+    }
+
+    try {
+      const userId = req.user.id;
+
+      // Get existing user to clean up old profile photo
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      const oldFilename = existingUser?.profilePhotoUrl || undefined;
+      const photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
+
+      // Update user's profile photo URL
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          profilePhotoUrl: photoUrl,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json({ profilePhotoUrl: updatedUser.profilePhotoUrl });
+    } catch (error: any) {
+      console.error("Profile photo upload error:", error);
+      res.status(500).json({ error: "Failed to upload profile photo" });
+    }
+  }));
+
+  // Onboarding API endpoints
+  app.get("/api/onboarding/state", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, req.user.id),
+        columns: {
+          hasCompletedOnboarding: true,
+          onboardingDebugMode: true,
+          isAdmin: true,
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
+        debugMode: user.isAdmin ? user.onboardingDebugMode : false,
+      });
+    } catch (error: any) {
+      console.error('Failed to fetch onboarding state:', error);
+      res.status(500).json({ error: "Failed to fetch onboarding state" });
+    }
+  });
+
+  app.post("/api/onboarding/complete", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      await db.update(users)
+        .set({ hasCompletedOnboarding: true })
+        .where(eq(users.id, req.user.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to complete onboarding:', error);
+      res.status(500).json({ error: "Failed to complete onboarding" });
+    }
+  });
+
+  app.post("/api/onboarding/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { role, company, useCase, workspaceName } = req.body;
+      const onboardingData = { role, company, useCase };
+
+      await db.update(users)
+        .set({ onboardingData })
+        .where(eq(users.id, req.user.id));
+
+      if (workspaceName && workspaceName.trim().length >= 2) {
+        const userWorkspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.ownerId, req.user.id),
+        });
+        if (userWorkspace) {
+          await db.update(workspaces)
+            .set({ name: workspaceName.trim() })
+            .where(eq(workspaces.id, userWorkspace.id));
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to save onboarding profile:', error);
+      res.status(500).json({ error: "Failed to save onboarding profile" });
+    }
+  });
+
+  app.put("/api/onboarding/settings", requireAdmin, async (req, res) => {
+    try {
+      const { debugMode } = req.body;
+
+      await db.update(users)
+        .set({ onboardingDebugMode: debugMode })
+        .where(eq(users.id, req.user!.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to update onboarding settings:', error);
+      res.status(500).json({ error: "Failed to update onboarding settings" });
+    }
+  });
+
+  // Test email endpoint for debugging
+  app.post("/api/test-email", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    try {
+      const { sendEmail } = await import("../email");
+      
+      await sendEmail({
+        to: email,
+        from: "david@davidhoang.com",
+        subject: "Test Email from Tapestry",
+        text: "This is a test email to verify SendGrid delivery.",
+        html: "<p>This is a test email to verify SendGrid delivery.</p>"
+      });
+
+      res.json({ success: true, message: "Test email sent successfully" });
+    } catch (error: any) {
+      console.error('Test email failed:', error);
+      res.status(500).json({ 
+        error: "Failed to send test email", 
+        details: error.message 
+      });
+    }
+  }));
+
+  // Workspace member management routes
+  app.get("/api/workspaces/:workspaceId/members", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const context = (req as any).workspaceContext;
+    const permissions = (req as any).permissions;
+
+    if (!permissions.canViewMembersList) {
+      return res.status(403).json({ error: "Not authorized to view members list" });
+    }
+
+    const members = await db.query.workspaceMembers.findMany({
+      where: eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            email: true,
+            username: true,
+            profilePhotoUrl: true,
+            createdAt: true,
+          }
+        },
+      },
+      orderBy: [
+        sql`CASE WHEN ${workspaceMembers.role} = 'owner' THEN 1 
+                 WHEN ${workspaceMembers.role} = 'admin' THEN 2 
+                 WHEN ${workspaceMembers.role} = 'member' THEN 3 
+                 WHEN ${workspaceMembers.role} = 'viewer' THEN 4 
+                 ELSE 5 END`,
+        asc(workspaceMembers.joinedAt)
+      ],
+    });
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'view_members',
+      resource: 'workspace_members',
+    });
+
+    res.json(members.map(member => ({
+      id: member.id,
+      userId: member.userId,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      user: member.user,
+    })));
+  }));
+
+  app.patch("/api/workspaces/:workspaceId/members/:memberId/role", requirePermission('canChangeRoles'), withErrorHandler(async (req, res) => {
+    const { workspaceId, memberId } = req.params;
+    const { role } = req.body;
+    const context = (req as any).workspaceContext;
+
+    if (!['owner', 'admin', 'member', 'viewer'].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    // Can't change owner role
+    const targetMember = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+        eq(workspaceMembers.id, parseInt(memberId))
+      ),
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    if (targetMember.role === 'owner' && role !== 'owner') {
+      return res.status(400).json({ error: "Cannot change owner role" });
+    }
+
+    // Can't promote someone to owner unless you are owner
+    if (role === 'owner' && !context.isOwner) {
+      return res.status(403).json({ error: "Only owners can promote to owner" });
+    }
+
+    const [updatedMember] = await db
+      .update(workspaceMembers)
+      .set({ role })
+      .where(eq(workspaceMembers.id, parseInt(memberId)))
+      .returning();
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'change_role',
+      resource: 'workspace_member',
+      resourceId: parseInt(memberId),
+      metadata: { oldRole: targetMember.role, newRole: role },
+    });
+
+    res.json(updatedMember);
+  }));
+
+  app.delete("/api/workspaces/:workspaceId/members/:memberId", requirePermission('canRemoveMembers'), withErrorHandler(async (req, res) => {
+    const { workspaceId, memberId } = req.params;
+    const context = (req as any).workspaceContext;
+
+    // Can't remove owner
+    const targetMember = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+        eq(workspaceMembers.id, parseInt(memberId))
+      ),
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    if (targetMember.role === 'owner') {
+      return res.status(400).json({ error: "Cannot remove workspace owner" });
+    }
+
+    // Can't remove yourself unless transferring ownership
+    if (targetMember.userId === context.userId) {
+      return res.status(400).json({ error: "Cannot remove yourself from workspace" });
+    }
+
+    const removedUser = await db.query.users.findFirst({
+      where: eq(users.id, targetMember.userId),
+    });
+
+    await db
+      .delete(workspaceMembers)
+      .where(eq(workspaceMembers.id, parseInt(memberId)));
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'remove_member',
+      resource: 'workspace_member',
+      resourceId: parseInt(memberId),
+      metadata: { removedRole: targetMember.role },
+    });
+
+    await logWorkspaceActivity(
+      parseInt(workspaceId),
+      context.userId,
+      'member_left',
+      'member',
+      targetMember.userId,
+      removedUser?.email || removedUser?.username || 'a member',
+      { 
+        removedBy: context.userId,
+        removedByEmail: req.user!.email,
+        role: targetMember.role,
+        removedUserId: targetMember.userId
+      }
+    );
+
+    res.json({ success: true });
+  }));
+
+  // Leave workspace endpoint
+  app.post("/api/workspaces/:workspaceId/leave", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const workspaceId = parseInt(req.params.workspaceId);
+    const userId = req.user!.id;
+
+    // Find the user's membership in this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: "Membership not found" });
+    }
+
+    // Prevent workspace owners from leaving their own workspace
+    if (membership.role === 'owner') {
+      return res.status(400).json({ error: "Workspace owners cannot leave their workspace. Transfer ownership first or delete the workspace." });
+    }
+
+    // Remove the user's membership
+    await db
+      .delete(workspaceMembers)
+      .where(and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId)
+      ));
+
+    await logPermissionAction({
+      userId: userId,
+      workspaceId: workspaceId,
+      action: 'leave_workspace',
+      resource: 'workspace_membership',
+      metadata: { leftRole: membership.role },
+    });
+
+    await logWorkspaceActivity(
+      workspaceId,
+      userId,
+      'member_left',
+      'member',
+      userId,
+      req.user!.username || req.user!.email,
+      { leftVoluntarily: true, role: membership.role }
+    );
+
+    res.json({ success: true, message: "Successfully left workspace" });
+  }));
+
+  app.get("/api/workspaces/:workspaceId/invitations", requirePermission('canManageInvitations'), withErrorHandler(async (req, res) => {
+    const { workspaceId } = req.params;
+    const context = (req as any).workspaceContext;
+
+    const invitations = await db.query.workspaceInvitations.findMany({
+      where: and(
+        eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        inviter: {
+          columns: {
+            id: true,
+            email: true,
+            username: true,
+          }
+        },
+      },
+      orderBy: desc(workspaceInvitations.createdAt),
+    });
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'view_invitations',
+      resource: 'workspace_invitations',
+    });
+
+    res.json(invitations.map(invitation => ({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      createdAt: invitation.createdAt,
+      expiresAt: invitation.expiresAt,
+      invitedBy: invitation.inviter,
+    })));
+  }));
+
+  app.delete("/api/workspaces/:workspaceId/invitations/:invitationId", requirePermission('canManageInvitations'), withErrorHandler(async (req, res) => {
+    const { workspaceId, invitationId } = req.params;
+    const context = (req as any).workspaceContext;
+
+    const invitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
+        eq(workspaceInvitations.id, parseInt(invitationId))
+      ),
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found" });
+    }
+
+    await db
+      .delete(workspaceInvitations)
+      .where(eq(workspaceInvitations.id, parseInt(invitationId)));
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: parseInt(workspaceId),
+      action: 'cancel_invitation',
+      resource: 'workspace_invitation',
+      resourceId: parseInt(invitationId),
+      metadata: { email: invitation.email, role: invitation.role },
+    });
+
+    res.json({ success: true });
+  }));
+
+  // Workspace invitation routes
+  app.get("/api/invitations/:token", withErrorHandler(async (req, res) => {
+    const { token } = req.params;
+    
+    const invitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.token, token),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+        inviter: true,
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found or already accepted" });
+    }
+
+    if (new Date() > invitation.expiresAt) {
+      return res.status(410).json({ error: "Invitation has expired" });
+    }
+
+    res.json({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      workspace: {
+        id: invitation.workspace.id,
+        name: invitation.workspace.name,
+        description: invitation.workspace.description,
+      },
+      invitedBy: invitation.inviter.email,
+      expiresAt: invitation.expiresAt,
+    });
+  }));
+
+  app.post("/api/invitations/:token/accept", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { token } = req.params;
+    
+    const invitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.token, token),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found or already accepted" });
+    }
+
+    if (new Date() > invitation.expiresAt) {
+      return res.status(410).json({ error: "Invitation has expired" });
+    }
+
+    // Check if user's email matches invitation
+    if (req.user!.email !== invitation.email) {
+      return res.status(403).json({ error: "This invitation is for a different email address" });
+    }
+
+    // Check if user is already a member of this workspace
+    const existingMembership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, invitation.workspaceId),
+        eq(workspaceMembers.userId, req.user!.id)
+      ),
+    });
+
+    if (existingMembership) {
+      return res.status(409).json({ error: "You are already a member of this workspace" });
+    }
+
+    // Accept the invitation in a transaction
+    await db.transaction(async (tx) => {
+      // Add user to workspace
+      await tx.insert(workspaceMembers).values({
+        workspaceId: invitation.workspaceId,
+        userId: req.user!.id,
+        role: invitation.role,
+      });
+
+      // Mark invitation as accepted
+      await tx
+        .update(workspaceInvitations)
+        .set({ acceptedAt: new Date() })
+        .where(eq(workspaceInvitations.id, invitation.id));
+    });
+
+    await logWorkspaceActivity(
+      invitation.workspaceId,
+      req.user!.id,
+      'member_joined',
+      'member',
+      req.user!.id,
+      req.user!.username || req.user!.email,
+      { role: invitation.role, joinedVia: 'invitation' }
+    );
+
+    res.json({ 
+      success: true, 
+      workspace: invitation.workspace,
+      role: invitation.role,
+    });
+  }));
+
+  app.post("/api/workspaces/:workspaceId/invite", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { workspaceId } = req.params;
+    const { email, role = "member" } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Check if user has permission to invite to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+        eq(workspaceMembers.userId, req.user.id)
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+      return res.status(403).json({ error: "Not authorized to invite users to this workspace" });
+    }
+
+    // Check if user is already a member
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (existingUser) {
+      const existingMembership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, parseInt(workspaceId)),
+          eq(workspaceMembers.userId, existingUser.id)
+        ),
+      });
+
+      if (existingMembership) {
+        return res.status(409).json({ error: "User is already a member of this workspace" });
+      }
+    }
+
+    // Check for existing pending invitation - if found, update expiry date instead of creating new
+    const existingInvitation = await db.query.workspaceInvitations.findFirst({
+      where: and(
+        eq(workspaceInvitations.workspaceId, parseInt(workspaceId)),
+        eq(workspaceInvitations.email, email),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+    });
+
+    let invitation;
+    let token: string;
+    
+    if (existingInvitation) {
+      // Update existing invitation with new expiry date
+      const newExpiresAt = new Date();
+      newExpiresAt.setDate(newExpiresAt.getDate() + 7); // Expires in 7 days
+      token = existingInvitation.token; // Reuse existing token
+      
+      [invitation] = await db
+        .update(workspaceInvitations)
+        .set({ 
+          expiresAt: newExpiresAt,
+          role: role, // Update role in case it changed
+          invitedBy: req.user.id,
+          createdAt: new Date() // Update created date for fresh invitation
+        })
+        .where(eq(workspaceInvitations.id, existingInvitation.id))
+        .returning();
+    } else {
+      // Generate invitation token
+      token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+
+      // Create new invitation
+      [invitation] = await db
+        .insert(workspaceInvitations)
+        .values({
+          workspaceId: parseInt(workspaceId),
+          email,
+          role,
+          token,
+          invitedBy: req.user.id,
+          expiresAt,
+        })
+        .returning();
+    }
+
+    // Send invitation email via Clerk (no domain verification required)
+    try {
+      const { sendInviteViaClerk } = await import("../email");
+      const inviteLink = `${req.protocol}://${req.get('host')}/invite/${token}`;
+
+      await sendInviteViaClerk({
+        email,
+        redirectUrl: inviteLink,
+        workspaceName: membership.workspace.name,
+        role,
+      });
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't fail the request if email fails — the DB token still works as a direct link
+    }
+
+    await logWorkspaceActivity(
+      parseInt(workspaceId),
+      req.user.id,
+      'invitation_sent',
+      'invitation',
+      invitation.id,
+      email,
+      { invitedEmail: email, role: invitation.role }
+    );
+
+    res.json({ 
+      success: true,
+      invitation: {
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        expiresAt: invitation.expiresAt,
+      },
+    });
+  }));
+
+  // Jobs API endpoints
+  app.get("/api/jobs", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const userJobs = await db.query.jobs.findMany({
+        where: eq(jobs.workspaceId, workspaceId),
+        orderBy: desc(jobs.createdAt),
+      });
+
+      res.json(userJobs);
+    } catch (error: any) {
+      console.error('Error fetching jobs:', error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  }));
+
+  app.post("/api/jobs", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { title, description } = req.body;
+
+      if (!title || !description) {
+        return res.status(400).json({ error: "Title and description are required" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const [newJob] = await db.insert(jobs).values({
+        userId: req.user.id,
+        workspaceId: workspaceId,
+        title,
+        description,
+        status: "draft"
+      }).returning();
+
+      res.json(newJob);
+    } catch (error: any) {
+      console.error('Error creating job:', error);
+      res.status(500).json({ error: "Failed to create job" });
+    }
+  }));
+
+  app.post("/api/jobs/matches", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { jobId } = req.body;
+
+      if (!jobId) {
+        return res.status(400).json({ error: "Job ID is required" });
+      }
+
+      let workspaceId: number | null = null;
+      
+      // Try to get workspace from URL headers (set by frontend)
+      const workspaceSlug = req.headers['x-workspace-slug'] as string;
+      
+      if (workspaceSlug) {
+        const workspace = await db.query.workspaces.findFirst({
+          where: eq(workspaces.slug, workspaceSlug),
+        });
+        
+        if (workspace) {
+          workspaceId = workspace.id;
+        }
+      }
+      
+      // If no workspace slug header, fall back to user's default workspace
+      if (!workspaceId) {
+        const userWorkspace = await getUserWorkspace(req.user.id);
+        if (userWorkspace) {
+          workspaceId = userWorkspace.id;
+        }
+      }
+      
+      if (!workspaceId) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      
+      // Verify user has access to this workspace
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspaceId)
+        ),
+      });
+      
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      // Get the job
+      const job = await db.query.jobs.findFirst({
+        where: and(eq(jobs.id, jobId), eq(jobs.workspaceId, workspaceId))
+      });
+
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Get all designers from user's workspace
+      const allDesigners = await db.query.designers.findMany({
+        where: eq(designers.workspaceId, workspaceId),
+        orderBy: desc(designers.createdAt),
+      });
+
+      if (allDesigners.length === 0) {
+        return res.json({ 
+          recommendations: [],
+          analysis: "No designers found in database to match against.",
+          jobId
+        });
+      }
+
+      // Create a summary of all designers for OpenAI using correct field names
+      const designerSummaries = allDesigners.map(designer => ({
+        id: designer.id,
+        name: designer.name,
+        title: designer.title,
+        company: designer.company,
+        skills: designer.skills,
+        description: designer.description,
+        level: designer.level,
+        location: designer.location
+      }));
+
+      // Check if OpenAI API key is available
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ error: "OpenAI API key not configured" });
+      }
+
+      // Use OpenAI to analyze and recommend matches
+      const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert design recruiter and talent matcher. Your job is to analyze a job description and recommend the best designers from a given pool based on their skills, experience, and background.
+
+          Return your response as a JSON object with this structure:
+          {
+            "analysis": "Brief analysis of the job requirements",
+            "recommendations": [
+              {
+                "designerId": number,
+                "matchScore": number (0-100),
+                "reasoning": "Explanation of why this designer is a good match",
+                "matchedSkills": ["skill1", "skill2"],
+                "concerns": "Any potential concerns or gaps (optional)"
+              }
+            ]
+          }
+
+          Rank designers by match quality and only include those with a match score of 60 or higher. Limit to top 10 matches.`
+        },
+        {
+          role: "user",
+          content: `Job Title: ${job.title}
+
+Job Description:
+${job.description}
+
+Available Designers:
+${JSON.stringify(designerSummaries, null, 2)}
+
+Please analyze this job and recommend the best matching designers.`
+        }
+      ],
+      temperature: 0.3,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      return res.status(500).json({ error: "Failed to get AI analysis" });
+    }
+
+      try {
+        const analysis = JSON.parse(aiResponse);
+        
+        // Enrich recommendations with full designer data
+        const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+          const designer = allDesigners.find(d => d.id === rec.designerId);
+          return {
+            ...rec,
+            designer
+          };
+        }).filter((rec: any) => rec.designer);
+
+        res.json({
+          analysis: analysis.analysis,
+          recommendations: enrichedRecommendations,
+          jobId
+        });
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        res.status(500).json({ error: "Failed to parse AI analysis" });
+      }
+    } catch (error: any) {
+      console.error('Error in job matching:', error);
+      res.status(500).json({ error: "Failed to find matches. Please try again or check your connection." });
+    }
+  }));
+
+  // Route to check pending invitations for an email
+  app.get("/api/invitations/check/:email", withErrorHandler(async (req, res) => {
+    const { email } = req.params;
+    
+    const pendingInvitations = await db.query.workspaceInvitations.findMany({
+      where: and(
+        eq(workspaceInvitations.email, decodeURIComponent(email)),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
+
+    res.json({ invitations: validInvitations });
+  }));
+
+  // Get user's workspaces
+  app.get("/api/workspaces", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const userWorkspaces = await db.query.workspaceMembers.findMany({
+      where: eq(workspaceMembers.userId, req.user.id),
+      with: {
+        workspace: {
+          with: {
+            owner: true,
+          },
+        },
+      },
+    });
+
+    const workspacesWithDetails = userWorkspaces.map(member => ({
+      id: member.workspace.id,
+      name: member.workspace.name,
+      slug: member.workspace.slug,
+      description: member.workspace.description,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      owner: {
+        id: member.workspace.owner.id,
+        email: member.workspace.owner.email,
+      },
+    }));
+
+    res.json(workspacesWithDetails);
+  }));
+
+  // Get user's workspace permissions
+  app.get("/api/workspaces/permissions", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const user = req.user as any;
+    let workspaceId: number | null = null;
+
+    // Try to get workspace from header
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+      if (workspace) {
+        workspaceId = workspace.id;
+      }
+    }
+
+    // Fall back to user's default workspace
+    if (!workspaceId) {
+      const userWorkspace = await getUserWorkspace(user.id);
+      if (userWorkspace) {
+        workspaceId = userWorkspace.id;
+      }
+    }
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: "No workspace found" });
+    }
+
+    // Get user's membership and role
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, user.id),
+        eq(workspaceMembers.workspaceId, workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not a member of this workspace" });
+    }
+
+    res.json({ role: membership.role, workspaceId });
+  }));
+
+  // Auto-accept pending invitations after registration
+  app.post("/api/invitations/auto-accept", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const pendingInvitations = await db.query.workspaceInvitations.findMany({
+      where: and(
+        eq(workspaceInvitations.email, req.user!.email),
+        sql`${workspaceInvitations.acceptedAt} IS NULL`
+      ),
+      with: {
+        workspace: true,
+      },
+    });
+
+    const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
+    
+    if (validInvitations.length === 0) {
+      return res.json({ acceptedCount: 0 });
+    }
+
+    let acceptedCount = 0;
+    
+    for (const invitation of validInvitations) {
+      // Check if user is already a member of this workspace
+      const existingMembership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, invitation.workspaceId),
+          eq(workspaceMembers.userId, req.user!.id)
+        ),
+      });
+
+      if (!existingMembership) {
+        await db.transaction(async (tx) => {
+          // Add user to workspace
+          await tx.insert(workspaceMembers).values({
+            workspaceId: invitation.workspaceId,
+            userId: req.user!.id,
+            role: invitation.role,
+          });
+
+          // Mark invitation as accepted
+          await tx
+            .update(workspaceInvitations)
+            .set({ acceptedAt: new Date() })
+            .where(eq(workspaceInvitations.id, invitation.id));
+        });
+        
+        acceptedCount++;
+      }
+    }
+
+    res.json({ acceptedCount, workspaceNames: validInvitations.map(inv => inv.workspace.name) });
+  }));
+
+  // RLHF Feedback Collection API endpoints
+  app.post("/api/recommendations/feedback", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const { 
+      designerId, 
+      jobId, 
+      matchScore, 
+      feedbackType, 
+      rating, 
+      comments, 
+      aiReasoning 
+    } = req.body;
+
+    const context = (req as any).workspaceContext;
+
+    if (!designerId || !feedbackType || matchScore === undefined) {
+      return res.status(400).json({ error: "Designer ID, feedback type, and match score are required" });
+    }
+
+    // Validate feedback type
+    const validFeedbackTypes = [
+      'irrelevant_experience', 
+      'under_qualified', 
+      'over_qualified', 
+      'location_mismatch', 
+      'good_match'
+    ];
+    
+    if (!validFeedbackTypes.includes(feedbackType)) {
+      return res.status(400).json({ error: "Invalid feedback type" });
+    }
+
+    // Get designer and job data for context
+    const [designer, job] = await Promise.all([
+      db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, context.workspaceId)
+        )
+      }),
+      jobId ? db.query.jobs.findFirst({
+        where: and(
+          eq(jobs.id, jobId),
+          eq(jobs.workspaceId, context.workspaceId)
+        )
+      }) : Promise.resolve(null)
+    ]);
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    if (jobId && !job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Get active system prompt for the workspace
+    const activePrompt = await db.query.aiSystemPrompts.findFirst({
+      where: and(
+        eq(aiSystemPrompts.workspaceId, context.workspaceId),
+        eq(aiSystemPrompts.isActive, true)
+      )
+    });
+
+    // Store feedback with contextual data
+    const [feedback] = await db.insert(recommendationFeedback)
+      .values({
+        userId: context.userId,
+        workspaceId: context.workspaceId,
+        jobId: jobId || null,
+        systemPromptId: activePrompt?.id || null,
+        designerId,
+        matchScore,
+        feedbackType,
+        rating: rating || null,
+        comments: comments || null,
+        jobDescription: job?.description || null,
+        designerSnapshot: {
+          name: designer.name,
+          title: designer.title,
+          skills: designer.skills,
+          location: designer.location,
+          level: designer.level,
+          description: designer.description
+        },
+        aiReasoning: aiReasoning || null
+      })
+      .returning();
+
+    await logPermissionAction({
+      userId: context.userId,
+      workspaceId: context.workspaceId,
+      action: 'submit_feedback',
+      resource: 'recommendation_feedback',
+      resourceId: feedback.id,
+      metadata: { feedbackType, designerId, jobId }
+    });
+
+    res.json({ success: true, feedbackId: feedback.id });
+  }));
+
+  // Get feedback analytics for improving recommendations
+  app.get("/api/recommendations/feedback/analytics", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const permissions = (req as any).permissions;
+    const { promptId } = req.query;
+
+    if (!permissions.canAccessAnalytics) {
+      return res.status(403).json({ error: "Not authorized to view analytics" });
+    }
+
+    // Build where clause based on filters
+    const baseWhere = eq(recommendationFeedback.workspaceId, context.workspaceId);
+    let whereClause;
+    
+    if (promptId && promptId !== 'all') {
+      if (promptId === 'null') {
+        whereClause = and(baseWhere, sql`${recommendationFeedback.systemPromptId} IS NULL`);
+      } else {
+        whereClause = and(baseWhere, eq(recommendationFeedback.systemPromptId, parseInt(promptId as string)));
+      }
+    } else {
+      whereClause = baseWhere;
+    }
+
+    const feedbackData = await db.query.recommendationFeedback.findMany({
+      where: whereClause,
+      orderBy: desc(recommendationFeedback.createdAt),
+      limit: 500 // Limit to recent feedback
+    });
+
+    const analytics = {
+      totalFeedback: feedbackData.length,
+      feedbackByType: {
+        irrelevant_experience: 0,
+        under_qualified: 0,
+        over_qualified: 0,
+        location_mismatch: 0,
+        good_match: 0
+      },
+      averageMatchScore: 0,
+      averageRating: 0,
+      commonConcerns: [] as string[],
+      recentTrends: [] as any[],
+      promptPerformance: [] as any[]
+    };
+
+    if (feedbackData.length > 0) {
+      feedbackData.forEach(feedback => {
+        if (analytics.feedbackByType.hasOwnProperty(feedback.feedbackType)) {
+          analytics.feedbackByType[feedback.feedbackType as keyof typeof analytics.feedbackByType]++;
+        }
+      });
+
+      analytics.averageMatchScore = Math.round(
+        feedbackData.reduce((sum, f) => sum + f.matchScore, 0) / feedbackData.length
+      );
+
+      const ratingsCount = feedbackData.filter(f => f.rating !== null).length;
+      if (ratingsCount > 0) {
+        analytics.averageRating = Math.round(
+          (feedbackData.reduce((sum, f) => sum + (f.rating || 0), 0) / ratingsCount) * 10
+        ) / 10;
+      }
+
+      const comments = feedbackData
+        .filter(f => f.comments && f.comments.trim().length > 0)
+        .map(f => f.comments!.toLowerCase());
+      
+      const concernKeywords = ['location', 'experience', 'skill', 'remote', 'salary', 'time zone', 'portfolio'];
+      analytics.commonConcerns = concernKeywords.filter(keyword =>
+        comments.some(comment => comment.includes(keyword))
+      );
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentFeedback = feedbackData.filter(f => 
+        f.createdAt && new Date(f.createdAt) >= thirtyDaysAgo
+      );
+
+      analytics.recentTrends = Object.entries(analytics.feedbackByType).map(([type, count]) => ({
+        type,
+        total: count,
+        recent: recentFeedback.filter(f => f.feedbackType === type).length
+      }));
+
+      // Calculate system prompt performance if not filtering by specific prompt
+      if (!promptId || promptId === 'all') {
+        // Get all feedback grouped by system prompt
+        const allFeedback = await db.query.recommendationFeedback.findMany({
+          where: eq(recommendationFeedback.workspaceId, context.workspaceId),
+          orderBy: desc(recommendationFeedback.createdAt),
+          limit: 1000
+        });
+
+        // Get system prompts for name mapping
+        const systemPrompts = await db.query.aiSystemPrompts.findMany({
+          where: eq(aiSystemPrompts.workspaceId, context.workspaceId)
+        });
+
+        const promptGroups = new Map<number | null, any[]>();
+        
+        allFeedback.forEach(feedback => {
+          const promptId = feedback.systemPromptId;
+          if (!promptGroups.has(promptId)) {
+            promptGroups.set(promptId, []);
+          }
+          promptGroups.get(promptId)!.push(feedback);
+        });
+
+        analytics.promptPerformance = Array.from(promptGroups.entries()).map(([promptId, feedbacks]) => {
+          const promptName = promptId 
+            ? systemPrompts.find(p => p.id === promptId)?.name || `Prompt ${promptId}`
+            : 'Default Prompt (No Custom Prompt)';
+          
+          const goodMatches = feedbacks.filter(f => f.feedbackType === 'good_match').length;
+          const totalFeedback = feedbacks.length;
+          const successRate = totalFeedback > 0 ? Math.round((goodMatches / totalFeedback) * 100) : 0;
+          const averageScore = totalFeedback > 0 
+            ? Math.round(feedbacks.reduce((sum, f) => sum + f.matchScore, 0) / totalFeedback)
+            : 0;
+
+          return {
+            promptId,
+            promptName,
+            totalFeedback,
+            successRate,
+            averageScore
+          };
+        }).sort((a, b) => b.successRate - a.successRate); // Sort by success rate
+      }
+    }
+
+    res.json(analytics);
+  }));
+
+  // Enhanced recommendation endpoint that learns from feedback
+  app.post("/api/recommendations/enhanced", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const { roleDescription, jobId } = req.body;
+    const context = (req as any).workspaceContext;
+
+    if (!roleDescription || roleDescription.trim().length === 0) {
+      return res.status(400).json({ error: "Role description is required" });
+    }
+
+    const allDesigners = await db.query.designers.findMany({
+      where: eq(designers.workspaceId, context.workspaceId),
+      orderBy: desc(designers.createdAt),
+    });
+
+    if (allDesigners.length === 0) {
+      return res.json({ 
+        recommendations: [],
+        analysis: "No designers found in database to match against.",
+        jobId
+      });
+    }
+
+    // Get historical feedback for learning
+    const historicalFeedback = await db.query.recommendationFeedback.findMany({
+      where: eq(recommendationFeedback.workspaceId, context.workspaceId),
+      orderBy: desc(recommendationFeedback.createdAt),
+      limit: 100
+    });
+
+    const feedbackInsights = {
+      commonNegativeFeedback: historicalFeedback
+        .filter(f => ['irrelevant_experience', 'under_qualified', 'over_qualified', 'location_mismatch'].includes(f.feedbackType))
+        .slice(0, 20)
+        .map(f => ({
+          type: f.feedbackType,
+          reasoning: f.aiReasoning,
+          comments: f.comments,
+          designerData: f.designerSnapshot
+        })),
+      successfulMatches: historicalFeedback
+        .filter(f => f.feedbackType === 'good_match' && f.rating && f.rating >= 4)
+        .slice(0, 10)
+        .map(f => ({
+          reasoning: f.aiReasoning,
+          designerData: f.designerSnapshot,
+          rating: f.rating
+        }))
+    };
+
+    const designerSummaries = allDesigners.map(designer => ({
+      id: designer.id,
+      name: designer.name,
+      title: designer.title,
+      company: designer.company,
+      skills: designer.skills,
+      description: designer.description,
+      level: designer.level,
+      location: designer.location
+    }));
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "OpenAI API key not configured" });
+    }
+
+    // Get active system prompt for this workspace
+    const activePrompt = await db.query.aiSystemPrompts.findFirst({
+      where: and(
+        eq(aiSystemPrompts.workspaceId, context.workspaceId),
+        eq(aiSystemPrompts.isActive, true)
+      )
+    });
+
+    // Prepare feedback insights for injection into prompt
+    const feedbackInsightsText = `
+${feedbackInsights.commonNegativeFeedback.length > 0 ? `
+Common issues in past recommendations:
+${feedbackInsights.commonNegativeFeedback.map(f => `- ${f.type}: ${f.comments || 'No specific comments'}`).join('\n')}
+` : 'No negative feedback patterns identified yet.'}
+
+${feedbackInsights.successfulMatches.length > 0 ? `
+Successful matches in the past:
+${feedbackInsights.successfulMatches.map(f => `- Rating ${f.rating}/5: Designer with skills ${JSON.stringify((f.designerData as any)?.skills || [])} was successful`).join('\n')}
+` : 'No successful match patterns identified yet.'}
+`.trim();
+
+    // Use custom system prompt if available, otherwise use default
+    let systemPrompt;
+    if (activePrompt) {
+      // Replace {feedbackInsights} placeholder with actual insights
+      systemPrompt = activePrompt.systemPrompt.replace('{feedbackInsights}', feedbackInsightsText);
+    } else {
+      // Default fallback prompt
+      systemPrompt = `You are an expert design recruiter with access to historical feedback data. Learn from past recommendations to improve future matches.
+
+IMPORTANT FEEDBACK INSIGHTS:
+${feedbackInsightsText}
+
+Based on feedback history, prioritize:
+1. Location alignment when specified
+2. Experience level matching
+3. Skill relevance
+4. Patterns from successful matches
+
+Return JSON response:
+{
+  "analysis": "Brief analysis including how feedback influenced recommendations",
+  "recommendations": [
+    {
+      "designerId": number,
+      "matchScore": number (0-100),
+      "reasoning": "Match explanation considering feedback",
+      "matchedSkills": ["skill1", "skill2"],
+      "concerns": "Potential concerns (optional)",
+      "confidenceLevel": "high|medium|low"
+    }
+  ]
+}
+
+Only include matches with score 70+ (raised due to feedback learning). Limit to 8 matches.`;
+    }
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Role Description: ${roleDescription}
+
+Available Designers:
+${JSON.stringify(designerSummaries, null, 2)}
+
+Analyze this role and recommend matching designers, considering feedback patterns.`
+          }
+        ],
+        temperature: 0.2,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content;
+      if (!aiResponse) {
+        return res.status(500).json({ error: "Failed to get AI analysis" });
+      }
+
+      const analysis = JSON.parse(aiResponse);
+      
+      const enrichedRecommendations = analysis.recommendations.map((rec: any) => {
+        const designer = allDesigners.find(d => d.id === rec.designerId);
+        return { ...rec, designer };
+      }).filter((rec: any) => rec.designer);
+
+      res.json({
+        analysis: analysis.analysis,
+        recommendations: enrichedRecommendations,
+        roleDescription,
+        feedbackLearningApplied: true,
+        historicalInsightsCount: historicalFeedback.length,
+        customPromptUsed: !!activePrompt,
+        promptName: activePrompt?.name
+      });
+    } catch (error) {
+      console.error('Enhanced recommendation error:', error);
+      res.status(500).json({ error: "Failed to generate enhanced recommendations" });
+    }
+  }));
+
+  // AI System Prompts Management
+  app.get("/api/system-prompts", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    
+    const prompts = await db.query.aiSystemPrompts.findMany({
+      where: eq(aiSystemPrompts.workspaceId, context.workspaceId),
+      orderBy: desc(aiSystemPrompts.updatedAt),
+      with: {
+        createdBy: {
+          columns: { id: true, email: true }
+        }
+      }
+    });
+
+    res.json(prompts);
+  }));
+
+  app.post("/api/system-prompts", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { name, description, systemPrompt } = req.body;
+
+    if (!name || !systemPrompt) {
+      return res.status(400).json({ error: "Name and system prompt are required" });
+    }
+
+    // Deactivate other prompts if this is being set as active
+    if (req.body.isActive) {
+      await db.update(aiSystemPrompts)
+        .set({ isActive: false })
+        .where(eq(aiSystemPrompts.workspaceId, context.workspaceId));
+    }
+
+    const [newPrompt] = await db.insert(aiSystemPrompts).values({
+      workspaceId: context.workspaceId,
+      name,
+      description,
+      systemPrompt,
+      isActive: req.body.isActive || false,
+      createdBy: context.userId,
+    }).returning();
+
+    res.json(newPrompt);
+  }));
+
+  app.put("/api/system-prompts/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const promptId = parseInt(req.params.id);
+    const { name, description, systemPrompt, isActive } = req.body;
+
+    if (!name || !systemPrompt) {
+      return res.status(400).json({ error: "Name and system prompt are required" });
+    }
+
+    // Deactivate other prompts if this is being set as active
+    if (isActive) {
+      await db.update(aiSystemPrompts)
+        .set({ isActive: false })
+        .where(and(
+          eq(aiSystemPrompts.workspaceId, context.workspaceId),
+          ne(aiSystemPrompts.id, promptId)
+        ));
+    }
+
+    const [updatedPrompt] = await db.update(aiSystemPrompts)
+      .set({
+        name,
+        description,
+        systemPrompt,
+        isActive,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(aiSystemPrompts.id, promptId),
+        eq(aiSystemPrompts.workspaceId, context.workspaceId)
+      ))
+      .returning();
+
+    if (!updatedPrompt) {
+      return res.status(404).json({ error: "System prompt not found" });
+    }
+
+    res.json(updatedPrompt);
+  }));
+
+  app.delete("/api/system-prompts/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const promptId = parseInt(req.params.id);
+
+    const [deletedPrompt] = await db.delete(aiSystemPrompts)
+      .where(and(
+        eq(aiSystemPrompts.id, promptId),
+        eq(aiSystemPrompts.workspaceId, context.workspaceId)
+      ))
+      .returning();
+
+    if (!deletedPrompt) {
+      return res.status(404).json({ error: "System prompt not found" });
+    }
+
+    res.json({ success: true });
+  }));
+
+  app.post("/api/system-prompts/:id/activate", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const promptId = parseInt(req.params.id);
+
+    // Deactivate all other prompts
+    await db.update(aiSystemPrompts)
+      .set({ isActive: false })
+      .where(eq(aiSystemPrompts.workspaceId, context.workspaceId));
+
+    // Activate the selected prompt
+    const [activatedPrompt] = await db.update(aiSystemPrompts)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(and(
+        eq(aiSystemPrompts.id, promptId),
+        eq(aiSystemPrompts.workspaceId, context.workspaceId)
+      ))
+      .returning();
+
+    if (!activatedPrompt) {
+      return res.status(404).json({ error: "System prompt not found" });
+    }
+
+    res.json(activatedPrompt);
+  }));
+
+  // Portfolio Management API endpoints
+  // Get all portfolios for a designer
+  app.get("/api/designers/:id/portfolios", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const designerId = parseInt(req.params.id);
+
+    // Verify designer exists in workspace
+    const designer = await db.query.designers.findFirst({
+      where: and(
+        eq(designers.id, designerId),
+        eq(designers.workspaceId, context.workspaceId)
+      )
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    const portfoliosData = await db.query.portfolios.findMany({
+      where: eq(portfolios.designerId, designerId),
+      orderBy: desc(portfolios.updatedAt),
+      with: {
+        projects: {
+          orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)]
+        }
+      }
+    });
+
+    res.json(portfoliosData);
+  }));
+
+  // Get a single portfolio with projects
+  app.get("/api/portfolios/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: {
+        designer: true,
+        projects: {
+          orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)],
+          with: {
+            media: {
+              orderBy: asc(portfolioMedia.sortOrder)
+            }
+          }
+        }
+      }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    // Verify designer is in current workspace
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    res.json(portfolio);
+  }));
+
+  // Create a new portfolio
+  app.post("/api/portfolios", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const { designerId, title, description, tagline, theme, primaryColor, isPublic } = req.body;
+
+    if (!designerId || !title) {
+      return res.status(400).json({ error: "Designer ID and title are required" });
+    }
+
+    // Verify designer exists in workspace
+    const designer = await db.query.designers.findFirst({
+      where: and(
+        eq(designers.id, designerId),
+        eq(designers.workspaceId, context.workspaceId)
+      )
+    });
+
+    if (!designer) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Generate unique slug
+    let slug = slugify(title);
+    let counter = 1;
+    while (true) {
+      const existingSlug = await db.query.portfolios.findFirst({
+        where: eq(portfolios.slug, slug)
+      });
+      if (!existingSlug) break;
+      slug = `${slugify(title)}-${counter}`;
+      counter++;
+    }
+
+    const [newPortfolio] = await db.insert(portfolios)
+      .values({
+        designerId,
+        title,
+        slug,
+        description,
+        tagline,
+        theme: theme || "modern",
+        primaryColor: primaryColor || "#C8944B",
+        isPublic: isPublic !== undefined ? isPublic : true,
+        settings: {
+          showContact: true,
+          showSocialLinks: true,
+          showResume: false,
+          showAvailability: true,
+          allowMessages: true,
+          requireApproval: false
+        }
+      })
+      .returning();
+
+    res.json(newPortfolio);
+  }));
+
+  // Update a portfolio
+  app.put("/api/portfolios/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+    const updates = req.body;
+
+    // Verify portfolio exists and user has access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Update slug if title changed
+    if (updates.title && updates.title !== portfolio.title) {
+      let slug = slugify(updates.title);
+      let counter = 1;
+      while (true) {
+        const existingSlug = await db.query.portfolios.findFirst({
+          where: and(
+            eq(portfolios.slug, slug),
+            ne(portfolios.id, portfolioId)
+          )
+        });
+        if (!existingSlug) break;
+        slug = `${slugify(updates.title)}-${counter}`;
+        counter++;
+      }
+      updates.slug = slug;
+    }
+
+    const [updatedPortfolio] = await db.update(portfolios)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(portfolios.id, portfolioId))
+      .returning();
+
+    res.json(updatedPortfolio);
+  }));
+
+  // Delete a portfolio
+  app.delete("/api/portfolios/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+
+    // Verify portfolio exists and user has access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await db.delete(portfolios)
+      .where(eq(portfolios.id, portfolioId));
+
+    res.json({ success: true });
+  }));
+
+  // Portfolio Projects API endpoints
+  // Get all projects for a portfolio
+  app.get("/api/portfolios/:id/projects", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+
+    // Verify portfolio access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const projects = await db.query.portfolioProjects.findMany({
+      where: eq(portfolioProjects.portfolioId, portfolioId),
+      orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)],
+      with: {
+        media: {
+          orderBy: asc(portfolioMedia.sortOrder)
+        }
+      }
+    });
+
+    res.json(projects);
+  }));
+
+  // Create a new project
+  app.post("/api/portfolios/:id/projects", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.id);
+    const { title, description, category, tags, content, projectUrl, clientName, isPublic, isFeatured } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: "Project title is required" });
+    }
+
+    // Verify portfolio access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Generate unique slug for project
+    let slug = slugify(title);
+    let counter = 1;
+    while (true) {
+      const existingSlug = await db.query.portfolioProjects.findFirst({
+        where: and(
+          eq(portfolioProjects.portfolioId, portfolioId),
+          eq(portfolioProjects.slug, slug)
+        )
+      });
+      if (!existingSlug) break;
+      slug = `${slugify(title)}-${counter}`;
+      counter++;
+    }
+
+    const [newProject] = await db.insert(portfolioProjects)
+      .values({
+        portfolioId,
+        title,
+        slug,
+        description,
+        content,
+        category,
+        tags: tags || [],
+        projectUrl,
+        clientName,
+        isPublic: isPublic !== undefined ? isPublic : true,
+        isFeatured: isFeatured || false,
+        sortOrder: 0
+      })
+      .returning();
+
+    res.json(newProject);
+  }));
+
+  // Update a project
+  app.put("/api/portfolios/:portfolioId/projects/:projectId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.portfolioId);
+    const projectId = parseInt(req.params.projectId);
+    const updates = req.body;
+
+    // Verify access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const project = await db.query.portfolioProjects.findFirst({
+      where: and(
+        eq(portfolioProjects.id, projectId),
+        eq(portfolioProjects.portfolioId, portfolioId)
+      )
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    // Update slug if title changed
+    if (updates.title && updates.title !== project.title) {
+      let slug = slugify(updates.title);
+      let counter = 1;
+      while (true) {
+        const existingSlug = await db.query.portfolioProjects.findFirst({
+          where: and(
+            eq(portfolioProjects.portfolioId, portfolioId),
+            eq(portfolioProjects.slug, slug),
+            ne(portfolioProjects.id, projectId)
+          )
+        });
+        if (!existingSlug) break;
+        slug = `${slugify(updates.title)}-${counter}`;
+        counter++;
+      }
+      updates.slug = slug;
+    }
+
+    const [updatedProject] = await db.update(portfolioProjects)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(portfolioProjects.id, projectId))
+      .returning();
+
+    res.json(updatedProject);
+  }));
+
+  // Delete a project
+  app.delete("/api/portfolios/:portfolioId/projects/:projectId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const context = (req as any).workspaceContext;
+    const portfolioId = parseInt(req.params.portfolioId);
+    const projectId = parseInt(req.params.projectId);
+
+    // Verify access
+    const portfolio = await db.query.portfolios.findFirst({
+      where: eq(portfolios.id, portfolioId),
+      with: { designer: true }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.designer.workspaceId !== context.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await db.delete(portfolioProjects)
+      .where(and(
+        eq(portfolioProjects.id, projectId),
+        eq(portfolioProjects.portfolioId, portfolioId)
+      ));
+
+    res.json({ success: true });
+  }));
+
+  // Public portfolio view (no authentication required)
+  app.get("/api/public/portfolios/:slug", withErrorHandler(async (req, res) => {
+    const slug = req.params.slug;
+
+    const portfolio = await db.query.portfolios.findFirst({
+      where: and(
+        eq(portfolios.slug, slug),
+        eq(portfolios.isPublic, true),
+        eq(portfolios.isActive, true)
+      ),
+      with: {
+        designer: true,
+        projects: {
+          where: and(
+            eq(portfolioProjects.isPublic, true),
+            eq(portfolioProjects.status, "published")
+          ),
+          orderBy: [asc(portfolioProjects.sortOrder), desc(portfolioProjects.updatedAt)],
+          with: {
+            media: {
+              orderBy: asc(portfolioMedia.sortOrder)
+            }
+          }
+        }
+      }
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    // Track portfolio view
+    const userAgent = req.get('User-Agent') || '';
+    const viewerIp = req.ip || req.connection.remoteAddress || '';
+    const referrer = req.get('Referer') || '';
+
+    await db.insert(portfolioViews)
+      .values({
+        portfolioId: portfolio.id,
+        viewerIp,
+        userAgent,
+        referrer,
+        device: userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+      })
+      .catch(() => {}); // Ignore errors for view tracking
+
+    res.json(portfolio);
+  }));
+
+  // Submit portfolio inquiry
+  app.post("/api/public/portfolios/:slug/inquiries", withErrorHandler(async (req, res) => {
+    const slug = req.params.slug;
+    const { name, email, company, subject, message, phone, budget, timeline, projectType } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Name, email, and message are required" });
+    }
+
+    const portfolio = await db.query.portfolios.findFirst({
+      where: and(
+        eq(portfolios.slug, slug),
+        eq(portfolios.isPublic, true),
+        eq(portfolios.isActive, true)
+      )
+    });
+
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    const [inquiry] = await db.insert(portfolioInquiries)
+      .values({
+        portfolioId: portfolio.id,
+        name,
+        email,
+        company,
+        subject,
+        message,
+        phone,
+        budget,
+        timeline,
+        projectType
+      })
+      .returning();
+
+    res.json({ success: true, inquiryId: inquiry.id });
+  }));
+
+  // Helper function to get workspace context with proper scoping
+  const getWorkspaceContext = async (req: any) => {
+    let workspaceId: number | null = null;
+    
+    // Try to get workspace from x-workspace-slug header (set by frontend)
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+    
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+      
+      if (workspace) {
+        workspaceId = workspace.id;
+      }
+    }
+    
+    // If no workspace slug header, fall back to user's default workspace
+    if (!workspaceId) {
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (userWorkspace) {
+        workspaceId = userWorkspace.id;
+      }
+    }
+    
+    if (!workspaceId) {
+      throw new Error("No workspace access");
+    }
+    
+    // Verify user has access to this workspace
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, workspaceId)
+      ),
+    });
+    
+    if (!membership) {
+      throw new Error("Not authorized to access this workspace");
+    }
+    
+    return { workspaceId, userId: req.user.id, userRole: membership.role };
+  };
+
+  // Rate limiting for recommendation generation (in memory - could be Redis in production)
+  const generateRateLimit = new Map<number, { count: number; resetTime: number }>();
+  const GENERATE_RATE_LIMIT = 5; // 5 requests per hour per workspace
+  const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+
+  const checkGenerateRateLimit = (workspaceId: number): boolean => {
+    const now = Date.now();
+    const key = workspaceId;
+    const limit = generateRateLimit.get(key);
+    
+    if (!limit || now > limit.resetTime) {
+      generateRateLimit.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      return true;
+    }
+    
+    if (limit.count >= GENERATE_RATE_LIMIT) {
+      return false;
+    }
+    
+    limit.count++;
+    return true;
+  };
+
+  // Inbox API Endpoints
+
+  // GET /api/inbox - Fetch recommendations for current workspace with filtering, pagination, and sorting
+  app.get("/api/inbox", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const { workspaceId, userId } = await getWorkspaceContext(req);
+      
+      // Parse query parameters
+      const {
+        status = 'new',
+        type,
+        page = '1',
+        limit = '20',
+        sortBy = 'score',
+        sortOrder = 'desc'
+      } = req.query;
+
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string))); // Max 100 items per page
+      const offset = (pageNum - 1) * limitNum;
+
+      // Build where conditions
+      const whereConditions = [
+        eq(inboxRecommendations.workspaceId, workspaceId),
+      ];
+
+      if (status && status !== 'all') {
+        if (Array.isArray(status)) {
+          whereConditions.push(inArray(inboxRecommendations.status, status as any));
+        } else {
+          whereConditions.push(eq(inboxRecommendations.status, status as typeof recommendationStatusEnum.enumValues[number]));
+        }
+      }
+
+      if (type && type !== 'all') {
+        if (Array.isArray(type)) {
+          whereConditions.push(inArray(inboxRecommendations.recommendationType, type as any));
+        } else {
+          whereConditions.push(eq(inboxRecommendations.recommendationType, type as typeof recommendationTypeEnum.enumValues[number]));
+        }
+      }
+
+      // Build order by
+      const orderBy = [];
+      if (sortBy === 'score') {
+        orderBy.push(sortOrder === 'desc' ? desc(inboxRecommendations.score) : asc(inboxRecommendations.score));
+      } else if (sortBy === 'created') {
+        orderBy.push(sortOrder === 'asc' ? asc(inboxRecommendations.createdAt) : desc(inboxRecommendations.createdAt));
+      } else if (sortBy === 'priority') {
+        // Custom priority order: urgent, high, medium, low
+        // Higher numbers = higher priority for correct DESC sorting
+        orderBy.push(
+          sql`CASE ${inboxRecommendations.priority} 
+            WHEN 'urgent' THEN 4 
+            WHEN 'high' THEN 3 
+            WHEN 'medium' THEN 2 
+            WHEN 'low' THEN 1 
+            ELSE 0 END ${sortOrder === 'desc' ? sql`DESC` : sql`ASC`}`
+        );
+        // Add score as secondary sort for items with same priority
+        orderBy.push(sortOrder === 'desc' ? desc(inboxRecommendations.score) : asc(inboxRecommendations.score));
+      }
+      
+      // Add secondary sort by creation date
+      orderBy.push(desc(inboxRecommendations.createdAt));
+
+      // Fetch recommendations with candidates
+      const recommendations = await db.query.inboxRecommendations.findMany({
+        where: and(...whereConditions),
+        with: {
+          candidates: {
+            with: {
+              designer: true,
+            },
+            orderBy: [asc(inboxRecommendationCandidates.rank)],
+          },
+        },
+        orderBy,
+        limit: limitNum,
+        offset,
+      });
+
+      // Get total count for pagination
+      const totalCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(inboxRecommendations)
+        .where(and(...whereConditions));
+      
+      const total = totalCountResult[0]?.count || 0;
+      const totalPages = Math.ceil(total / limitNum);
+
+      res.json({
+        recommendations,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error fetching inbox recommendations:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  }));
+
+  // POST /api/inbox/generate - Manually trigger recommendation generation with rate limiting
+  app.post("/api/inbox/generate", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to generate recommendations (Admin/Editor required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or Admin role required to generate recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      
+      // Check rate limit
+      if (!checkGenerateRateLimit(workspaceId)) {
+        return res.status(429).json({ 
+          error: "Rate limit exceeded. You can generate recommendations up to 5 times per hour." 
+        });
+      }
+
+      const { types, limit = 20, forceRefresh = false } = req.body;
+
+      // Validate types if provided
+      const validTypes = ['add_to_list', 'create_list', 'update_profile'];
+      if (types && Array.isArray(types)) {
+        const invalidTypes = types.filter((type: string) => !validTypes.includes(type));
+        if (invalidTypes.length > 0) {
+          return res.status(400).json({ 
+            error: `Invalid recommendation types: ${invalidTypes.join(', ')}. Valid types: ${validTypes.join(', ')}` 
+          });
+        }
+      }
+
+      // Generate recommendations
+      const recommendations = await recommendationEngine.generate({
+        workspaceId,
+        userId,
+        types: types || validTypes,
+        limit: Math.min(50, Math.max(1, limit)), // Clamp between 1-50
+        forceRefresh,
+      });
+
+      // Log generation event - only if we have valid recommendations with IDs
+      if (recommendations.length > 0 && recommendations[0].id) {
+        await db.insert(inboxRecommendationEvents).values({
+          recommendationId: recommendations[0].id,
+          userId,
+          eventType: 'created',
+          description: `Manual recommendation generation triggered by user`,
+          metadata: {
+            generationType: 'manual',
+            requestedTypes: types || validTypes,
+            generatedCount: recommendations.length,
+          },
+        });
+      }
+
+      res.json({
+        success: true,
+        generated: recommendations.length,
+        recommendations: recommendations.slice(0, 10), // Return first 10 for preview
+      });
+    } catch (error: any) {
+      console.error('Error generating recommendations:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to generate recommendations" });
+    }
+  }));
+
+  // POST /api/inbox/:id/approve - Approve a recommendation and mark it as approved
+  app.post("/api/inbox/:id/approve", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to approve recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to approve recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { notes } = req.body;
+
+      // Fetch and verify recommendation
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status !== 'new') {
+        return res.status(400).json({ error: "Only new recommendations can be approved" });
+      }
+
+      // Update recommendation status
+      const [updatedRecommendation] = await db
+        .update(inboxRecommendations)
+        .set({ 
+          status: 'approved',
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId))
+        .returning();
+
+      // Log approval event
+      await db.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'approved',
+        description: `Recommendation approved by user`,
+        metadata: {
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      });
+
+      res.json({
+        success: true,
+        recommendation: updatedRecommendation,
+      });
+    } catch (error: any) {
+      console.error('Error approving recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to approve recommendation" });
+    }
+  }));
+
+  // POST /api/inbox/:id/dismiss - Dismiss a recommendation permanently
+  app.post("/api/inbox/:id/dismiss", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to dismiss recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to dismiss recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { reason, notes } = req.body;
+
+      // Fetch and verify recommendation
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status === 'dismissed') {
+        return res.status(400).json({ error: "Recommendation is already dismissed" });
+      }
+
+      // Update recommendation status
+      const [updatedRecommendation] = await db
+        .update(inboxRecommendations)
+        .set({ 
+          status: 'dismissed',
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId))
+        .returning();
+
+      // Log dismiss event
+      await db.insert(inboxRecommendationEvents).values({
+        recommendationId: recommendationId,
+        userId: userId,
+        eventType: 'dismissed',
+        description: `Recommendation dismissed by user`,
+        metadata: {
+          reason: reason || null,
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      } as any);
+
+      res.json({
+        success: true,
+        recommendation: updatedRecommendation,
+      });
+    } catch (error: any) {
+      console.error('Error dismissing recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to dismiss recommendation" });
+    }
+  }));
+
+  // POST /api/inbox/:id/snooze - Snooze a recommendation for a specified time
+  app.post("/api/inbox/:id/snooze", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to snooze recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to snooze recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { snoozeUntil, snoozeDuration, notes } = req.body;
+
+      // Validate snooze parameters
+      let snoozeTime: Date;
+      if (snoozeUntil) {
+        snoozeTime = new Date(snoozeUntil);
+        if (isNaN(snoozeTime.getTime()) || snoozeTime <= new Date()) {
+          return res.status(400).json({ error: "Invalid snooze date. Must be in the future." });
+        }
+      } else if (snoozeDuration) {
+        // Duration in hours
+        const hours = parseInt(snoozeDuration);
+        if (isNaN(hours) || hours <= 0 || hours > 8760) { // Max 1 year
+          return res.status(400).json({ error: "Invalid snooze duration. Must be between 1 and 8760 hours." });
+        }
+        snoozeTime = new Date(Date.now() + hours * 60 * 60 * 1000);
+      } else {
+        return res.status(400).json({ error: "Either snoozeUntil date or snoozeDuration in hours is required" });
+      }
+
+      // Fetch and verify recommendation
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status === 'dismissed' || recommendation.status === 'applied') {
+        return res.status(400).json({ error: "Cannot snooze dismissed or applied recommendations" });
+      }
+
+      // Update recommendation status and snooze time
+      const [updatedRecommendation] = await db
+        .update(inboxRecommendations)
+        .set({ 
+          status: 'snoozed',
+          snoozeUntil: snoozeTime,
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId))
+        .returning();
+
+      // Log snooze event
+      await db.insert(inboxRecommendationEvents).values({
+        recommendationId: recommendationId,
+        userId: userId,
+        eventType: 'snoozed',
+        description: `Recommendation snoozed until ${snoozeTime.toISOString()}`,
+        metadata: {
+          snoozeUntil: snoozeTime.toISOString(),
+          snoozeDurationHours: Math.round((snoozeTime.getTime() - Date.now()) / (60 * 60 * 1000)),
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      } as any);
+
+      res.json({
+        success: true,
+        recommendation: updatedRecommendation,
+        snoozeUntil: snoozeTime.toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Error snoozing recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to snooze recommendation" });
+    }
+  }));
+
+  // POST /api/inbox/:id/apply - Apply a recommendation and mark as applied
+  app.post("/api/inbox/:id/apply", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    try {
+      // Get workspace context from middleware
+      const workspaceContext = (req as any).workspaceContext;
+      const permissions = (req as any).permissions;
+      
+      // Check if user has permission to apply recommendations (Editor+ required)
+      if (!permissions.canDeleteLists) { // Using canDeleteLists as proxy for Editor+ permissions
+        return res.status(403).json({ error: "Permission denied: Editor or higher role required to apply recommendations" });
+      }
+
+      const { workspaceId, userId } = { workspaceId: workspaceContext.workspaceId, userId: workspaceContext.userId };
+      const recommendationId = parseInt(req.params.id);
+      const { notes } = req.body;
+
+      // Fetch and verify recommendation with candidates
+      const recommendation = await db.query.inboxRecommendations.findFirst({
+        where: and(
+          eq(inboxRecommendations.id, recommendationId),
+          eq(inboxRecommendations.workspaceId, workspaceId)
+        ),
+        with: {
+          candidates: {
+            with: {
+              designer: true,
+            },
+            orderBy: [asc(inboxRecommendationCandidates.rank)],
+          },
+        },
+      });
+
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      if (recommendation.status === 'applied') {
+        return res.status(400).json({ error: "Recommendation is already applied" });
+      }
+
+      if (recommendation.status === 'dismissed') {
+        return res.status(400).json({ error: "Cannot apply dismissed recommendations" });
+      }
+
+      let appliedResult: any = null;
+
+      // Apply the recommendation based on its type
+      await db.transaction(async (tx) => {
+        try {
+          switch (recommendation.recommendationType) {
+            case 'add_to_list':
+              // Check permission to edit lists
+              if (!permissions.canEditLists) {
+                throw new Error("Permission denied: Cannot edit lists");
+              }
+              
+              // Add designer(s) to the target list
+              if (!recommendation.targetListId) {
+                throw new Error("Target list ID is required for add_to_list recommendations");
+              }
+
+              // Verify list exists and user has access
+              const targetList = await tx.query.lists.findFirst({
+                where: and(
+                  eq(lists.id, recommendation.targetListId),
+                  eq(lists.workspaceId, workspaceId)
+                ),
+              });
+
+              if (!targetList) {
+                throw new Error("Target list not found or access denied");
+              }
+
+              // Add the top candidate(s) to the list
+              const candidatesToAdd = recommendation.candidates.slice(0, 3); // Add top 3 candidates
+              for (const candidate of candidatesToAdd) {
+                // Check if designer is already in the list
+                const existingEntry = await tx.query.listDesigners.findFirst({
+                  where: and(
+                    eq(listDesigners.listId, recommendation.targetListId),
+                    eq(listDesigners.designerId, candidate.designerId)
+                  ),
+                });
+
+                if (!existingEntry) {
+                  await tx.insert(listDesigners).values({
+                    listId: recommendation.targetListId,
+                    designerId: candidate.designerId,
+                    notes: `Added via recommendation: ${candidate.reasoning || 'AI-recommended match'}`,
+                  });
+                }
+              }
+
+              appliedResult = {
+                action: 'added_to_list',
+                listId: recommendation.targetListId,
+                listName: targetList.name,
+                designersAdded: candidatesToAdd.length,
+                candidates: candidatesToAdd.map(c => ({
+                  designerId: c.designerId,
+                  designerName: c.designer.name,
+                  score: c.score,
+                })),
+              };
+              break;
+
+            case 'create_list':
+              // Check permission to create lists
+              if (!permissions.canCreateLists) {
+                throw new Error("Permission denied: Cannot create lists");
+              }
+              
+              // Create a new list with the recommendation metadata
+              const metadata = recommendation.metadata as any;
+              if (!metadata?.suggestedListName) {
+                throw new Error("Suggested list name is required for create_list recommendations");
+              }
+
+              // Generate unique slug for the list
+              let listSlug = slugify(metadata.suggestedListName);
+              let counter = 1;
+              while (true) {
+                const existingSlug = await tx.query.lists.findFirst({
+                  where: and(
+                    eq(lists.slug, listSlug),
+                    eq(lists.workspaceId, workspaceId)
+                  ),
+                });
+                if (!existingSlug) break;
+                listSlug = `${slugify(metadata.suggestedListName)}-${counter}`;
+                counter++;
+              }
+
+              const [newList] = await tx.insert(lists).values({
+                userId,
+                workspaceId,
+                name: metadata.suggestedListName,
+                slug: listSlug,
+                description: metadata.suggestedDescription || `AI-recommended list: ${metadata.suggestedListName}`,
+                summary: metadata.suggestedSummary || null,
+                isPublic: false,
+              }).returning();
+
+              // Add top candidates to the new list
+              const topCandidates = recommendation.candidates.slice(0, 5); // Add top 5 candidates
+              for (const candidate of topCandidates) {
+                await tx.insert(listDesigners).values({
+                  listId: newList.id,
+                  designerId: candidate.designerId,
+                  notes: `Initial member: ${candidate.reasoning || 'AI-recommended match'}`,
+                });
+              }
+
+              appliedResult = {
+                action: 'created_list',
+                listId: newList.id,
+                listName: newList.name,
+                listSlug: newList.slug,
+                designersAdded: topCandidates.length,
+                candidates: topCandidates.map(c => ({
+                  designerId: c.designerId,
+                  designerName: c.designer.name,
+                  score: c.score,
+                })),
+              };
+              break;
+
+            case 'update_profile':
+              // Check permission to edit designers
+              if (!permissions.canEditDesigners) {
+                throw new Error("Permission denied: Cannot edit designers");
+              }
+              
+              // Update designer profile with suggested improvements
+              if (!recommendation.designerId) {
+                throw new Error("Designer ID is required for update_profile recommendations");
+              }
+
+              const profileMetadata = recommendation.metadata as any;
+              const updateData: any = {};
+
+              // Apply suggested profile updates
+              if (profileMetadata?.suggestedSkills) {
+                updateData.skills = profileMetadata.suggestedSkills;
+              }
+              if (profileMetadata?.suggestedTitle) {
+                updateData.title = profileMetadata.suggestedTitle;
+              }
+              if (profileMetadata?.suggestedDescription) {
+                updateData.description = profileMetadata.suggestedDescription;
+              }
+
+              if (Object.keys(updateData).length > 0) {
+                updateData.updatedAt = new Date();
+                
+                const [updatedDesigner] = await tx
+                  .update(designers)
+                  .set(updateData)
+                  .where(and(
+                    eq(designers.id, recommendation.designerId),
+                    eq(designers.workspaceId, workspaceId)
+                  ))
+                  .returning();
+
+                appliedResult = {
+                  action: 'updated_profile',
+                  designerId: recommendation.designerId,
+                  designerName: updatedDesigner.name,
+                  updates: updateData,
+                };
+              } else {
+                throw new Error("No valid profile updates found in recommendation metadata");
+              }
+              break;
+
+            case 'capture_create_designer':
+              // Check permission to create designers
+              if (!permissions.canCreateDesigners) {
+                throw new Error("Permission denied: Cannot create designers");
+              }
+              
+              // Extract data from capture metadata
+              const createCaptureMetadata = recommendation.metadata as any;
+              const extractedData = createCaptureMetadata?.extractedData || {};
+              
+              if (!extractedData.name) {
+                throw new Error("Designer name is required to create a profile from capture");
+              }
+              
+              // Create new designer profile with required field defaults
+              const [newDesigner] = await tx.insert(designers).values({
+                workspaceId,
+                name: extractedData.name,
+                title: extractedData.title || 'Designer',
+                level: extractedData.level || 'Mid-level',
+                company: extractedData.company || null,
+                location: extractedData.location || null,
+                email: extractedData.email || null,
+                linkedIn: extractedData.linkedIn || null,
+                website: extractedData.website || null,
+                skills: extractedData.skills || [],
+                description: `Profile created from capture${createCaptureMetadata.source ? ': ' + createCaptureMetadata.source : ''}`,
+              }).returning();
+              
+              appliedResult = {
+                action: 'created_designer',
+                designerId: newDesigner.id,
+                designerName: newDesigner.name,
+                captureEntryId: createCaptureMetadata.captureEntryId,
+                annotationId: createCaptureMetadata.annotationId,
+                fieldsPopulated: Object.keys(extractedData).filter(k => extractedData[k]),
+              };
+              break;
+
+            case 'capture_enrich_profile':
+              // Check permission to edit designers
+              if (!permissions.canEditDesigners) {
+                throw new Error("Permission denied: Cannot edit designers");
+              }
+              
+              // Get designer ID from metadata or recommendation
+              const enrichCaptureMetadata = recommendation.metadata as any;
+              const targetDesignerId = enrichCaptureMetadata?.matchedDesignerId || recommendation.designerId;
+              
+              if (!targetDesignerId) {
+                throw new Error("Designer ID is required to enrich a profile from capture");
+              }
+              
+              // Find the existing designer
+              const existingDesigner = await tx.query.designers.findFirst({
+                where: and(
+                  eq(designers.id, targetDesignerId),
+                  eq(designers.workspaceId, workspaceId)
+                ),
+              });
+              
+              if (!existingDesigner) {
+                throw new Error("Designer not found or access denied");
+              }
+              
+              // Build update data - only update fields that are missing/empty on the designer
+              const enrichExtractedData = enrichCaptureMetadata?.extractedData || {};
+              const enrichUpdateData: any = {};
+              const fieldsUpdated: string[] = [];
+              
+              if (enrichExtractedData.title && !existingDesigner.title) {
+                enrichUpdateData.title = enrichExtractedData.title;
+                fieldsUpdated.push('title');
+              }
+              if (enrichExtractedData.company && !existingDesigner.company) {
+                enrichUpdateData.company = enrichExtractedData.company;
+                fieldsUpdated.push('company');
+              }
+              if (enrichExtractedData.location && !existingDesigner.location) {
+                enrichUpdateData.location = enrichExtractedData.location;
+                fieldsUpdated.push('location');
+              }
+              if (enrichExtractedData.email && !existingDesigner.email) {
+                enrichUpdateData.email = enrichExtractedData.email;
+                fieldsUpdated.push('email');
+              }
+              if (enrichExtractedData.linkedIn && !existingDesigner.linkedIn) {
+                enrichUpdateData.linkedIn = enrichExtractedData.linkedIn;
+                fieldsUpdated.push('linkedIn');
+              }
+              if (enrichExtractedData.website && !existingDesigner.website) {
+                enrichUpdateData.website = enrichExtractedData.website;
+                fieldsUpdated.push('website');
+              }
+              if (enrichExtractedData.skills?.length && (!existingDesigner.skills || existingDesigner.skills.length === 0)) {
+                enrichUpdateData.skills = enrichExtractedData.skills;
+                fieldsUpdated.push('skills');
+              }
+              
+              if (Object.keys(enrichUpdateData).length > 0) {
+                enrichUpdateData.updatedAt = new Date();
+                
+                const [enrichedDesigner] = await tx
+                  .update(designers)
+                  .set(enrichUpdateData)
+                  .where(eq(designers.id, targetDesignerId))
+                  .returning();
+                
+                appliedResult = {
+                  action: 'enriched_profile',
+                  designerId: targetDesignerId,
+                  designerName: enrichedDesigner.name,
+                  fieldsUpdated,
+                  captureEntryId: enrichCaptureMetadata.captureEntryId,
+                  annotationId: enrichCaptureMetadata.annotationId,
+                };
+              } else {
+                // No new fields to add - mark as applied anyway
+                appliedResult = {
+                  action: 'enriched_profile',
+                  designerId: targetDesignerId,
+                  designerName: existingDesigner.name,
+                  fieldsUpdated: [],
+                  note: 'No new fields to update - designer profile already complete',
+                  captureEntryId: enrichCaptureMetadata.captureEntryId,
+                  annotationId: enrichCaptureMetadata.annotationId,
+                };
+              }
+              break;
+
+            default:
+              throw new Error(`Unsupported recommendation type: ${recommendation.recommendationType}`);
+          }
+
+          // Update recommendation status
+          await tx
+            .update(inboxRecommendations)
+            .set({ 
+              status: 'applied',
+              appliedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(inboxRecommendations.id, recommendationId));
+
+          // Log apply event
+          await tx.insert(inboxRecommendationEvents).values({
+            recommendationId: recommendationId,
+            userId: userId,
+            eventType: 'applied',
+            description: `Recommendation applied: ${appliedResult.action}`,
+            metadata: {
+              result: appliedResult,
+              notes: notes || null,
+              previousStatus: recommendation.status,
+            },
+          } as any);
+
+        } catch (error) {
+          console.error('Error applying recommendation:', error);
+          throw error;
+        }
+      });
+
+      res.json({
+        success: true,
+        applied: true,
+        result: appliedResult,
+      });
+    } catch (error: any) {
+      console.error('Error applying recommendation:', error);
+      if (error.message === "No workspace access" || error.message === "Not authorized to access this workspace") {
+        return res.status(403).json({ error: error.message });
+      }
+      if (error.message.includes("Target list") || error.message.includes("Designer ID") || error.message.includes("Suggested list name")) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to apply recommendation" });
+    }
+  }));
+
+  // Home Recommendations API - New recommendation types for home page
+
+  // GET /api/home/recommendations - Fetch recommendations with daily quota enforcement
+  app.get("/api/home/recommendations", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { workspaceId, userId } = workspaceContext;
+    const loadMore = req.query.loadMore === 'true';
+
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get or create daily quota record
+    let quotaRecord = await db.query.dailyRecommendationQuota.findFirst({
+      where: and(
+        eq(dailyRecommendationQuota.workspaceId, workspaceId),
+        eq(dailyRecommendationQuota.userId, userId),
+        eq(dailyRecommendationQuota.date, today)
+      ),
+    });
+
+    if (!quotaRecord) {
+      const [newQuota] = await db.insert(dailyRecommendationQuota).values({
+        workspaceId,
+        userId,
+        date: today,
+        recommendationsShown: 0,
+      }).returning();
+      quotaRecord = newQuota;
+    }
+
+    const currentShown = quotaRecord.recommendationsShown || 0;
+
+    // Generate recommendations filtered to actionable types only
+    // Focus on outreach and designer matches - not profile maintenance
+    const actionableTypes = ['recommend_designer', 'reach_out'];
+    await recommendationEngine.generate({
+      workspaceId,
+      userId,
+      types: actionableTypes,
+      limit: 10,
+      forceRefresh: false, // Always persist so we can fetch from DB
+    });
+
+    // Fetch recommendations from database with full designer data
+    // Get 'new' status recommendations of the actionable types
+    // Limit to 5 normally, or more if loading more
+    const limit = loadMore ? currentShown + 5 : 5;
+    const fullRecommendations = await db.query.inboxRecommendations.findMany({
+      where: and(
+        eq(inboxRecommendations.workspaceId, workspaceId),
+        eq(inboxRecommendations.userId, userId),
+        eq(inboxRecommendations.status, 'new'),
+        inArray(inboxRecommendations.recommendationType, actionableTypes as any)
+      ),
+      with: {
+        candidates: {
+          with: {
+            designer: true,
+          },
+          orderBy: [asc(inboxRecommendationCandidates.rank)],
+        },
+      },
+      orderBy: [desc(inboxRecommendations.score)],
+      limit,
+    });
+
+    // Only update quota when explicitly loading more (not on refetch)
+    if (loadMore && fullRecommendations.length > currentShown) {
+      await db.update(dailyRecommendationQuota)
+        .set({ recommendationsShown: fullRecommendations.length })
+        .where(eq(dailyRecommendationQuota.id, quotaRecord.id));
+    }
+
+    res.json({
+      recommendations: fullRecommendations,
+      quota: {
+        shown: fullRecommendations.length,
+        remaining: Math.max(0, 10 - fullRecommendations.length), // Allow up to 10 total
+        date: today,
+      },
+    });
+  }));
+
+  // POST /api/home/recommendations/:id/accept - Accept a recommendation and apply the action
+  app.post("/api/home/recommendations/:id/accept", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const permissions = (req as any).permissions;
+    const { workspaceId, userId } = workspaceContext;
+    const recommendationId = parseInt(req.params.id);
+    const { notes, targetListId } = req.body;
+
+    // Fetch and verify recommendation with candidates
+    const recommendation = await db.query.inboxRecommendations.findFirst({
+      where: and(
+        eq(inboxRecommendations.id, recommendationId),
+        eq(inboxRecommendations.workspaceId, workspaceId)
+      ),
+      with: {
+        candidates: {
+          with: {
+            designer: true,
+          },
+          orderBy: [asc(inboxRecommendationCandidates.rank)],
+        },
+      },
+    });
+
+    if (!recommendation) {
+      return res.status(404).json({ error: "Recommendation not found" });
+    }
+
+    if (recommendation.status === 'applied') {
+      return res.status(400).json({ error: "Recommendation is already applied" });
+    }
+
+    if (recommendation.status === 'dismissed') {
+      return res.status(400).json({ error: "Cannot apply dismissed recommendations" });
+    }
+
+    let appliedResult: any = null;
+
+    await db.transaction(async (tx) => {
+      switch (recommendation.recommendationType) {
+        case 'recommend_designer':
+          if (!permissions.canEditLists) {
+            throw new Error("Permission denied: Cannot edit lists");
+          }
+
+          const designerToAdd = recommendation.designerId || (recommendation.candidates.length > 0 ? recommendation.candidates[0].designerId : null);
+          if (!designerToAdd) {
+            throw new Error("No designer associated with this recommendation");
+          }
+
+          // Get designer info
+          const designer = await tx.query.designers.findFirst({
+            where: eq(designers.id, designerToAdd),
+          });
+
+          if (!designer) {
+            throw new Error("Designer not found");
+          }
+
+          // If targetListId provided, add to that list
+          if (targetListId) {
+            const list = await tx.query.lists.findFirst({
+              where: and(
+                eq(lists.id, targetListId),
+                eq(lists.workspaceId, workspaceId)
+              ),
+            });
+
+            if (!list) {
+              throw new Error("Target list not found");
+            }
+
+            // Check if designer already in list
+            const existing = await tx.query.listDesigners.findFirst({
+              where: and(
+                eq(listDesigners.listId, targetListId),
+                eq(listDesigners.designerId, designerToAdd)
+              ),
+            });
+
+            if (!existing) {
+              await tx.insert(listDesigners).values({
+                listId: targetListId,
+                designerId: designerToAdd,
+                notes: notes || 'Added via AI recommendation',
+              });
+            }
+
+            appliedResult = {
+              action: 'added_to_list',
+              designerId: designerToAdd,
+              designerName: designer.name,
+              listId: targetListId,
+              listName: list.name,
+            };
+          } else {
+            // Create a new list for the designer or add to default
+            const metadata = recommendation.metadata as any;
+            const listName = metadata?.suggestedListName || `${designer.name} - Recommended`;
+            let listSlug = slugify(listName);
+            let counter = 1;
+
+            while (true) {
+              const existingSlug = await tx.query.lists.findFirst({
+                where: and(
+                  eq(lists.slug, listSlug),
+                  eq(lists.workspaceId, workspaceId)
+                ),
+              });
+              if (!existingSlug) break;
+              listSlug = `${slugify(listName)}-${counter}`;
+              counter++;
+            }
+
+            const [newList] = await tx.insert(lists).values({
+              userId,
+              workspaceId,
+              name: listName,
+              slug: listSlug,
+              description: `Created from AI recommendation`,
+            }).returning();
+
+            await tx.insert(listDesigners).values({
+              listId: newList.id,
+              designerId: designerToAdd,
+              notes: notes || 'Added via AI recommendation',
+            });
+
+            appliedResult = {
+              action: 'created_list_with_designer',
+              designerId: designerToAdd,
+              designerName: designer.name,
+              listId: newList.id,
+              listName: newList.name,
+            };
+          }
+          break;
+
+        case 'reach_out':
+          const outreachDesignerId = recommendation.designerId || (recommendation.candidates.length > 0 ? recommendation.candidates[0].designerId : null);
+          if (!outreachDesignerId) {
+            throw new Error("No designer associated with this recommendation");
+          }
+
+          const outreachDesigner = await tx.query.designers.findFirst({
+            where: eq(designers.id, outreachDesignerId),
+          });
+
+          if (!outreachDesigner) {
+            throw new Error("Designer not found");
+          }
+
+          // Create designer outreach record
+          const [outreachRecord] = await tx.insert(designerOutreach).values({
+            workspaceId,
+            designerId: outreachDesignerId,
+            userId,
+            outreachType: 'recommendation',
+            notes: notes || 'Initiated via AI recommendation',
+          }).returning();
+
+          appliedResult = {
+            action: 'outreach_initiated',
+            designerId: outreachDesignerId,
+            designerName: outreachDesigner.name,
+            outreachId: outreachRecord.id,
+          };
+          break;
+
+        case 'update_profile':
+          if (!permissions.canEditDesigners) {
+            throw new Error("Permission denied: Cannot edit designers");
+          }
+
+          const updateMetadata = recommendation.metadata as any;
+          const profileDesignerId = recommendation.designerId;
+
+          if (!profileDesignerId) {
+            throw new Error("No designer associated with this recommendation");
+          }
+
+          const existingDesigner = await tx.query.designers.findFirst({
+            where: and(
+              eq(designers.id, profileDesignerId),
+              eq(designers.workspaceId, workspaceId)
+            ),
+          });
+
+          if (!existingDesigner) {
+            throw new Error("Designer not found or access denied");
+          }
+
+          // Apply suggested updates from metadata
+          const updates: any = {};
+          const fieldsUpdated: string[] = [];
+
+          if (updateMetadata?.suggestedUpdates) {
+            for (const [field, value] of Object.entries(updateMetadata.suggestedUpdates)) {
+              if (value && !(existingDesigner as any)[field]) {
+                updates[field] = value;
+                fieldsUpdated.push(field);
+              }
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            updates.updatedAt = new Date();
+            await tx.update(designers)
+              .set(updates)
+              .where(eq(designers.id, profileDesignerId));
+          }
+
+          appliedResult = {
+            action: 'profile_updated',
+            designerId: profileDesignerId,
+            designerName: existingDesigner.name,
+            fieldsUpdated,
+          };
+          break;
+
+        default:
+          throw new Error(`Unsupported recommendation type: ${recommendation.recommendationType}`);
+      }
+
+      // Update recommendation status
+      await tx.update(inboxRecommendations)
+        .set({
+          status: 'applied',
+          appliedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId));
+
+      // Log apply event
+      await tx.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'applied',
+        description: `Home recommendation accepted: ${appliedResult.action}`,
+        metadata: {
+          result: appliedResult,
+          notes: notes || null,
+          previousStatus: recommendation.status,
+        },
+      } as any);
+    });
+
+    res.json({
+      success: true,
+      applied: true,
+      result: appliedResult,
+    });
+  }));
+
+  // POST /api/home/recommendations/:id/draft-message - Generate a personalized outreach draft
+  app.post("/api/home/recommendations/:id/draft-message", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { workspaceId, userId } = workspaceContext;
+    const recommendationId = parseInt(req.params.id);
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "OpenAI not configured" });
+    }
+
+    // Fetch recommendation + designer
+    const recommendation = await db.query.inboxRecommendations.findFirst({
+      where: and(
+        eq(inboxRecommendations.id, recommendationId),
+        eq(inboxRecommendations.workspaceId, workspaceId)
+      ),
+      with: {
+        candidates: {
+          with: { designer: true },
+          orderBy: [asc(inboxRecommendationCandidates.rank)],
+        },
+      },
+    });
+
+    if (!recommendation) {
+      return res.status(404).json({ error: "Recommendation not found" });
+    }
+
+    const designer = recommendation.candidates?.[0]?.designer;
+    if (!designer) {
+      return res.status(400).json({ error: "No designer associated with this recommendation" });
+    }
+
+    // Fetch workspace name and sender info
+    const workspace = await db.query.workspaces.findFirst({
+      where: eq(workspaces.id, workspaceId),
+    });
+
+    // Fetch active jobs for context
+    const activeJobs = await db.query.jobs.findMany({
+      where: and(
+        eq(jobs.workspaceId, workspaceId),
+        eq(jobs.status, 'active')
+      ),
+      columns: { title: true, description: true },
+      limit: 3,
+    });
+
+    // Fetch user info for sender context
+    const sender = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { username: true, email: true },
+    });
+
+    const reasoning = recommendation.candidates?.[0]?.reasoning || recommendation.description || "";
+    const trigger = (recommendation.metadata as any)?.trigger;
+    const triggerDetail = (recommendation.metadata as any)?.triggerDetail;
+    const designerSkills = Array.isArray(designer.skills) ? (designer.skills as string[]).slice(0, 6).join(", ") : "";
+    const jobContext = activeJobs.length > 0
+      ? `Active open roles at this company: ${activeJobs.map(j => j.title).join(", ")}.`
+      : "";
+
+    const systemPrompt = `You are a thoughtful design recruiter writing a concise, personal outreach message. 
+Write naturally and specifically — avoid generic phrases like "I came across your profile" or "I'd love to connect". 
+The message should feel like it was written by a real person who did their homework. Keep it brief: 3 short paragraphs max.
+Never use emojis. Use sentence case for the subject line, not title case.`;
+
+    const userPrompt = `Write a personalized outreach message to ${designer.name}, a ${designer.title || "designer"}${designer.company ? ` currently at ${designer.company}` : ""}.
+
+Context about why we're reaching out now:
+${trigger ? `Trigger: ${trigger}` : ""}
+${triggerDetail ? `Trigger detail: ${triggerDetail}` : ""}
+${reasoning ? `AI reasoning: ${reasoning}` : ""}
+${jobContext}
+
+Designer profile:
+- Name: ${designer.name}
+- Title: ${designer.title || "Designer"}
+- Company: ${designer.company || "Unknown"}
+- Location: ${designer.location || "Unknown"}
+- Skills: ${designerSkills}
+- Available for new work: ${designer.available ? "Yes" : "Not currently"}
+
+Sender context: ${sender?.username || "a recruiter"} from ${workspace?.name || "our company"}.
+
+Return a JSON object with exactly these fields:
+{
+  "subject": "short email subject line (8 words max, sentence case)",
+  "body": "the email body (plain text, 3 paragraphs max, no salutation line - start after 'Hi [Name],')"
+}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      return res.status(500).json({ error: "Failed to generate draft" });
+    }
+
+    const draft = JSON.parse(content);
+    res.json({
+      subject: draft.subject || "",
+      body: draft.body || "",
+      designerName: designer.name,
+    });
+  }));
+
+  // POST /api/home/recommendations/:id/reject - Reject a recommendation with RLHF feedback
+  app.post("/api/home/recommendations/:id/reject", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { workspaceId, userId } = workspaceContext;
+    const recommendationId = parseInt(req.params.id);
+    const { reason, notes } = req.body;
+
+    // Validate reason
+    const validReasons = ['not_relevant', 'already_contacted', 'not_qualified', 'too_expensive', 'location_mismatch', 'other'];
+    if (!reason || !validReasons.includes(reason)) {
+      return res.status(400).json({ 
+        error: "Invalid reason",
+        validReasons,
+      });
+    }
+
+    // Fetch and verify recommendation
+    const recommendation = await db.query.inboxRecommendations.findFirst({
+      where: and(
+        eq(inboxRecommendations.id, recommendationId),
+        eq(inboxRecommendations.workspaceId, workspaceId)
+      ),
+    });
+
+    if (!recommendation) {
+      return res.status(404).json({ error: "Recommendation not found" });
+    }
+
+    if (recommendation.status === 'dismissed') {
+      return res.status(400).json({ error: "Recommendation is already dismissed" });
+    }
+
+    await db.transaction(async (tx) => {
+      // Create RLHF feedback record if designer is associated
+      if (recommendation.designerId) {
+        // Fetch designer for snapshot
+        const feedbackDesigner = await tx.query.designers.findFirst({
+          where: eq(designers.id, recommendation.designerId),
+        });
+
+        await tx.insert(recommendationFeedback).values({
+          userId,
+          workspaceId,
+          designerId: recommendation.designerId!,
+          matchScore: recommendation.score || 0,
+          feedbackType: reason,
+          comments: notes || null,
+          aiReasoning: recommendation.description || undefined,
+          designerSnapshot: feedbackDesigner ? {
+            name: feedbackDesigner.name,
+            title: feedbackDesigner.title,
+            skills: feedbackDesigner.skills,
+            level: feedbackDesigner.level,
+          } : undefined,
+        });
+      }
+
+      // Update recommendation status
+      await tx.update(inboxRecommendations)
+        .set({
+          status: 'dismissed',
+          updatedAt: new Date(),
+        })
+        .where(eq(inboxRecommendations.id, recommendationId));
+
+      // Log RLHF event
+      await tx.insert(inboxRecommendationEvents).values({
+        recommendationId,
+        userId,
+        eventType: 'dismissed',
+        description: `Home recommendation rejected: ${reason}`,
+        metadata: {
+          reason,
+          notes: notes || null,
+          previousStatus: recommendation.status,
+          designerId: recommendation.designerId,
+          rlhfFeedbackRecorded: !!recommendation.designerId,
+        },
+      } as any);
+    });
+
+    res.json({
+      success: true,
+      dismissed: true,
+      reason,
+    });
+  }));
+
+  // POST /api/user/location - Save user's location with consent
+  app.post("/api/user/location", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const userId = (req as any).user.id;
+    const { latitude, longitude, city, country, consent } = req.body;
+
+    if (typeof consent !== 'boolean') {
+      return res.status(400).json({ error: "Consent field is required" });
+    }
+
+    // Check if user already has a location record
+    const existingLocation = await db.query.userLocations.findFirst({
+      where: eq(userLocations.userId, userId),
+    });
+
+    let savedLocation;
+
+    if (consent === false) {
+      // If consent is revoked, clear location data
+      if (existingLocation) {
+        [savedLocation] = await db.update(userLocations)
+          .set({
+            latitude: null,
+            longitude: null,
+            city: null,
+            country: null,
+            consentGranted: false,
+            lastUpdated: new Date(),
+          })
+          .where(eq(userLocations.userId, userId))
+          .returning();
+      } else {
+        [savedLocation] = await db.insert(userLocations).values({
+          userId,
+          consentGranted: false,
+        }).returning();
+      }
+    } else {
+      // Consent granted - save location data
+      if (!latitude || !longitude) {
+        return res.status(400).json({ error: "Latitude and longitude are required when consent is granted" });
+      }
+
+      if (existingLocation) {
+        [savedLocation] = await db.update(userLocations)
+          .set({
+            latitude,
+            longitude,
+            city: city || null,
+            country: country || null,
+            consentGranted: true,
+            lastUpdated: new Date(),
+          })
+          .where(eq(userLocations.userId, userId))
+          .returning();
+      } else {
+        [savedLocation] = await db.insert(userLocations).values({
+          userId,
+          latitude,
+          longitude,
+          city: city || null,
+          country: country || null,
+          consentGranted: true,
+        }).returning();
+      }
+    }
+
+    res.json(savedLocation);
+  }));
+
+  // GET /api/user/location - Get user's current location if consented
+  app.get("/api/user/location", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const userId = (req as any).user.id;
+
+    const location = await db.query.userLocations.findFirst({
+      where: eq(userLocations.userId, userId),
+    });
+
+    if (!location || !location.consentGranted) {
+      return res.json({ consentGranted: false });
+    }
+
+    res.json(location);
+  }));
+
+  // Saved Searches API
+
+  // GET /api/saved-searches - Get all saved searches for workspace
+  app.get("/api/saved-searches", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+
+    // If slug provided, verify workspace exists and user is a member FIRST
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspace.id)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      const searches = await db.query.savedSearches.findMany({
+        where: and(
+          eq(savedSearches.workspaceId, workspace.id),
+          eq(savedSearches.userId, req.user.id)
+        ),
+        orderBy: desc(savedSearches.createdAt),
+      });
+
+      return res.json(searches);
+    }
+
+    // No slug provided - use user's default workspace
+    const userWorkspace = await getUserWorkspace(req.user.id);
+    if (!userWorkspace) {
+      return res.status(403).json({ error: "No workspace access" });
+    }
+
+    const searches = await db.query.savedSearches.findMany({
+      where: and(
+        eq(savedSearches.workspaceId, userWorkspace.id),
+        eq(savedSearches.userId, req.user.id)
+      ),
+      orderBy: desc(savedSearches.createdAt),
+    });
+
+    res.json(searches);
+  }));
+
+  // POST /api/saved-searches - Create a saved search
+  app.post("/api/saved-searches", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { name, searchType, searchValue } = req.body;
+
+    if (!name || !searchType || !searchValue) {
+      return res.status(400).json({ error: "Name, searchType, and searchValue are required" });
+    }
+
+    if (!['skill', 'title', 'location'].includes(searchType)) {
+      return res.status(400).json({ error: "searchType must be 'skill', 'title', or 'location'" });
+    }
+
+    const workspaceSlug = req.headers['x-workspace-slug'] as string;
+    let workspaceId: number;
+
+    // If slug provided, verify workspace exists and user is a member FIRST
+    if (workspaceSlug) {
+      const workspace = await db.query.workspaces.findFirst({
+        where: eq(workspaces.slug, workspaceSlug),
+      });
+
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, workspace.id)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this workspace" });
+      }
+
+      workspaceId = workspace.id;
+    } else {
+      // No slug provided - use user's default workspace
+      const userWorkspace = await getUserWorkspace(req.user.id);
+      if (!userWorkspace) {
+        return res.status(403).json({ error: "No workspace access" });
+      }
+      workspaceId = userWorkspace.id;
+    }
+
+    const [savedSearch] = await db.insert(savedSearches).values({
+      workspaceId,
+      userId: req.user.id,
+      name: name.trim(),
+      searchType,
+      searchValue: searchValue.trim(),
+    }).returning();
+
+    // Log activity for saved search
+    await logWorkspaceActivity(
+      workspaceId,
+      req.user.id,
+      'search_saved',
+      'saved_search',
+      savedSearch.id,
+      savedSearch.name
+    );
+
+    res.json(savedSearch);
+  }));
+
+  // DELETE /api/saved-searches/:id - Delete a saved search
+  app.delete("/api/saved-searches/:id", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const searchId = parseInt(req.params.id);
+    if (isNaN(searchId)) {
+      return res.status(400).json({ error: "Invalid search ID" });
+    }
+
+    // First, fetch the saved search to verify ownership
+    const savedSearch = await db.query.savedSearches.findFirst({
+      where: eq(savedSearches.id, searchId),
+    });
+
+    if (!savedSearch) {
+      return res.status(404).json({ error: "Saved search not found" });
+    }
+
+    // Verify user is a member of the workspace this search belongs to
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, savedSearch.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to access this workspace" });
+    }
+
+    // Users can only delete their own saved searches
+    if (savedSearch.userId !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized to delete this saved search" });
+    }
+
+    // Log activity before delete
+    await logWorkspaceActivity(
+      savedSearch.workspaceId,
+      req.user.id,
+      'search_deleted',
+      'search',
+      savedSearch.id,
+      savedSearch.name
+    );
+
+    await db.delete(savedSearches).where(eq(savedSearches.id, searchId));
+
+    res.json({ success: true });
+  }));
+
+  // ============================================
+  // Capture Endpoints
+  // ============================================
+
+  // GET /api/capture - List capture entries for workspace (requires editor/admin role)
+  app.get("/api/capture", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    // Check if user has editor/admin role
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const entries = await db.query.captureEntries.findMany({
+      where: eq(captureEntries.workspaceId, workspaceContext.workspaceId),
+      orderBy: desc(captureEntries.createdAt),
+      with: {
+        assets: true,
+        creator: {
+          columns: {
+            id: true,
+            email: true,
+            username: true,
+            profilePhotoUrl: true,
+          },
+        },
+        list: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    res.json(entries);
+  }));
+
+  // POST /api/capture - Create new capture entry (multipart form for file upload)
+  app.post("/api/capture", requireWorkspaceMembership(), upload.single('file'), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    // Check if user has editor/admin role
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const { content, contentType } = req.body;
+    
+    // Validate content type
+    const validContentTypes = ['text', 'email', 'upload'];
+    if (!contentType || !validContentTypes.includes(contentType)) {
+      return res.status(400).json({ error: "Invalid content type. Must be 'text', 'email', or 'upload'" });
+    }
+
+    // Validate that we have either content or file
+    if (!content && !req.file) {
+      return res.status(400).json({ error: "Either content or file is required" });
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // Create the capture entry
+      const [entry] = await tx.insert(captureEntries).values({
+        workspaceId: workspaceContext.workspaceId,
+        creatorId: req.user!.id,
+        contentType: contentType as 'text' | 'email' | 'upload',
+        contentRaw: content || null,
+        status: 'pending',
+      }).returning();
+
+      // If file was uploaded, process and store it
+      if (req.file) {
+        const filename = `captures/${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+        
+        // Process image
+        const processedBuffer = await sharp(req.file.buffer, {
+          failOnError: false,
+          limitInputPixels: 50000000
+        })
+          .resize(1200, 1200, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({ quality: 85 })
+          .toBuffer();
+
+        // Upload to Object Storage
+        const uploadResult = await objectStorage.uploadFromBytes(filename, processedBuffer);
+        if (uploadResult.error) {
+          throw new Error(`Upload failed: ${uploadResult.error.message}`);
+        }
+
+        // Create asset record
+        await tx.insert(captureAssets).values({
+          entryId: entry.id,
+          storageUrl: `/api/uploads/${filename}`,
+          originalFilename: req.file.originalname,
+          assetType: 'image',
+          mimeType: req.file.mimetype,
+          fileSize: processedBuffer.length,
+        });
+      }
+
+      // Fetch the entry with assets
+      const entryWithAssets = await tx.query.captureEntries.findFirst({
+        where: eq(captureEntries.id, entry.id),
+        with: {
+          assets: true,
+          creator: {
+            columns: {
+              id: true,
+              email: true,
+              username: true,
+              profilePhotoUrl: true,
+            },
+          },
+        },
+      });
+
+      return entryWithAssets;
+    });
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      req.user!.id,
+      'capture_created',
+      'capture',
+      result!.id,
+      contentType === 'upload' ? 'File upload' : (content?.substring(0, 50) || 'Capture entry')
+    );
+
+    // Auto-analyze the capture in the background (don't await to not block response)
+    (async () => {
+      try {
+        // Update status to processing
+        await db.update(captureEntries)
+          .set({ status: 'processing', updatedAt: new Date() })
+          .where(eq(captureEntries.id, result!.id));
+
+        // Run analysis
+        const analysisResult = await analyzeCapture(result!, result!.assets, workspaceContext.workspaceId);
+
+        const matchedDesignerId = analysisResult.entities.find(e => e.matchedDesignerId)?.matchedDesignerId || null;
+
+        await db.insert(captureAnnotations).values({
+          entryId: result!.id,
+          aiSummary: analysisResult.summary,
+          extractedEntities: analysisResult.extractedData,
+          suggestedActions: analysisResult.suggestedActions,
+          matchedDesignerId: matchedDesignerId,
+          processingModel: analysisResult.processingModel,
+          processingDuration: analysisResult.processingDuration,
+        });
+
+        await db.update(captureEntries)
+          .set({ 
+            status: 'processed', 
+            processedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(captureEntries.id, result!.id));
+
+        await logWorkspaceActivity(
+          workspaceContext.workspaceId,
+          req.user!.id,
+          'capture_analyzed',
+          'capture',
+          result!.id,
+          contentType === 'upload' ? 'File upload' : (content?.substring(0, 50) || 'Capture entry')
+        );
+
+        console.log(`Auto-analyzed capture ${result!.id} successfully`);
+      } catch (error) {
+        console.error('Auto-analysis failed:', error);
+        await db.update(captureEntries)
+          .set({ 
+            status: 'error', 
+            errorMessage: error instanceof Error ? error.message : 'Auto-analysis failed',
+            updatedAt: new Date()
+          })
+          .where(eq(captureEntries.id, result!.id));
+      }
+    })();
+
+    res.status(201).json(result);
+  }));
+
+  // DELETE /api/capture/:id - Delete a capture entry
+  app.delete("/api/capture/:id", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    // Check if user has editor/admin role
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const entryId = parseInt(req.params.id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "Invalid entry ID" });
+    }
+
+    // Find the entry and verify it belongs to this workspace
+    const entry = await db.query.captureEntries.findFirst({
+      where: and(
+        eq(captureEntries.id, entryId),
+        eq(captureEntries.workspaceId, workspaceContext.workspaceId)
+      ),
+      with: {
+        assets: true,
+      },
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Capture entry not found" });
+    }
+
+    // Delete assets from object storage
+    for (const asset of entry.assets) {
+      try {
+        const key = asset.storageUrl.replace('/api/uploads/', '');
+        await objectStorage.delete(key);
+      } catch (err) {
+        console.error('Failed to delete asset from storage:', err);
+      }
+    }
+
+    // Delete the entry (cascades to assets)
+    await db.delete(captureEntries).where(eq(captureEntries.id, entryId));
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      req.user!.id,
+      'capture_deleted',
+      'capture',
+      entryId,
+      entry.contentRaw?.substring(0, 50) || 'Capture entry'
+    );
+
+    res.json({ success: true });
+  }));
+
+  // POST /api/capture/:id/link - Link a capture entry to a list
+  app.post("/api/capture/:id/link", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture access requires editor or admin role" });
+    }
+
+    const entryId = parseInt(req.params.id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "Invalid entry ID" });
+    }
+
+    const { listId } = req.body;
+    if (!listId || typeof listId !== 'number') {
+      return res.status(400).json({ error: "List ID is required" });
+    }
+
+    // Verify the capture entry exists and belongs to this workspace
+    const entry = await db.query.captureEntries.findFirst({
+      where: and(
+        eq(captureEntries.id, entryId),
+        eq(captureEntries.workspaceId, workspaceContext.workspaceId)
+      ),
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Capture entry not found" });
+    }
+
+    // Verify the list exists and belongs to this workspace
+    const list = await db.query.lists.findFirst({
+      where: and(
+        eq(lists.id, listId),
+        eq(lists.workspaceId, workspaceContext.workspaceId)
+      ),
+    });
+
+    if (!list) {
+      return res.status(404).json({ error: "List not found" });
+    }
+
+    // Update the capture entry with the list ID
+    await db.update(captureEntries)
+      .set({ listId, updatedAt: new Date() })
+      .where(eq(captureEntries.id, entryId));
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      req.user!.id,
+      'capture_linked',
+      'capture',
+      entryId,
+      `Linked to list: ${list.name}`
+    );
+
+    res.json({ success: true, listId });
+  }));
+
+  // POST /api/capture/:id/analyze - Trigger AI analysis for a capture entry
+  app.post("/api/capture/:id/analyze", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(workspaceContext.role)) {
+      return res.status(403).json({ error: "Permission denied: Capture analysis requires editor or admin role" });
+    }
+
+    const entryId = parseInt(req.params.id);
+    if (isNaN(entryId)) {
+      return res.status(400).json({ error: "Invalid entry ID" });
+    }
+
+    const entry = await db.query.captureEntries.findFirst({
+      where: and(
+        eq(captureEntries.id, entryId),
+        eq(captureEntries.workspaceId, workspaceContext.workspaceId)
+      ),
+      with: {
+        assets: true,
+      },
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Capture entry not found" });
+    }
+
+    if (entry.status === 'processing') {
+      return res.status(409).json({ error: "Analysis already in progress" });
+    }
+
+    await db.update(captureEntries)
+      .set({ status: 'processing', updatedAt: new Date() })
+      .where(eq(captureEntries.id, entryId));
+
+    try {
+      const analysisResult = await analyzeCapture(entry, entry.assets, workspaceContext.workspaceId);
+
+      const matchedDesignerId = analysisResult.entities.find(e => e.matchedDesignerId)?.matchedDesignerId || null;
+
+      const [annotation] = await db.insert(captureAnnotations).values({
+        entryId: entry.id,
+        aiSummary: analysisResult.summary,
+        extractedEntities: analysisResult.extractedData,
+        suggestedActions: analysisResult.suggestedActions,
+        matchedDesignerId: matchedDesignerId,
+        processingModel: analysisResult.processingModel,
+        processingDuration: analysisResult.processingDuration,
+      }).returning();
+
+      await db.update(captureEntries)
+        .set({ 
+          status: 'processed', 
+          processedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(captureEntries.id, entryId));
+
+      await logWorkspaceActivity(
+        workspaceContext.workspaceId,
+        req.user!.id,
+        'capture_analyzed',
+        'capture',
+        entryId,
+        entry.contentRaw?.substring(0, 50) || 'Capture entry'
+      );
+
+      res.json({
+        success: true,
+        annotation,
+        analysis: {
+          entities: analysisResult.entities,
+          summary: analysisResult.summary,
+          rawInsights: analysisResult.rawInsights,
+        },
+      });
+    } catch (error) {
+      console.error('Capture analysis failed:', error);
+
+      await db.update(captureEntries)
+        .set({ 
+          status: 'error', 
+          errorMessage: error instanceof Error ? error.message : 'Analysis failed',
+          updatedAt: new Date()
+        })
+        .where(eq(captureEntries.id, entryId));
+
+      res.status(500).json({ 
+        error: "Analysis failed",
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+
+  // =============================================
+  // API Token Management (for MCP/external API access)
+  // =============================================
+
+  // Generate a cryptographically secure token
+  function generateApiToken(): { token: string; hash: string; prefix: string } {
+    const rawToken = crypto.randomBytes(32).toString('base64url');
+    const prefix = rawToken.substring(0, 8);
+    const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    return { token: `tap_${rawToken}`, hash, prefix };
+  }
+
+  // List user's API tokens for a workspace
+  app.get("/api/workspaces/:workspaceSlug/api-tokens", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    
+    const tokens = await db.query.apiTokens.findMany({
+      where: and(
+        eq(apiTokens.userId, workspaceContext.userId),
+        eq(apiTokens.workspaceId, workspaceContext.workspaceId)
+      ),
+      orderBy: desc(apiTokens.createdAt),
+    });
+
+    // Return tokens without the hash (security)
+    const safeTokens = tokens.map(t => ({
+      id: t.id,
+      name: t.name,
+      tokenPrefix: t.tokenPrefix,
+      role: t.role,
+      usageCount: t.usageCount || 0,
+      lastUsedAt: t.lastUsedAt,
+      expiresAt: t.expiresAt,
+      createdAt: t.createdAt,
+    }));
+
+    res.json(safeTokens);
+  }));
+
+  // Create a new API token
+  app.post("/api/workspaces/:workspaceSlug/api-tokens", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const { name, expiresInDays } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ error: "Token name is required" });
+    }
+
+    const { token, hash, prefix } = generateApiToken();
+    
+    let expiresAt = null;
+    if (expiresInDays && typeof expiresInDays === 'number' && expiresInDays > 0) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    }
+
+    const [newToken] = await db.insert(apiTokens).values({
+      userId: workspaceContext.userId,
+      workspaceId: workspaceContext.workspaceId,
+      name: name.trim(),
+      tokenHash: hash,
+      tokenPrefix: prefix,
+      role: workspaceContext.role, // Inherit user's workspace role
+      expiresAt,
+    }).returning();
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      workspaceContext.userId,
+      'api_token_created',
+      'api_token',
+      newToken.id,
+      name.trim()
+    );
+
+    // Return the full token only once (on creation)
+    res.json({
+      id: newToken.id,
+      name: newToken.name,
+      token, // Full token - only shown once
+      tokenPrefix: newToken.tokenPrefix,
+      role: newToken.role,
+      expiresAt: newToken.expiresAt,
+      createdAt: newToken.createdAt,
+    });
+  }));
+
+  // Revoke (delete) an API token
+  app.delete("/api/workspaces/:workspaceSlug/api-tokens/:tokenId", requireWorkspaceMembership(), withErrorHandler(async (req, res) => {
+    const workspaceContext = (req as any).workspaceContext;
+    const tokenId = parseInt(req.params.tokenId);
+
+    if (isNaN(tokenId)) {
+      return res.status(400).json({ error: "Invalid token ID" });
+    }
+
+    // Only allow users to delete their own tokens
+    const existingToken = await db.query.apiTokens.findFirst({
+      where: and(
+        eq(apiTokens.id, tokenId),
+        eq(apiTokens.userId, workspaceContext.userId),
+        eq(apiTokens.workspaceId, workspaceContext.workspaceId)
+      ),
+    });
+
+    if (!existingToken) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+
+    await db.delete(apiTokens).where(eq(apiTokens.id, tokenId));
+
+    await logWorkspaceActivity(
+      workspaceContext.workspaceId,
+      workspaceContext.userId,
+      'api_token_revoked',
+      'api_token',
+      tokenId,
+      existingToken.name
+    );
+
+    res.json({ success: true });
+  }));
+
+  // =========================================================================
+  // Talent Graph Routes
+  // =========================================================================
+
+  // Talent Graph enum validators
+  const VALID_EMPLOYMENT_TYPES = ['full_time', 'contract', 'freelance', 'part_time', 'internship'] as const;
+  const VALID_PROFICIENCIES = ['beginner', 'intermediate', 'advanced', 'expert'] as const;
+  const VALID_SKILL_CATEGORIES = ['visual', 'interaction', 'research', 'motion', 'tooling', 'other'] as const;
+  const VALID_REMOTE_PREFS = ['remote_only', 'hybrid', 'on_site', 'flexible'] as const;
+
+  // Helper: verify designer belongs to workspace
+  const verifyDesignerWorkspaceAccess = async (designerId: number, workspaceId: number, userId: number) => {
+    const designer = await db.query.designers.findFirst({
+      where: and(eq(designers.id, designerId), eq(designers.workspaceId, workspaceId)),
+    });
+    if (!designer) return null;
+
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.workspaceId, workspaceId)),
+    });
+    if (!membership) return null;
+
+    return designer;
+  };
+
+  // --- Work Experience ---
+
+  // GET work experience for a designer
+  app.get(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const experiences = await db.query.designerWorkExperience.findMany({
+        where: and(
+          eq(designerWorkExperience.designerId, designerId),
+          eq(designerWorkExperience.workspaceId, workspaceId)
+        ),
+        orderBy: [desc(designerWorkExperience.startDate)],
+      });
+      res.json(experiences);
+    })
+  );
+
+  // POST create work experience
+  app.post(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const { employerName, title, startDate, endDate, isCurrent, description, employmentType } = req.body;
+
+      if (!employerName || !title || !startDate) {
+        return res.status(400).json({ error: "employerName, title, and startDate are required" });
+      }
+      if (isNaN(Date.parse(startDate))) {
+        return res.status(400).json({ error: "startDate must be a valid ISO 8601 date" });
+      }
+      if (endDate && isNaN(Date.parse(endDate))) {
+        return res.status(400).json({ error: "endDate must be a valid ISO 8601 date" });
+      }
+      if (employmentType && !VALID_EMPLOYMENT_TYPES.includes(employmentType)) {
+        return res.status(400).json({ error: `employmentType must be one of: ${VALID_EMPLOYMENT_TYPES.join(', ')}` });
+      }
+
+      const [record] = await db.insert(designerWorkExperience).values({
+        workspaceId,
+        designerId,
+        employerName,
+        title,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        isCurrent: isCurrent ?? false,
+        description: description || null,
+        employmentType: employmentType || 'full_time',
+      }).returning();
+
+      res.status(201).json(record);
+    })
+  );
+
+  // PATCH update work experience
+  app.patch(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerWorkExperience.findFirst({
+        where: and(
+          eq(designerWorkExperience.id, id),
+          eq(designerWorkExperience.designerId, designerId),
+          eq(designerWorkExperience.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Work experience record not found" });
+
+      const { employerName, title, startDate, endDate, isCurrent, description, employmentType } = req.body;
+
+      if (startDate !== undefined && isNaN(Date.parse(startDate))) {
+        return res.status(400).json({ error: "startDate must be a valid ISO 8601 date" });
+      }
+      if (endDate !== undefined && endDate !== null && isNaN(Date.parse(endDate))) {
+        return res.status(400).json({ error: "endDate must be a valid ISO 8601 date" });
+      }
+      if (employmentType !== undefined && !VALID_EMPLOYMENT_TYPES.includes(employmentType)) {
+        return res.status(400).json({ error: `employmentType must be one of: ${VALID_EMPLOYMENT_TYPES.join(', ')}` });
+      }
+
+      const updateData: Partial<InsertDesignerWorkExperience> & { updatedAt: Date } = { updatedAt: new Date() };
+      if (employerName !== undefined) updateData.employerName = employerName;
+      if (title !== undefined) updateData.title = title;
+      if (startDate !== undefined) updateData.startDate = new Date(startDate);
+      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      if (isCurrent !== undefined) updateData.isCurrent = isCurrent;
+      if (description !== undefined) updateData.description = description;
+      if (employmentType !== undefined) updateData.employmentType = employmentType;
+
+      const [updated] = await db.update(designerWorkExperience)
+        .set(updateData)
+        .where(eq(designerWorkExperience.id, id))
+        .returning();
+
+      res.json(updated);
+    })
+  );
+
+  // DELETE work experience
+  app.delete(
+    "/api/workspaces/:workspaceId/designers/:designerId/work-experience/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerWorkExperience.findFirst({
+        where: and(
+          eq(designerWorkExperience.id, id),
+          eq(designerWorkExperience.designerId, designerId),
+          eq(designerWorkExperience.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Work experience record not found" });
+
+      await db.delete(designerWorkExperience).where(eq(designerWorkExperience.id, id));
+      res.json({ success: true });
+    })
+  );
+
+  // --- Designer Skills (Talent Graph) ---
+
+  // GET skills for a designer
+  app.get(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const skills = await db.query.designerSkills.findMany({
+        where: and(
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.workspaceId, workspaceId)
+        ),
+        orderBy: [asc(designerSkills.name)],
+      });
+      res.json(skills);
+    })
+  );
+
+  // POST create skill
+  app.post(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const { name, proficiency, category } = req.body;
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Skill name is required" });
+      }
+      if (proficiency && !VALID_PROFICIENCIES.includes(proficiency)) {
+        return res.status(400).json({ error: `proficiency must be one of: ${VALID_PROFICIENCIES.join(', ')}` });
+      }
+      if (category && !VALID_SKILL_CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: `category must be one of: ${VALID_SKILL_CATEGORIES.join(', ')}` });
+      }
+
+      const dupCheck = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.workspaceId, workspaceId),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.name, name.trim())
+        ),
+      });
+      if (dupCheck) {
+        return res.status(409).json({ error: `Skill "${name.trim()}" already exists for this designer. Use PATCH to update it.` });
+      }
+
+      const [record] = await db.insert(designerSkills).values({
+        workspaceId,
+        designerId,
+        name: name.trim(),
+        proficiency: proficiency || 'intermediate',
+        category: category || 'other',
+      }).returning();
+
+      res.status(201).json(record);
+    })
+  );
+
+  // PATCH update skill
+  app.patch(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.id, id),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Skill not found" });
+
+      if (req.body.proficiency !== undefined && !VALID_PROFICIENCIES.includes(req.body.proficiency)) {
+        return res.status(400).json({ error: `proficiency must be one of: ${VALID_PROFICIENCIES.join(', ')}` });
+      }
+      if (req.body.category !== undefined && !VALID_SKILL_CATEGORIES.includes(req.body.category)) {
+        return res.status(400).json({ error: `category must be one of: ${VALID_SKILL_CATEGORIES.join(', ')}` });
+      }
+      if (req.body.name !== undefined && req.body.name.trim() !== existing.name) {
+        const nameConflict = await db.query.designerSkills.findFirst({
+          where: and(
+            eq(designerSkills.workspaceId, workspaceId),
+            eq(designerSkills.designerId, designerId),
+            eq(designerSkills.name, req.body.name.trim())
+          ),
+        });
+        if (nameConflict) {
+          return res.status(409).json({ error: `Skill "${req.body.name.trim()}" already exists for this designer.` });
+        }
+      }
+
+      const updateData: Partial<InsertDesignerSkills> & { updatedAt: Date } = { updatedAt: new Date() };
+      if (req.body.name !== undefined) updateData.name = req.body.name.trim();
+      if (req.body.proficiency !== undefined) updateData.proficiency = req.body.proficiency;
+      if (req.body.category !== undefined) updateData.category = req.body.category;
+
+      const [updated] = await db.update(designerSkills)
+        .set(updateData)
+        .where(eq(designerSkills.id, id))
+        .returning();
+
+      res.json(updated);
+    })
+  );
+
+  // DELETE skill
+  app.delete(
+    "/api/workspaces/:workspaceId/designers/:designerId/skills/:id",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+      const id = parseInt(req.params.id);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const existing = await db.query.designerSkills.findFirst({
+        where: and(
+          eq(designerSkills.id, id),
+          eq(designerSkills.designerId, designerId),
+          eq(designerSkills.workspaceId, workspaceId)
+        ),
+      });
+      if (!existing) return res.status(404).json({ error: "Skill not found" });
+
+      await db.delete(designerSkills).where(eq(designerSkills.id, id));
+      res.json({ success: true });
+    })
+  );
+
+  // --- Talent Profile ---
+
+  // GET talent profile
+  app.get(
+    "/api/workspaces/:workspaceId/designers/:designerId/talent-profile",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const profile = await db.query.designerTalentProfile.findFirst({
+        where: and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, workspaceId)
+        ),
+      });
+      res.json(profile || null);
+    })
+  );
+
+  // PUT upsert talent profile
+  app.put(
+    "/api/workspaces/:workspaceId/designers/:designerId/talent-profile",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      const {
+        city, country, timezone, remotePreference,
+        currency, currentAnnualComp, expectedAnnualComp, equityInterest,
+        growthMotivators,
+      } = req.body;
+
+      if (remotePreference && !VALID_REMOTE_PREFS.includes(remotePreference)) {
+        return res.status(400).json({ error: `remotePreference must be one of: ${VALID_REMOTE_PREFS.join(', ')}` });
+      }
+      if (currentAnnualComp !== undefined && (typeof currentAnnualComp !== 'number' || currentAnnualComp < 0)) {
+        return res.status(400).json({ error: "currentAnnualComp must be a non-negative number" });
+      }
+      if (expectedAnnualComp !== undefined && (typeof expectedAnnualComp !== 'number' || expectedAnnualComp < 0)) {
+        return res.status(400).json({ error: "expectedAnnualComp must be a non-negative number" });
+      }
+
+      const existing = await db.query.designerTalentProfile.findFirst({
+        where: and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, workspaceId)
+        ),
+      });
+
+      if (existing) {
+        const [updated] = await db.update(designerTalentProfile)
+          .set({
+            city: city !== undefined ? city : existing.city,
+            country: country !== undefined ? country : existing.country,
+            timezone: timezone !== undefined ? timezone : existing.timezone,
+            remotePreference: remotePreference !== undefined ? remotePreference : existing.remotePreference,
+            currency: currency !== undefined ? currency : existing.currency,
+            currentAnnualComp: currentAnnualComp !== undefined ? currentAnnualComp : existing.currentAnnualComp,
+            expectedAnnualComp: expectedAnnualComp !== undefined ? expectedAnnualComp : existing.expectedAnnualComp,
+            equityInterest: equityInterest !== undefined ? equityInterest : existing.equityInterest,
+            growthMotivators: growthMotivators !== undefined ? growthMotivators : existing.growthMotivators,
+            updatedAt: new Date(),
+          })
+          .where(eq(designerTalentProfile.id, existing.id))
+          .returning();
+        res.json(updated);
+      } else {
+        const [record] = await db.insert(designerTalentProfile).values({
+          workspaceId,
+          designerId,
+          city: city ?? null,
+          country: country ?? null,
+          timezone: timezone ?? null,
+          remotePreference: remotePreference ?? 'flexible',
+          currency: currency ?? 'USD',
+          currentAnnualComp: currentAnnualComp ?? null,
+          expectedAnnualComp: expectedAnnualComp ?? null,
+          equityInterest: equityInterest ?? false,
+          growthMotivators: growthMotivators ?? [],
+        }).returning();
+        res.status(201).json(record);
+      }
+    })
+  );
+
+  // DELETE talent profile
+  app.delete(
+    "/api/workspaces/:workspaceId/designers/:designerId/talent-profile",
+    requireWorkspaceMembership(),
+    withErrorHandler(async (req, res) => {
+      const workspaceId = parseInt(req.params.workspaceId);
+      const designerId = parseInt(req.params.designerId);
+
+      const designer = await verifyDesignerWorkspaceAccess(designerId, workspaceId, req.user!.id);
+      if (!designer) return res.status(404).json({ error: "Designer not found" });
+
+      await db.delete(designerTalentProfile).where(
+        and(
+          eq(designerTalentProfile.designerId, designerId),
+          eq(designerTalentProfile.workspaceId, workspaceId)
+        )
+      );
+      res.json({ success: true });
+    })
+  );
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

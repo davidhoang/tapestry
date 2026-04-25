@@ -1,0 +1,381 @@
+import { Link, useLocation } from "wouter";
+import { useUser } from "../hooks/use-user";
+import { useQuery } from "@tanstack/react-query";
+import { useWorkspacePermissions } from "../hooks/use-permissions";
+import { SelectUser, SelectWorkspace } from "@db/schema";
+import { Button } from "@/components/ui/button";
+
+// Type for workspace with owner relation included (as returned by /api/workspaces)
+type WorkspaceWithOwner = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  owner: SelectUser;
+  role: string;
+  isOwner: boolean;
+  joinedAt: string;
+};
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserCircle, Menu, X, Settings, User, Users, Building2, Check, Activity, Key, Home, BookOpen } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
+
+export default function Navigation() {
+  const [location] = useLocation();
+  const { user, logout, login } = useUser();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Handle workspace switching with visual feedback
+  const handleWorkspaceSwitch = (workspace: any) => {
+    const workspaceName = workspace.owner?.email === user?.email ? 'My Workspace' : workspace.name;
+    
+    // Clear all queries to force fresh data for new workspace
+    queryClient.clear();
+    
+    toast({
+      title: "Workspace switched",
+      description: `Now viewing ${workspaceName}`,
+      duration: 3000,
+    });
+  };
+
+
+  // Get user's workspace
+  const { data: workspaces } = useQuery({
+    queryKey: ["/api/workspaces"],
+    queryFn: async () => {
+      const response = await fetch("/api/workspaces");
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
+  // Get current workspace from URL path
+  const currentWorkspaceSlug = location.split('/')[1] || "david-hoang";
+  const userWorkspace = workspaces?.find((w: WorkspaceWithOwner) => w.slug === currentWorkspaceSlug) || workspaces?.[0];
+  const workspaceSlug = userWorkspace?.slug || "david-hoang";
+
+  // Update permissions to use current workspace context
+  const permissions = useWorkspacePermissions(workspaceSlug);
+
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    if (userWorkspace?.name) {
+      return userWorkspace.name.substring(0, 2).toUpperCase();
+    }
+    if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
+  return (
+    <nav className="border-b border-gray-200 bg-nav-cream fixed top-0 left-0 right-0 z-50">
+      <div className="container flex h-16 max-w-screen-2xl items-center px-4 mx-auto">
+        {/* Left: Workspace Switcher + Navigation Links */}
+        <div className="flex items-center">
+          {user ? (
+            <WorkspaceSwitcher />
+          ) : (
+            <Link to="/" className="mr-6 flex items-center space-x-2">
+              <span className="text-xl font-extrabold text-gray-900 font-serif">Tapestry</span>
+            </Link>
+          )}
+          {user && (
+            <div className="hidden md:flex items-center space-x-6 text-sm font-semibold ml-2 pl-4 border-l border-gray-200">
+              <Link
+                to={`/${workspaceSlug}/directory`}
+                className={location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Directory
+              </Link>
+              <Link
+                to={`/${workspaceSlug}/lists`}
+                className={location === `/${workspaceSlug}/lists` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Lists
+              </Link>
+              {permissions.canAccessHiring && (
+                <Link
+                  to={`/${workspaceSlug}/hiring`}
+                  className={location === `/${workspaceSlug}/hiring` ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+                >
+                  Hiring
+                </Link>
+              )}
+              <Link
+                to="/docs/mcp"
+                className={location === "/docs/mcp" ? "text-gray-900 font-bold" : "text-gray-600 hover:text-gray-900 transition-colors"}
+              >
+                Docs
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+        
+        {/* Right: User Menu */}
+        <div className="flex items-center space-x-4">
+          
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center space-x-4">
+            {!user && (
+              <Link
+                to="/docs/mcp"
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Docs
+              </Link>
+            )}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.profilePhotoUrl || undefined} alt="Profile photo" />
+                      <AvatarFallback className="text-xs">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="w-[200px] truncate text-sm text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border-t"></div>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/${workspaceSlug}/activity`} className="flex items-center w-full">
+                      <Activity className="mr-2 h-4 w-4" />
+                      Activity
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/${workspaceSlug}/api-tokens`} className="flex items-center w-full">
+                      <Key className="mr-2 h-4 w-4" />
+                      API tokens
+                    </Link>
+                  </DropdownMenuItem>
+                  {permissions?.canViewMembersList && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/workspaces/members" className="flex items-center w-full">
+                        <Users className="mr-2 h-4 w-4" />
+                        Workspace members
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {user.isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/components" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Components
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {user.isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Database Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <Link to="/docs/mcp" className="flex items-center w-full">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Docs
+                    </Link>
+                  </DropdownMenuItem>
+                  <div className="border-t"></div>
+                  <DropdownMenuItem onSelect={() => logout()}>
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="default" onClick={() => login()} className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                Sign in
+              </Button>
+            )}
+          </div>
+
+          {/* Mobile Menu - Only show hamburger when logged in */}
+          <div className="md:hidden">
+            {user ? (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-gray-700 hover:bg-gray-100">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] bg-nav-cream border-gray-200">
+                  <SheetHeader>
+                    <VisuallyHidden>
+                      <SheetTitle>Navigation Menu</SheetTitle>
+                    </VisuallyHidden>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-4 mt-6">
+                    {/* Mobile Workspace Switcher */}
+                    <div className="px-4 pb-2 border-b border-gray-200">
+                      <WorkspaceSwitcher className="w-full" />
+                    </div>
+                    
+                    <Link
+                      to={`/${workspaceSlug}/home`}
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === `/${workspaceSlug}/home`
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Home
+                    </Link>
+                    <Link
+                      to={`/${workspaceSlug}/directory`}
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === `/${workspaceSlug}/directory` || location === `/${workspaceSlug}`
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Directory
+                    </Link>
+                    {permissions.canViewLists && (
+                      <Link
+                        to={`/${workspaceSlug}/lists`}
+                        className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                          location === `/${workspaceSlug}/lists`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Lists
+                      </Link>
+                    )}
+                    {permissions.canAccessHiring && (
+                      <Link
+                        to={`/${workspaceSlug}/hiring`}
+                        className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                          location === `/${workspaceSlug}/hiring`
+                            ? "text-gray-900 bg-gray-100 font-bold" 
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Hiring
+                      </Link>
+                    )}
+                    <Link
+                      to="/docs/mcp"
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === "/docs/mcp"
+                          ? "text-gray-900 bg-gray-100 font-bold"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Docs
+                    </Link>
+                    <Link
+                      to="/profile"
+                      className={`text-lg py-3 px-4 rounded-lg transition-colors ${
+                        location === "/profile" 
+                          ? "text-gray-900 bg-gray-100 font-bold" 
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-semibold"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    {user.isAdmin && (
+                      <Link
+                        to="/components"
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-3 px-4 rounded-lg transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Components
+                      </Link>
+                    )}
+                    {user.isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-3 px-4 rounded-lg transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Database Admin
+                      </Link>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => {
+                        logout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 text-lg py-3 px-4 rounded-lg transition-colors justify-start"
+                    >
+                      Logout
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            ) : (
+              /* Docs + Sign in on mobile when logged out */
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/docs/mcp"
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Docs
+                </Link>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => login()} 
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base px-4 py-2"
+                >
+                  Sign in
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+    </nav>
+  );
+}

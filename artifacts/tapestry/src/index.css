@@ -1,0 +1,438 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+
+/* Design tokens — aligned with Tapestry's warm editorial design language */
+:root {
+  /* Color palette */
+  --color-primary: #C8944B;
+  --color-primary-dark: #8B5A2B;
+  --color-primary-light: #E6B87D;
+  --color-background: #fafaf9;
+  --color-surface: #FBF8F3;
+  --color-surface-warm: #F5F2ED;
+  --color-border: #E8DFD0;
+  --color-text-primary: #1A1612;
+  --color-text-secondary: #5C4F3A;
+  --color-text-muted: #8C7B62;
+
+  /* Typography */
+  --font-family-serif: 'Crimson Text', Charter, Georgia, 'Times New Roman', serif;
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.3;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+  --letter-spacing-tighter: -0.04em;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-wider: 0.08em;
+
+  /* Border radius */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  body {
+    @apply font-serif antialiased text-foreground text-left text-base;
+    background-color: #fafaf9;
+    min-height: 100vh;
+    font-size: 18px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  /* Mobile-first font scaling for better readability on iPhone */
+  @media (max-width: 640px) {
+    html {
+      font-size: 18px; /* Larger base for mobile readability */
+    }
+    
+    body {
+      text-align: left !important;
+      font-size: 18px;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      text-align: left;
+    }
+    
+    h2 {
+      font-size: 1.5rem;
+      text-align: left;
+    }
+    
+    h3 {
+      font-size: 1.25rem;
+      text-align: left;
+    }
+    
+    p, li {
+      text-align: left;
+    }
+    
+    /* Only apply to prose content, not badges/status elements */
+    .prose p, .prose li, article p, article li {
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    
+    /* Ensure inputs don't zoom on iOS (minimum 16px) */
+    input, textarea, select {
+      font-size: 16px;
+    }
+  }
+
+  /* iPad and tablet optimizations (768px - 1024px) */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    /* Prevent rubber-banding/bounce on scroll */
+    html, body {
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Smoother touch scrolling for all scrollable containers */
+    [class*="overflow-y-auto"],
+    [class*="overflow-auto"],
+    [class*="overflow-scroll"] {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scroll-behavior: smooth;
+    }
+    
+    /* Prevent text selection delay on touch */
+    button, a, [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    
+    /* Optimize fixed/sticky elements for smooth scrolling */
+    .fixed, .sticky, [class*="fixed"], [class*="sticky"] {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      will-change: transform;
+    }
+  }
+
+  /* iOS Safari specific fixes */
+  @supports (-webkit-touch-callout: none) {
+    /* Fix for iOS Safari viewport height issues */
+    html {
+      height: -webkit-fill-available;
+    }
+    
+    body {
+      min-height: -webkit-fill-available;
+    }
+    
+    /* Prevent momentum scroll issues in modals */
+    [role="dialog"] {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/images/bg.jpeg');
+    background-repeat: repeat;
+    background-size: 300px;
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Typography - consolidated font-serif application */
+  h1, h2, h3, h4, h5, h6 {
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    letter-spacing: -0.02em;
+  }
+
+  /* Heading sizes */
+  h1 {
+    font-size: 2.0rem;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: 1.875rem;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+  }
+
+  h5 {
+    font-size: 1.125rem;
+    letter-spacing: -0.01em;
+    line-height: 1.5;
+  }
+
+  h6 {
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
+  }
+
+  /* Form controls */
+  input, textarea, select {
+    line-height: normal;
+  }
+
+  /* Designer card specific */
+  .designer-name {
+    @apply font-semibold;
+    letter-spacing: -0.01em;
+  }
+
+  /* Prose content */
+  .prose, .prose p, .prose li, .prose blockquote {
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    line-height: 1.7;
+  }
+
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    @apply font-bold;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  /* Text color utilities */
+  .text-muted-foreground {
+    color: hsl(240 5% 45%);
+  }
+
+  .text-secondary-foreground {
+    color: hsl(240 6% 40%);
+  }
+
+  .designer-skills-text {
+    color: #374151;
+  }
+
+  .designer-profile-text {
+    color: #111827;
+  }
+
+  .designer-profile-text h1,
+  .designer-profile-text h2,
+  .designer-profile-text h3,
+  .designer-profile-text h4,
+  .designer-profile-text h5,
+  .designer-profile-text h6 {
+    border-bottom: none;
+    text-decoration: none;
+  }
+}
+
+/* Custom scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgb(203 213 225);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(148 163 184);
+}
+
+.scrollbar-thumb-gray-300 {
+  scrollbar-color: rgb(209 213 219) transparent;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background-color: rgb(209 213 219);
+}
+
+.scrollbar-track-transparent {
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Markdown Editor Light Mode Styles */
+.w-md-editor,
+.w-md-editor.w-md-editor-dark {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  color-scheme: light;
+}
+
+.w-md-editor-text-container,
+.w-md-editor-text,
+.w-md-editor-text-textarea,
+.w-md-editor.w-md-editor-dark .w-md-editor-text-container,
+.w-md-editor.w-md-editor-dark .w-md-editor-text,
+.w-md-editor.w-md-editor-dark .w-md-editor-text-textarea {
+  background-color: white;
+  color: #0f172a;
+}
+
+.w-md-editor-bar,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.w-md-editor-bar svg,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar svg {
+  color: #4a5568;
+}
+
+.w-md-editor-bar button,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar button {
+  color: #4a5568;
+  background-color: transparent;
+}
+
+.w-md-editor-bar button:hover,
+.w-md-editor.w-md-editor-dark .w-md-editor-bar button:hover {
+  background-color: #e2e8f0;
+}
+
+.w-md-editor-preview,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview {
+  background-color: white;
+  color: #0f172a;
+}
+
+.w-md-editor-preview *,
+.w-md-editor.w-md-editor-dark .w-md-editor-preview * {
+  color: #0f172a;
+  background-color: transparent;
+}
+
+.w-md-editor-focus,
+.w-md-editor.w-md-editor-dark.w-md-editor-focus {
+  border-color: #3182ce;
+}
+
+/* Hide view mode buttons in MDEditor */
+.w-md-editor .w-md-editor-bar .w-md-editor-toolbar .w-md-editor-toolbar-child:last-child,
+.w-md-editor-toolbar-mode,
+.w-md-editor-bar-view,
+.w-md-editor-bar .w-md-editor-toolbar .w-md-editor-toolbar-child:nth-last-child(1),
+.w-md-editor-bar .w-md-editor-toolbar .w-md-editor-toolbar-child:nth-last-child(2) {
+  display: none;
+}
+
+/* Markdown Renderer Light Mode Styles */
+.w-md-editor-markdown,
+.w-md-editor-markdown-color {
+  background-color: transparent;
+  color: #0f172a;
+}
+
+.w-md-editor-markdown *,
+.w-md-editor-markdown-color * {
+  color: #0f172a;
+  background-color: transparent;
+}
+
+/* Scrollbar styling — thin, elegant, accessible */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 99px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

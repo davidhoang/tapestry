@@ -18,7 +18,7 @@ import { TapestryLogo } from "@/components/TapestryLogo";
 import { useColors } from "@/hooks/useColors";
 import { fonts, type } from "@/constants/typography";
 
-type Mode = "signIn" | "signUp" | "verify";
+type Mode = "signIn" | "signUp" | "verifySignUp" | "verifySignIn";
 
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
@@ -46,9 +46,24 @@ export default function SignInScreen() {
       const result = await signIn.create({ identifier: email.trim(), password });
       if (result.status === "complete") {
         await setActiveSignIn({ session: result.createdSessionId });
-      } else {
-        setError("Additional verification required. Please use the web app to finish setup.");
+        return;
       }
+      if (result.status === "needs_first_factor") {
+        const emailFactor = result.supportedFirstFactors?.find(
+          (factor): factor is Extract<typeof factor, { strategy: "email_code" }> =>
+            factor.strategy === "email_code",
+        );
+        if (emailFactor) {
+          await signIn.prepareFirstFactor({
+            strategy: "email_code",
+            emailAddressId: emailFactor.emailAddressId,
+          });
+          setCode("");
+          setMode("verifySignIn");
+          return;
+        }
+      }
+      setError("Couldn't finish signing in here. Please use the web app to complete setup.");
     } catch (err: unknown) {
       setError(extractError(err));
     } finally {
@@ -63,7 +78,7 @@ export default function SignInScreen() {
     try {
       await signUp.create({ emailAddress: email.trim(), password });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setMode("verify");
+      setMode("verifySignUp");
     } catch (err: unknown) {
       setError(extractError(err));
     } finally {
@@ -72,15 +87,29 @@ export default function SignInScreen() {
   };
 
   const handleVerify = async () => {
-    if (!signUpLoaded || submitting) return;
+    if (submitting) return;
     setError(null);
     setSubmitting(true);
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code });
-      if (result.status === "complete") {
-        await setActiveSignUp({ session: result.createdSessionId });
-      } else {
-        setError("Couldn't verify the code. Please try again.");
+      if (mode === "verifySignUp") {
+        if (!signUpLoaded) return;
+        const result = await signUp.attemptEmailAddressVerification({ code });
+        if (result.status === "complete") {
+          await setActiveSignUp({ session: result.createdSessionId });
+        } else {
+          setError("Couldn't verify the code. Please try again.");
+        }
+      } else if (mode === "verifySignIn") {
+        if (!signInLoaded) return;
+        const result = await signIn.attemptFirstFactor({
+          strategy: "email_code",
+          code,
+        });
+        if (result.status === "complete") {
+          await setActiveSignIn({ session: result.createdSessionId });
+        } else {
+          setError("Couldn't verify the code. Please try again.");
+        }
       }
     } catch (err: unknown) {
       setError(extractError(err));
@@ -96,7 +125,7 @@ export default function SignInScreen() {
     return handleVerify();
   };
 
-  const isVerify = mode === "verify";
+  const isVerify = mode === "verifySignUp" || mode === "verifySignIn";
   const isSignUp = mode === "signUp";
 
   return (
@@ -219,7 +248,7 @@ export default function SignInScreen() {
           ) : (
             <Pressable
               onPress={() => {
-                setMode("signUp");
+                setMode(mode === "verifySignIn" ? "signIn" : "signUp");
                 setCode("");
                 setError(null);
               }}

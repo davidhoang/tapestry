@@ -43,28 +43,48 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await signIn.create({ identifier: email.trim(), password });
+      const trimmedEmail = email.trim();
+      const hasPassword = password.length > 0;
+      const createParams: Parameters<typeof signIn.create>[0] = hasPassword
+        ? { identifier: trimmedEmail, password }
+        : { identifier: trimmedEmail, strategy: "email_code" };
+
+      const result = await signIn.create(createParams);
+
       if (result.status === "complete") {
         await setActiveSignIn({ session: result.createdSessionId });
         return;
       }
+
       if (result.status === "needs_first_factor") {
-        const emailFactor = result.supportedFirstFactors?.find(
+        const factors = result.supportedFirstFactors ?? [];
+        const emailCodeFactor = factors.find(
           (factor): factor is Extract<typeof factor, { strategy: "email_code" }> =>
             factor.strategy === "email_code",
         );
-        if (emailFactor) {
+        if (emailCodeFactor) {
           await signIn.prepareFirstFactor({
             strategy: "email_code",
-            emailAddressId: emailFactor.emailAddressId,
+            emailAddressId: emailCodeFactor.emailAddressId,
           });
           setCode("");
           setMode("verifySignIn");
           return;
         }
+
+        const strategies = factors.map((factor) => factor.strategy).join(", ") || "none";
+        console.warn("[sign-in] no email_code factor available", {
+          status: result.status,
+          supportedFirstFactors: factors,
+        });
+        setError(`Sign-in needs a step we don't support yet. Status: ${result.status}. Available: ${strategies}.`);
+        return;
       }
-      setError("Couldn't finish signing in here. Please use the web app to complete setup.");
+
+      console.warn("[sign-in] unexpected status", { status: result.status, result });
+      setError(`Couldn't finish signing in. Clerk returned status: ${result.status}.`);
     } catch (err: unknown) {
+      console.warn("[sign-in] threw", err);
       setError(extractError(err));
     } finally {
       setSubmitting(false);

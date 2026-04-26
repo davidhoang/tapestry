@@ -22,6 +22,18 @@ function findWorkspaceRoot(startDir) {
 const workspaceRoot = findWorkspaceRoot(projectRoot);
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
+function checkRequiredEnv() {
+  if (!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    console.error(
+      "ERROR: EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY is required to build the mobile app.\n" +
+        "The build script in package.json resolves it from EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY, " +
+        "CLERK_DEV_PUBLISHABLE_KEY, or VITE_CLERK_PUBLISHABLE_KEY — set one of these before building.\n" +
+        "Without a key, the app builds successfully but crashes on launch when Clerk fails to initialize.",
+    );
+    process.exit(1);
+  }
+}
+
 function exitWithError(message) {
   console.error(message);
   if (metroProcess) {
@@ -513,6 +525,7 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
 async function main() {
   console.log("Building static Expo Go deployment...");
 
+  checkRequiredEnv();
   setupSignalHandlers();
 
   const domain = getDeploymentDomain();

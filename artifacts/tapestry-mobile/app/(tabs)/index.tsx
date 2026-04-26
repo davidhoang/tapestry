@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -13,12 +13,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DesignerCard } from "@/components/DesignerCard";
 import { EmptyState } from "@/components/EmptyState";
+import { GlassChrome } from "@/components/GlassChrome";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TapestryLogo } from "@/components/TapestryLogo";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { useColors } from "@/hooks/useColors";
 import { useDefaultWorkspace } from "@/hooks/useWorkspace";
 import { type } from "@/constants/typography";
+import { TAB_BAR_OFFSET } from "@/constants/chrome";
 import type { Designer } from "@/lib/api";
 
 type RecommendationsResponse = {
@@ -27,14 +29,13 @@ type RecommendationsResponse = {
   total: number;
 };
 
-const TAB_BAR_HEIGHT = Platform.OS === "web" ? 84 : 88;
-
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const router = useRouter();
   const authFetch = useAuthFetch();
   const { workspace } = useDefaultWorkspace();
+  const [chromeHeight, setChromeHeight] = useState(0);
 
   const query = useQuery({
     queryKey: ["mobile", "recommendations"],
@@ -47,30 +48,14 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.topBar,
-          {
-            paddingTop: insets.top + 8,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TapestryLogo size="md" />
-        {workspace ? (
-          <Text style={[type.caption, { color: colors.textMuted }]}>
-            {workspace.name}
-          </Text>
-        ) : null}
-      </View>
-
       <FlatList
         data={designers}
         keyExtractor={(item) => String(item.id)}
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 24,
+          paddingTop: chromeHeight + 8,
+          paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
           gap: 12,
         }}
         ListHeaderComponent={
@@ -95,6 +80,7 @@ export default function HomeScreen() {
             refreshing={query.isRefetching}
             onRefresh={() => query.refetch()}
             tintColor={colors.primary}
+            progressViewOffset={chromeHeight}
           />
         }
         ListEmptyComponent={
@@ -122,6 +108,17 @@ export default function HomeScreen() {
         }
         scrollEnabled={!!designers.length}
       />
+
+      <GlassChrome onMeasureHeight={setChromeHeight}>
+        <View style={styles.topBar}>
+          <TapestryLogo size="md" />
+          {workspace ? (
+            <Text style={[type.caption, { color: colors.textMuted }]}>
+              {workspace.name}
+            </Text>
+          ) : null}
+        </View>
+      </GlassChrome>
     </View>
   );
 }
@@ -133,8 +130,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   center: { padding: 48, alignItems: "center" },
 });

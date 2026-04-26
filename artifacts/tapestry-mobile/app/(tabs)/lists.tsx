@@ -1,10 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -14,16 +14,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "@/components/EmptyState";
+import { GlassChrome } from "@/components/GlassChrome";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { useColors } from "@/hooks/useColors";
 import { useDefaultWorkspace } from "@/hooks/useWorkspace";
 import { type } from "@/constants/typography";
+import { TAB_BAR_OFFSET } from "@/constants/chrome";
 import type { ListSummary } from "@/lib/api";
 
 type ListsResponse = { lists: ListSummary[] };
-
-const TAB_BAR_HEIGHT = Platform.OS === "web" ? 84 : 88;
 
 export default function ListsScreen() {
   const insets = useSafeAreaInsets();
@@ -31,6 +31,7 @@ export default function ListsScreen() {
   const router = useRouter();
   const authFetch = useAuthFetch();
   const { workspace } = useDefaultWorkspace();
+  const [chromeHeight, setChromeHeight] = useState(0);
 
   const query = useQuery({
     queryKey: ["mobile", "lists", workspace?.id],
@@ -45,21 +46,14 @@ export default function ListsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={{ paddingTop: insets.top }}>
-        <ScreenHeader
-          eyebrow="Collections"
-          title="Lists"
-          subtitle="Curated groups of designers"
-        />
-      </View>
-
       <FlatList
         data={lists}
         keyExtractor={(item) => String(item.id)}
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingTop: 8,
-          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 24,
+          paddingTop: chromeHeight + 8,
+          paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
           gap: 12,
         }}
         renderItem={({ item }) => (
@@ -104,6 +98,7 @@ export default function ListsScreen() {
             refreshing={query.isRefetching}
             onRefresh={() => query.refetch()}
             tintColor={colors.primary}
+            progressViewOffset={chromeHeight}
           />
         }
         ListEmptyComponent={
@@ -121,6 +116,14 @@ export default function ListsScreen() {
         }
         scrollEnabled={!!lists.length}
       />
+
+      <GlassChrome onMeasureHeight={setChromeHeight}>
+        <ScreenHeader
+          eyebrow="Collections"
+          title="Lists"
+          subtitle="Curated groups of designers"
+        />
+      </GlassChrome>
     </View>
   );
 }

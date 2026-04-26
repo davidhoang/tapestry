@@ -1,17 +1,24 @@
 import { BlurView } from "expo-blur";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TAB_BAR } from "@/constants/chrome";
 import { useColors } from "@/hooks/useColors";
+
+const NATIVE_GLASS =
+  Platform.OS === "ios" &&
+  typeof isLiquidGlassAvailable === "function" &&
+  isLiquidGlassAvailable();
 
 export default function TabLayout() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
 
   return (
     <Tabs
@@ -21,32 +28,78 @@ export default function TabLayout() {
         headerShown: false,
         tabBarLabelStyle: {
           fontFamily: "CrimsonText_600SemiBold",
-          fontSize: 12,
+          fontSize: 11,
           letterSpacing: 0.3,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 6,
         },
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: isWeb ? 1 : StyleSheet.hairlineWidth,
-          borderTopColor: colors.border,
+          left: TAB_BAR.marginHorizontal,
+          right: TAB_BAR.marginHorizontal,
+          bottom: insets.bottom + TAB_BAR.marginBottom,
+          height: TAB_BAR.height,
+          borderRadius: TAB_BAR.radius,
+          borderTopWidth: 0,
+          backgroundColor: "transparent",
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          shadowColor: "#1A1612",
+          shadowOpacity: isDark ? 0.4 : 0.14,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+          // Allow the shadow to escape; the rounded glass surface is clipped
+          // by the inner background view instead.
+          overflow: "visible",
         },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={90}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : isWeb ? (
+        tabBarBackground: () => (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { borderRadius: TAB_BAR.radius, overflow: "hidden" },
+            ]}
+          >
+            {NATIVE_GLASS ? (
+              <GlassView
+                style={StyleSheet.absoluteFill}
+                glassEffectStyle="regular"
+                tintColor="rgba(251,248,243,0.35)"
+              />
+            ) : (
+              <>
+                <BlurView
+                  intensity={70}
+                  tint={isDark ? "dark" : "light"}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(20,18,16,0.45)"
+                        : "rgba(251,248,243,0.5)",
+                    },
+                  ]}
+                />
+              </>
+            )}
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: colors.background },
+                {
+                  pointerEvents: "none",
+                  borderRadius: TAB_BAR.radius,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: isDark
+                    ? "rgba(255,255,255,0.10)"
+                    : "rgba(255,255,255,0.55)",
+                },
               ]}
             />
-          ) : null,
+          </View>
+        ),
       }}
     >
       <Tabs.Screen

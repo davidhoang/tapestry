@@ -58,19 +58,53 @@ export type MobileUser = {
   createdAt: string;
 };
 
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function normalizeOrigin(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return trimTrailingSlash(withScheme);
+}
+
+/**
+ * Resolves the base URL for the api-server in this order:
+ *   1. EXPO_PUBLIC_API_URL  — explicit override, required for native production
+ *      builds where there is no current window.origin.
+ *   2. expo.extra.apiUrl    — same value baked into app.json's `extra` block by
+ *      EAS / build pipelines that prefer config over env vars.
+ *   3. EXPO_PUBLIC_DOMAIN   — set by the local dev script to the Replit dev
+ *      domain so dev runs against the live api-server workflow.
+ *   4. window.location.origin — for the web bundle (dev preview and any
+ *      production web export deployed alongside api-server on the same host).
+ *   5. Expo Go packager hostUri — native dev fallback (talks to the dev
+ *      api-server on port 8080 over LAN).
+ *
+ * If none of these are available we throw at first request so the failure is
+ * loud and actionable rather than producing silent 404s against an empty URL.
+ */
 function getApiBase(): string {
   const explicit = process.env.EXPO_PUBLIC_API_URL;
-  if (explicit) return explicit.replace(/\/+$/, "");
+  if (explicit) return normalizeOrigin(explicit);
+
+  const extraApiUrl = (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl;
+  if (extraApiUrl) return normalizeOrigin(extraApiUrl);
 
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
-  if (domain) return `https://${domain}`.replace(/\/+$/, "");
+  if (domain) return normalizeOrigin(domain);
 
-  // Fallback for Expo Go — read host from manifest
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return trimTrailingSlash(window.location.origin);
+  }
+
   const debuggerHost = Constants.expoConfig?.hostUri ?? "";
   if (debuggerHost) {
     const host = debuggerHost.split(":")[0];
     return `http://${host}:8080`;
   }
+
   return "";
 }
 
@@ -93,6 +127,14 @@ export async function apiFetch<T>(
   options: RequestInit & { token?: string | null; query?: Record<string, string | number | undefined> } = {},
 ): Promise<T> {
   const { token, query, headers, ...rest } = options;
+
+  if (!API_BASE) {
+    throw new ApiError(
+      "Tapestry Mobile is not configured to reach the api-server. Set EXPO_PUBLIC_API_URL (or expo.extra.apiUrl in app.json) to your deployed api-server URL.",
+      0,
+      null,
+    );
+  }
 
   const url = new URL(`${API_BASE}${path}`);
   if (query) {

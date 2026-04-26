@@ -146,6 +146,11 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     console.log(`Setting EXPO_PUBLIC_REPL_ID=${expoPublicReplId}`);
   }
 
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL;
+    console.log(`Setting EXPO_PUBLIC_API_URL=${process.env.EXPO_PUBLIC_API_URL}`);
+  }
+
   metroProcess = spawn(
     "pnpm",
     [

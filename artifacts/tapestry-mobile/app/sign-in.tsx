@@ -28,7 +28,6 @@ export default function SignInScreen() {
 
   const [mode, setMode] = useState<Mode>("signIn");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +42,10 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      const trimmedEmail = email.trim();
-      const hasPassword = password.length > 0;
-      const createParams: Parameters<typeof signIn.create>[0] = hasPassword
-        ? { identifier: trimmedEmail, password }
-        : { identifier: trimmedEmail, strategy: "email_code" };
-
-      const result = await signIn.create(createParams);
+      const result = await signIn.create({
+        identifier: email.trim(),
+        strategy: "email_code",
+      });
 
       if (result.status === "complete") {
         await setActiveSignIn({ session: result.createdSessionId });
@@ -57,8 +53,7 @@ export default function SignInScreen() {
       }
 
       if (result.status === "needs_first_factor") {
-        const factors = result.supportedFirstFactors ?? [];
-        const emailCodeFactor = factors.find(
+        const emailCodeFactor = result.supportedFirstFactors?.find(
           (factor): factor is Extract<typeof factor, { strategy: "email_code" }> =>
             factor.strategy === "email_code",
         );
@@ -67,22 +62,14 @@ export default function SignInScreen() {
             strategy: "email_code",
             emailAddressId: emailCodeFactor.emailAddressId,
           });
-          setCode("");
-          setMode("verifySignIn");
-          return;
         }
-
-        const strategies = factors.map((factor) => factor.strategy).join(", ") || "none";
-        console.warn("[sign-in] no email_code factor available", {
-          status: result.status,
-          supportedFirstFactors: factors,
-        });
-        setError(`Sign-in needs a step we don't support yet. Status: ${result.status}. Available: ${strategies}.`);
+        setCode("");
+        setMode("verifySignIn");
         return;
       }
 
-      console.warn("[sign-in] unexpected status", { status: result.status, result });
-      setError(`Couldn't finish signing in. Clerk returned status: ${result.status}.`);
+      console.warn("[sign-in] unexpected status", { status: result.status });
+      setError(`Couldn't send a sign-in code. Status: ${result.status}.`);
     } catch (err: unknown) {
       console.warn("[sign-in] threw", err);
       setError(extractError(err));
@@ -96,10 +83,12 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await signUp.create({ emailAddress: email.trim(), password });
+      await signUp.create({ emailAddress: email.trim() });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setCode("");
       setMode("verifySignUp");
     } catch (err: unknown) {
+      console.warn("[sign-up] threw", err);
       setError(extractError(err));
     } finally {
       setSubmitting(false);
@@ -148,6 +137,12 @@ export default function SignInScreen() {
   const isVerify = mode === "verifySignUp" || mode === "verifySignIn";
   const isSignUp = mode === "signUp";
 
+  const submitLabel = isVerify
+    ? "Verify and continue"
+    : isSignUp
+      ? "Create account"
+      : "Send sign-in code";
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -184,15 +179,14 @@ export default function SignInScreen() {
                 autoComplete="email"
                 colors={colors}
               />
-              <Field
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Your password"
-                secureTextEntry
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                colors={colors}
-              />
+              <Text
+                style={[
+                  type.small,
+                  { color: colors.textSecondary, marginTop: -4 },
+                ]}
+              >
+                We'll email you a 6-digit code to sign in.
+              </Text>
             </>
           ) : (
             <>
@@ -240,11 +234,7 @@ export default function SignInScreen() {
               <Text
                 style={[type.button, { color: colors.primaryForeground }]}
               >
-                {isVerify
-                  ? "Verify and continue"
-                  : isSignUp
-                    ? "Create account"
-                    : "Sign in"}
+                {submitLabel}
               </Text>
             )}
           </Pressable>

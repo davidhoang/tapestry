@@ -7,6 +7,7 @@ import Navigation from "../components/Navigation";
 import { Database, List, Code, MapPin, Mail, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlutedGlass } from "@paper-design/shaders-react";
+import { WebGlGuard } from "@/components/WebGlGuard";
 import { ShaderButton } from "../components/ShaderButton";
 import heroArtwork from "../assets/visualelectric-1.png";
 
@@ -281,6 +282,7 @@ export default function HomePage() {
         
         {/* Fluted Glass Shader Background */}
         <div className="absolute inset-0" style={{ opacity: 0.3 }}>
+          <WebGlGuard>
           <FlutedGlass
             width="100%"
             height="100%"
@@ -304,6 +306,7 @@ export default function HomePage() {
             grainOverlay={0}
             fit="cover"
           />
+          </WebGlGuard>
         </div>
         
         <div className="container mx-auto px-4 max-w-5xl relative z-10">

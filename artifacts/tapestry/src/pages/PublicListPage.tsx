@@ -3,6 +3,7 @@ import { SelectList, SelectDesigner } from "@db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FlutedGlass } from "@paper-design/shaders-react";
+import { WebGlGuard } from "@/components/WebGlGuard";
 import { Link } from "wouter";
 import heroArtwork from "../assets/visualelectric-1.png";
 
@@ -44,29 +45,31 @@ export default function PublicListPage({ params }: { params: { slugOrId: string 
         <div className="absolute inset-0 bg-black" />
 
         <div className="absolute inset-0" style={{ opacity: 0.3 }}>
-          <FlutedGlass
-            width="100%"
-            height="100%"
-            image={heroArtwork}
-            colorBack="#00000000"
-            colorShadow="#000000"
-            colorHighlight="#ffffff"
-            size={0.1}
-            shadows={0.57}
-            highlights={0.18}
-            shape="lines"
-            angle={0}
-            distortionShape="prism"
-            distortion={0.5}
-            shift={0}
-            stretch={0}
-            blur={0}
-            edges={0.25}
-            margin={0}
-            grainMixer={0}
-            grainOverlay={0}
-            fit="cover"
-          />
+          <WebGlGuard>
+            <FlutedGlass
+              width="100%"
+              height="100%"
+              image={heroArtwork}
+              colorBack="#00000000"
+              colorShadow="#000000"
+              colorHighlight="#ffffff"
+              size={0.1}
+              shadows={0.57}
+              highlights={0.18}
+              shape="lines"
+              angle={0}
+              distortionShape="prism"
+              distortion={0.5}
+              shift={0}
+              stretch={0}
+              blur={0}
+              edges={0.25}
+              margin={0}
+              grainMixer={0}
+              grainOverlay={0}
+              fit="cover"
+            />
+          </WebGlGuard>
         </div>
 
         <div className="mx-auto px-4 w-full max-w-2xl relative z-10">

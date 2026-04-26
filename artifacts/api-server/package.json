@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "export NODE_ENV=development && export VITE_CLERK_PUBLISHABLE_KEY=${CLERK_DEV_PUBLISHABLE_KEY:-$VITE_CLERK_PUBLISHABLE_KEY} && export CLERK_SECRET_KEY=${CLERK_DEV_SECRET_KEY:-$CLERK_SECRET_KEY} && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"

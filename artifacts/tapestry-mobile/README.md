@@ -55,3 +55,18 @@ hitting the wrong host.
 The web export is deployed behind the same application router as the
 api-server, so `window.location.origin` resolves correctly without any
 extra configuration.
+
+## Clerk keys
+
+In Replit development, the `dev` script automatically prefers
+`CLERK_DEV_PUBLISHABLE_KEY` (a `pk_test_*` from Clerk's development
+instance) over `VITE_CLERK_PUBLISHABLE_KEY`. This lets sign-in work
+inside the preview iframe without restricting auth to the production
+domain.
+
+For native production builds (iOS / Android), `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
+must be present at build time — the `build` script forwards
+`VITE_CLERK_PUBLISHABLE_KEY` (the live `pk_live_*` secret) by default.
+To override (e.g. ship a staging build pointed at a `pk_test_*`), set
+`EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` directly in your shell before
+running `pnpm --filter @workspace/tapestry-mobile run build`.

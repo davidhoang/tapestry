@@ -5,6 +5,12 @@ import {
   CrimsonText_700Bold,
   useFonts,
 } from "@expo-google-fonts/crimson-text";
+import {
+  Roboto_400Regular,
+  Roboto_400Regular_Italic,
+  Roboto_500Medium,
+  Roboto_700Bold,
+} from "@expo-google-fonts/roboto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
@@ -13,14 +19,25 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { defaultTextFontFamily } from "@/constants/typography";
+import { isAndroidSkin } from "@/lib/platform-skin";
 import { hasOnboarded } from "@/lib/preferences";
 import { tokenCache } from "@/lib/token-cache";
+
+// Make every <Text> default to the active skin's body font. Components that
+// pass an explicit fontFamily (via the `type.*` tokens) still win.
+const TextAny = Text as any;
+TextAny.defaultProps = TextAny.defaultProps || {};
+TextAny.defaultProps.style = [
+  { fontFamily: defaultTextFontFamily },
+  TextAny.defaultProps.style,
+];
 
 SplashScreen.preventAutoHideAsync();
 
@@ -146,12 +163,27 @@ const styles = StyleSheet.create({
 });
 
 export default function RootLayout() {
+  // Load both font families so the same bundle can render either skin —
+  // we don't want a flash if the URL param flips between sessions.
   const [fontsLoaded, fontError] = useFonts({
     CrimsonText_400Regular,
     CrimsonText_400Regular_Italic,
     CrimsonText_600SemiBold,
     CrimsonText_700Bold,
+    Roboto_400Regular,
+    Roboto_400Regular_Italic,
+    Roboto_500Medium,
+    Roboto_700Bold,
   });
+
+  // Tag the document so global CSS (web only) can react to the active skin.
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.dataset.platformSkin = isAndroidSkin()
+        ? "android"
+        : "ios";
+    }
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MaterialButton } from "@/components/MaterialButton";
 import { TapestryLogo } from "@/components/TapestryLogo";
 import { useColors } from "@/hooks/useColors";
 import { fonts, type } from "@/constants/typography";
@@ -216,28 +217,53 @@ export default function SignInScreen() {
             </Text>
           ) : null}
 
-          <Pressable
-            onPress={onSubmit}
-            disabled={submitting}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: colors.primary,
-                borderRadius: colors.radius,
-                opacity: submitting ? 0.7 : pressed ? 0.85 : 1,
-              },
-            ]}
-          >
-            {submitting ? (
-              <ActivityIndicator color={colors.primaryForeground} />
-            ) : (
-              <Text
-                style={[type.button, { color: colors.primaryForeground }]}
-              >
-                {submitLabel}
-              </Text>
-            )}
-          </Pressable>
+          {colors.skin === "android" ? (
+            <View style={{ marginTop: 8 }}>
+              {submitting ? (
+                <View
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: colors.primary,
+                      borderRadius: 100,
+                    },
+                  ]}
+                >
+                  <ActivityIndicator color={colors.primaryForeground} />
+                </View>
+              ) : (
+                <MaterialButton
+                  label={submitLabel}
+                  onPress={onSubmit}
+                  variant="filled"
+                  disabled={submitting}
+                />
+              )}
+            </View>
+          ) : (
+            <Pressable
+              onPress={onSubmit}
+              disabled={submitting}
+              style={({ pressed }) => [
+                styles.button,
+                {
+                  backgroundColor: colors.primary,
+                  borderRadius: colors.radius,
+                  opacity: submitting ? 0.7 : pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              {submitting ? (
+                <ActivityIndicator color={colors.primaryForeground} />
+              ) : (
+                <Text
+                  style={[type.button, { color: colors.primaryForeground }]}
+                >
+                  {submitLabel}
+                </Text>
+              )}
+            </Pressable>
+          )}
 
           {!isVerify ? (
             <Pressable
@@ -250,7 +276,13 @@ export default function SignInScreen() {
             >
               <Text style={[type.small, { color: colors.textSecondary }]}>
                 {isSignUp ? "Already have an account?" : "New to Tapestry?"}{" "}
-                <Text style={{ color: colors.primary, fontFamily: fonts.serifSemiBold }}>
+                <Text
+                  style={{
+                    color: colors.primary,
+                    fontFamily:
+                      colors.skin === "android" ? fonts.sansMedium : fonts.serifSemiBold,
+                  }}
+                >
                   {isSignUp ? "Sign in" : "Create one"}
                 </Text>
               </Text>
@@ -305,13 +337,21 @@ function Field({
         placeholderTextColor={colors.textMuted}
         style={[
           styles.input,
-          {
-            color: colors.foreground,
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-            borderRadius: colors.radius,
-            fontFamily: fonts.serifRegular,
-          },
+          colors.skin === "android"
+            ? {
+                color: colors.foreground,
+                backgroundColor: colors.material.surfaceContainerHigh,
+                borderColor: "transparent",
+                borderRadius: 12,
+                fontFamily: fonts.sansRegular,
+              }
+            : {
+                color: colors.foreground,
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderRadius: colors.radius,
+                fontFamily: fonts.serifRegular,
+              },
         ]}
       />
     </View>

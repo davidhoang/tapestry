@@ -679,6 +679,9 @@ importers:
       '@expo-google-fonts/crimson-text':
         specifier: ^0.4.0
         version: 0.4.0
+      '@expo-google-fonts/roboto':
+        specifier: ^0.4.3
+        version: 0.4.3
       '@tanstack/query-async-storage-persister':
         specifier: ^5.100.5
         version: 5.100.5
@@ -1599,6 +1602,9 @@ packages:
 
   '@expo-google-fonts/crimson-text@0.4.0':
     resolution: {integrity: sha512-KTurGCs3QubCY33dE5WqCGFAawqPCEsA/sqdkiuQ0536pNxf7nlGwg/0rxDXK39LH0hheBEuvqnPZLWPotbITg==}
+
+  '@expo-google-fonts/roboto@0.4.3':
+    resolution: {integrity: sha512-kX3wmpmu06fN1yOwYWMdjYJWNUYW6xUiAGeHbvPzzSEb3A3j23JelQ3tAgwQNKgEKRq6wtMmzixy2r7y9c8dsA==}
 
   '@expo/cli@54.0.23':
     resolution: {integrity: sha512-km0h72SFfQCmVycH/JtPFTVy69w6Lx1cHNDmfLfQqgKFYeeHTjx7LVDP4POHCtNxFP2UeRazrygJhlh4zz498g==}
@@ -9018,6 +9024,8 @@ snapshots:
     optional: true
 
   '@expo-google-fonts/crimson-text@0.4.0': {}
+
+  '@expo-google-fonts/roboto@0.4.3': {}
 
   '@expo/cli@54.0.23(expo-router@6.0.23)(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(typescript@5.9.3)':
     dependencies:

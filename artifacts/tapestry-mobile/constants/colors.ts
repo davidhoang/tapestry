@@ -2,7 +2,66 @@
  * Tapestry brand tokens — synced from the web artifact's
  * `artifacts/tapestry/src/index.css` :root variables so both apps
  * feel like the same product.
+ *
+ * The `material` block layered on top of each scheme adds Material 3
+ * specific tones (primary container, surface tints, elevation) used by
+ * the Android skin so the same data renders with a distinct visual
+ * language without forking screens.
  */
+
+const materialLight = {
+  // M3 surfaces — slightly tinted with primary
+  surfaceContainerLowest: "#FFFFFF",
+  surfaceContainerLow: "#F8F4EC",
+  surfaceContainer: "#F2ECDF",
+  surfaceContainerHigh: "#ECE3D2",
+  surfaceContainerHighest: "#E5DAC5",
+  surfaceVariant: "#EAE0CB",
+  onSurfaceVariant: "#5C4F3A",
+
+  // Primary container = filled tonal button background
+  primaryContainer: "#F4D9A8",
+  onPrimaryContainer: "#3A2400",
+
+  // Secondary container = chips, FAB-secondary
+  secondaryContainer: "#EFE2C9",
+  onSecondaryContainer: "#3D3220",
+
+  // Outlines
+  outline: "#8C7B62",
+  outlineVariant: "#D6C9B0",
+
+  // Elevation tint overlay (semi-transparent primary on top of surface)
+  elevationTint: "rgba(200,148,75,0.08)",
+
+  // Ripple
+  rippleBase: "rgba(26,22,18,0.12)",
+  rippleOnPrimary: "rgba(26,22,18,0.20)",
+};
+
+const materialDark = {
+  surfaceContainerLowest: "#0F0D0B",
+  surfaceContainerLow: "#1B1714",
+  surfaceContainer: "#221D18",
+  surfaceContainerHigh: "#2C2620",
+  surfaceContainerHighest: "#37302A",
+  surfaceVariant: "#2C2620",
+  onSurfaceVariant: "#C9B996",
+
+  primaryContainer: "#5E4220",
+  onPrimaryContainer: "#FBE4BD",
+
+  secondaryContainer: "#3F3527",
+  onSecondaryContainer: "#EFE2C9",
+
+  outline: "#9C8E78",
+  outlineVariant: "#43392C",
+
+  elevationTint: "rgba(230,184,125,0.08)",
+
+  rippleBase: "rgba(245,239,227,0.16)",
+  rippleOnPrimary: "rgba(26,22,18,0.20)",
+};
 
 const colors = {
   light: {
@@ -61,6 +120,9 @@ const colors = {
     // Skeleton shimmer base
     skeletonBase: "#EEE7D9",
     skeletonHighlight: "#F7F1E5",
+
+    // Material 3 additions
+    material: materialLight,
   },
 
   dark: {
@@ -118,6 +180,9 @@ const colors = {
     // Skeleton shimmer base
     skeletonBase: "#28231D",
     skeletonHighlight: "#33291D",
+
+    // Material 3 additions
+    material: materialDark,
   },
 
   // 4px = 0.25rem (matches theme.json radius: 0.25). Tapestry's web tailwind

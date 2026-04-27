@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { SkillChip } from "@/components/SkillChip";
-import { useColors } from "@/hooks/useColors";
+import { elevation, useColors } from "@/hooks/useColors";
 import { type } from "@/constants/typography";
 import type { Designer } from "@/lib/api";
 
@@ -17,18 +17,29 @@ type Props = {
 
 export function DesignerCard({ designer, onPress }: Props) {
   const colors = useColors();
+  const isAndroid = colors.skin === "android";
 
   return (
     <Pressable
       onPress={onPress}
+      android_ripple={isAndroid ? { color: colors.material.rippleBase } : undefined}
       style={({ pressed }) => [
         styles.card,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderRadius: colors.radius,
-          opacity: pressed ? 0.85 : 1,
-        },
+        isAndroid
+          ? {
+              backgroundColor: colors.material.surfaceContainerLow,
+              borderRadius: 12,
+              borderWidth: 0,
+              ...elevation(1),
+              opacity: pressed && Platform.OS === "ios" ? 0.85 : 1,
+            }
+          : {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderRadius: colors.radius,
+              borderWidth: StyleSheet.hairlineWidth,
+              opacity: pressed ? 0.85 : 1,
+            },
       ]}
     >
       <View style={styles.top}>
@@ -75,8 +86,8 @@ export function DesignerCard({ designer, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: 12,
+    overflow: "hidden",
   },
   top: { flexDirection: "row", gap: 14, alignItems: "center" },
   headerText: { flex: 1, minWidth: 0 },

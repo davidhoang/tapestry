@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DesignerCard } from "@/components/DesignerCard";
 import { EmptyState } from "@/components/EmptyState";
+import { FAB } from "@/components/FAB";
 import { FilterChips, type FilterChip } from "@/components/FilterChips";
 import { GlassChrome } from "@/components/GlassChrome";
 import { LastUpdated } from "@/components/LastUpdated";
@@ -229,11 +230,18 @@ export default function DesignersScreen() {
           <View
             style={[
               styles.searchBox,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderRadius: colors.radius,
-              },
+              colors.skin === "android"
+                ? {
+                    backgroundColor: colors.material.surfaceContainerHigh,
+                    borderColor: "transparent",
+                    borderRadius: 28,
+                    paddingHorizontal: 16,
+                  }
+                : {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    borderRadius: colors.radius,
+                  },
             ]}
           >
             <Feather name="search" size={16} color={colors.textMuted} />
@@ -246,7 +254,10 @@ export default function DesignersScreen() {
               placeholderTextColor={colors.textMuted}
               style={[
                 styles.input,
-                { color: colors.foreground, fontFamily: fonts.serifRegular },
+                {
+                  color: colors.foreground,
+                  fontFamily: colors.skin === "android" ? fonts.sansRegular : fonts.serifRegular,
+                },
               ]}
               autoCorrect={false}
               autoCapitalize="none"
@@ -266,7 +277,7 @@ export default function DesignersScreen() {
             <View style={styles.recentRow}>
               <Text
                 style={{
-                  fontFamily: fonts.serifSemiBold,
+                  fontFamily: colors.skin === "android" ? fonts.sansMedium : fonts.serifSemiBold,
                   fontSize: 11,
                   color: colors.textMuted,
                   letterSpacing: 1,
@@ -280,20 +291,33 @@ export default function DesignersScreen() {
                 <Pressable
                   key={term}
                   onPress={() => setSearch(term)}
+                  android_ripple={
+                    colors.skin === "android"
+                      ? { color: colors.material.rippleBase }
+                      : undefined
+                  }
                   style={({ pressed }) => [
                     styles.recentChip,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                      borderRadius: colors.radius,
-                      opacity: pressed ? 0.7 : 1,
-                    },
+                    colors.skin === "android"
+                      ? {
+                          backgroundColor: colors.material.surfaceContainerHigh,
+                          borderColor: "transparent",
+                          borderRadius: 16,
+                          opacity: pressed && Platform.OS === "ios" ? 0.7 : 1,
+                        }
+                      : {
+                          backgroundColor: colors.card,
+                          borderColor: colors.border,
+                          borderRadius: colors.radius,
+                          opacity: pressed ? 0.7 : 1,
+                        },
                   ]}
                 >
                   <Feather name="clock" size={11} color={colors.textMuted} />
                   <Text
                     style={{
-                      fontFamily: fonts.serifRegular,
+                      fontFamily:
+                        colors.skin === "android" ? fonts.sansRegular : fonts.serifRegular,
                       fontSize: 12,
                       color: colors.textSecondary,
                     }}
@@ -311,7 +335,8 @@ export default function DesignersScreen() {
               >
                 <Text
                   style={{
-                    fontFamily: fonts.serifSemiBold,
+                    fontFamily:
+                      colors.skin === "android" ? fonts.sansMedium : fonts.serifSemiBold,
                     fontSize: 11,
                     color: colors.textMuted,
                   }}
@@ -334,6 +359,18 @@ export default function DesignersScreen() {
           </View>
         ) : null}
       </GlassChrome>
+
+      {/* Renders nothing on iOS skin. On Android skin shows a Material 3
+          extended FAB pinned above the bottom nav. */}
+      <FAB
+        icon="search"
+        label="Find designer"
+        bottomOffset={insets.bottom + TAB_BAR_OFFSET + 16}
+        onPress={() => {
+          // Focus the search box; we just clear it so the user notices it.
+          setSearch("");
+        }}
+      />
     </View>
   );
 }

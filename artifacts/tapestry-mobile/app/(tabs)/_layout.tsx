@@ -7,7 +7,8 @@ import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR } from "@/constants/chrome";
-import { useColors } from "@/hooks/useColors";
+import { fonts } from "@/constants/typography";
+import { elevation, useColors } from "@/hooks/useColors";
 
 const NATIVE_GLASS =
   Platform.OS === "ios" &&
@@ -19,6 +20,78 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const isAndroidSkin = colors.skin === "android";
+
+  if (isAndroidSkin) {
+    // Material 3 bottom navigation: opaque surface-container background,
+    // no blur, larger active label, full-width fixed bar with hairline
+    // separator and a pill indicator behind the active icon.
+    return (
+      <Tabs
+        screenOptions={({ route }) => ({
+          tabBarActiveTintColor: colors.material.onPrimaryContainer,
+          tabBarInactiveTintColor: colors.material.onSurfaceVariant,
+          headerShown: false,
+          tabBarLabelStyle: {
+            fontFamily: fonts.sansMedium,
+            fontSize: 12,
+            letterSpacing: 0.5,
+            marginTop: 4,
+          },
+          tabBarItemStyle: { paddingVertical: 6 },
+          tabBarStyle: {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 80 + insets.bottom,
+            paddingBottom: insets.bottom,
+            paddingTop: 8,
+            borderRadius: 0,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.material.outlineVariant,
+            backgroundColor: colors.material.surfaceContainer,
+            ...elevation(2),
+          },
+          tabBarIcon: ({ focused, color }) => {
+            const iconName = (
+              {
+                index: "home",
+                designers: "users",
+                lists: "bookmark",
+                profile: "user",
+              } as const
+            )[route.name as "index" | "designers" | "lists" | "profile"];
+            return (
+              <View
+                style={{
+                  width: 64,
+                  height: 32,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: focused
+                    ? colors.material.primaryContainer
+                    : "transparent",
+                }}
+              >
+                <Feather
+                  name={iconName ?? "circle"}
+                  size={22}
+                  color={color}
+                />
+              </View>
+            );
+          },
+        })}
+      >
+        <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen name="designers" options={{ title: "Designers" }} />
+        <Tabs.Screen name="lists" options={{ title: "Lists" }} />
+        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      </Tabs>
+    );
+  }
 
   return (
     <Tabs

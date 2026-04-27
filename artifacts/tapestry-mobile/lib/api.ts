@@ -58,6 +58,48 @@ export type MobileUser = {
   createdAt: string;
 };
 
+export type PortfolioProject = {
+  id: number;
+  title: string;
+  description: string | null;
+  category: string | null;
+  tags: string[];
+  coverImageUrl: string | null;
+  projectUrl: string | null;
+  isFeatured: boolean;
+  role: string | null;
+  duration: string | null;
+  clientName: string | null;
+  projectDate: string | null;
+};
+
+export type PortfolioMediaItem = {
+  id: number;
+  projectId: number | null;
+  fileUrl: string;
+  fileType: string;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  alt: string | null;
+  caption: string | null;
+};
+
+export type PortfolioResponse = {
+  portfolio: {
+    id: number;
+    title: string;
+    tagline: string | null;
+    description: string | null;
+    theme: string | null;
+    primaryColor: string | null;
+    socialLinks: Record<string, string | undefined> | null;
+    contactInfo: Record<string, unknown> | null;
+  } | null;
+  projects: PortfolioProject[];
+  media: PortfolioMediaItem[];
+};
+
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }

@@ -64,7 +64,7 @@ export default function TabLayout() {
               <GlassView
                 style={StyleSheet.absoluteFill}
                 glassEffectStyle="regular"
-                tintColor="rgba(251,248,243,0.35)"
+                tintColor={colors.glassTint}
               />
             ) : (
               <>
@@ -76,11 +76,7 @@ export default function TabLayout() {
                 <View
                   style={[
                     StyleSheet.absoluteFill,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(20,18,16,0.45)"
-                        : "rgba(251,248,243,0.5)",
-                    },
+                    { backgroundColor: colors.glassTintFallback },
                   ]}
                 />
               </>
@@ -92,9 +88,7 @@ export default function TabLayout() {
                   pointerEvents: "none",
                   borderRadius: TAB_BAR.radius,
                   borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: isDark
-                    ? "rgba(255,255,255,0.10)"
-                    : "rgba(255,255,255,0.55)",
+                  borderColor: colors.glassBorder,
                 },
               ]}
             />

@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect } from "react";
 import {
-  ActivityIndicator,
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,12 +14,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
+import { PortfolioGallery } from "@/components/PortfolioGallery";
+import { SkeletonDesignerDetail } from "@/components/Skeleton";
 import { SkillChip } from "@/components/SkillChip";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { useColors } from "@/hooks/useColors";
 import { useDefaultWorkspace } from "@/hooks/useWorkspace";
 import { type } from "@/constants/typography";
-import type { DesignerDetails } from "@/lib/api";
+import {
+  saveDesignerToContactsWithAlert,
+  shareDesigner,
+} from "@/lib/designer-actions";
+import { addRecentDesigner } from "@/lib/preferences";
+import type { DesignerDetails, PortfolioResponse } from "@/lib/api";
 
 export default function DesignerScreen() {
   const insets = useSafeAreaInsets();
@@ -41,16 +46,51 @@ export default function DesignerScreen() {
       }),
   });
 
-  useEffect(() => {
-    navigation.setOptions({ title: query.data?.name ?? "" });
-  }, [navigation, query.data?.name]);
+  const portfolioQuery = useQuery({
+    queryKey: ["mobile", "portfolio", id, workspace?.id],
+    enabled: !!id && !!workspace?.id,
+    queryFn: () =>
+      authFetch<PortfolioResponse>(`/api/mobile/designers/${id}/portfolio`, {
+        query: { workspaceId: workspace!.id },
+      }),
+  });
 
   const designer = query.data;
 
+  // Header title + share button.
+  useEffect(() => {
+    navigation.setOptions({
+      title: designer?.name ?? "",
+      headerRight: () =>
+        designer ? (
+          <Pressable
+            onPress={() => shareDesigner(designer)}
+            hitSlop={12}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 8 })}
+          >
+            <Feather name="share" size={20} color={colors.primary} />
+          </Pressable>
+        ) : null,
+    });
+  }, [navigation, designer, colors.primary]);
+
+  // Add to recently-viewed cache once data lands.
+  useEffect(() => {
+    if (designer) {
+      addRecentDesigner({
+        id: designer.id,
+        name: designer.name,
+        title: designer.title,
+        company: designer.company,
+        photoUrl: designer.photoUrl,
+      }).catch(() => {});
+    }
+  }, [designer]);
+
   if (query.isLoading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <SkeletonDesignerDetail />
       </View>
     );
   }
@@ -66,12 +106,17 @@ export default function DesignerScreen() {
               ? query.error.message
               : "Try again in a moment."
           }
+          action={{ label: "Try again", icon: "refresh-cw", onPress: () => query.refetch() }}
         />
       </View>
     );
   }
 
   const subtitle = [designer.title, designer.company].filter(Boolean).join(" · ");
+  const portfolio = portfolioQuery.data;
+  const hasPortfolio =
+    !!portfolio &&
+    (portfolio.projects.length > 0 || portfolio.media.length > 0 || !!portfolio.portfolio);
 
   return (
     <ScrollView
@@ -108,6 +153,21 @@ export default function DesignerScreen() {
             </Text>
           </View>
         ) : null}
+
+        <View style={styles.heroActions}>
+          <ActionButton
+            icon="share"
+            label="Share"
+            onPress={() => shareDesigner(designer)}
+            colors={colors}
+          />
+          <ActionButton
+            icon="user-plus"
+            label="Add to contacts"
+            onPress={() => saveDesignerToContactsWithAlert(designer)}
+            colors={colors}
+          />
+        </View>
       </View>
 
       {designer.description ? (
@@ -128,6 +188,22 @@ export default function DesignerScreen() {
         </Section>
       ) : null}
 
+      <Section title="Work" colors={colors}>
+        {portfolioQuery.isLoading ? (
+          <Text style={[type.small, { color: colors.textMuted }]}>Loading portfolio…</Text>
+        ) : portfolioQuery.isError ? (
+          <Text style={[type.small, { color: colors.textMuted }]}>
+            Couldn't load portfolio. Pull to refresh later.
+          </Text>
+        ) : hasPortfolio && portfolio ? (
+          <PortfolioGallery projects={portfolio.projects} media={portfolio.media} />
+        ) : (
+          <Text style={[type.small, { color: colors.textMuted }]}>
+            No portfolio pieces published yet.
+          </Text>
+        )}
+      </Section>
+
       <Section title="Contact" colors={colors}>
         <View style={{ gap: 8 }}>
           {designer.email ? (
@@ -135,6 +211,14 @@ export default function DesignerScreen() {
               icon="mail"
               label={designer.email}
               onPress={() => Linking.openURL(`mailto:${designer.email}`)}
+              colors={colors}
+            />
+          ) : null}
+          {designer.phoneNumber ? (
+            <ContactRow
+              icon="phone"
+              label={designer.phoneNumber}
+              onPress={() => Linking.openURL(`tel:${designer.phoneNumber}`)}
               colors={colors}
             />
           ) : null}
@@ -154,7 +238,7 @@ export default function DesignerScreen() {
               colors={colors}
             />
           ) : null}
-          {!designer.email && !designer.linkedIn && !designer.website ? (
+          {!designer.email && !designer.linkedIn && !designer.website && !designer.phoneNumber ? (
             <Text style={[type.small, { color: colors.textMuted }]}>
               No contact info on file yet.
             </Text>
@@ -221,9 +305,40 @@ function ContactRow({
   );
 }
 
+function ActionButton({
+  icon,
+  label,
+  onPress,
+  colors,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  onPress: () => void;
+  colors: ReturnType<typeof useColors>;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionBtn,
+        {
+          borderColor: colors.border,
+          backgroundColor: colors.card,
+          borderRadius: colors.radius,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <Feather name={icon} size={14} color={colors.primary} />
+      <Text style={[type.label, { color: colors.foreground }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   hero: { alignItems: "center", paddingTop: 8 },
+  heroActions: { flexDirection: "row", gap: 8, marginTop: 18 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   sectionBody: { padding: 16, borderWidth: StyleSheet.hairlineWidth },
@@ -233,5 +348,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });

@@ -1,7 +1,17 @@
 import { Request, Response } from "express";
 import { db } from "@workspace/db";
-import { workspaceMembers, designers, lists, listDesigners, designerEvents } from "@workspace/db";
-import { eq, and, desc, ilike, or, sql, count } from "drizzle-orm";
+import {
+  workspaceMembers,
+  designers,
+  lists,
+  listDesigners,
+  designerEvents,
+  portfolios,
+  portfolioProjects,
+  portfolioMedia,
+  mobileDevices,
+} from "@workspace/db";
+import { eq, and, desc, ilike, or, sql, count, asc } from "drizzle-orm";
 import { createHash } from "crypto";
 
 function generateETag(data: any): string {
@@ -12,8 +22,13 @@ function setCacheHeaders(req: Request, res: Response, data: any, maxAge: number 
   const etag = generateETag(data);
   const ifNoneMatch = req.headers['if-none-match'];
 
+  // All mobile endpoints are authenticated and workspace-scoped, so caches
+  // MUST NOT be shared across users. `private` keeps payloads in the
+  // user-agent only; `Vary: Authorization` ensures any well-behaved
+  // intermediary keys on the bearer token if it ever sees one.
   res.setHeader('ETag', etag);
-  res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
+  res.setHeader('Cache-Control', `private, max-age=${maxAge}`);
+  res.setHeader('Vary', 'Authorization');
 
   if (ifNoneMatch === etag) {
     res.status(304).end();
@@ -372,6 +387,181 @@ export function setupMobileAuth(app: any) {
     } catch (error) {
       console.error("Get designer timeline error:", error);
       res.status(500).json({ error: "Failed to get timeline" });
+    }
+  });
+
+  app.get("/api/mobile/designers/:id/portfolio", async (req: Request, res: Response) => {
+    try {
+      const auth = await validateAuthAndWorkspace(req, res);
+      if (!auth) return;
+
+      const { workspaceId } = auth;
+      const designerId = parseInt(req.params.id, 10);
+      if (isNaN(designerId)) {
+        return res.status(400).json({ error: "Invalid designer ID" });
+      }
+
+      // Confirm designer belongs to this workspace before exposing portfolio.
+      const designer = await db.query.designers.findFirst({
+        where: and(
+          eq(designers.id, designerId),
+          eq(designers.workspaceId, workspaceId),
+        ),
+        columns: { id: true },
+      });
+      if (!designer) {
+        return res.status(404).json({ error: "Designer not found" });
+      }
+
+      const portfolio = await db.query.portfolios.findFirst({
+        where: and(
+          eq(portfolios.designerId, designerId),
+          eq(portfolios.isActive, true),
+        ),
+      });
+
+      if (!portfolio) {
+        const emptyPayload = {
+          portfolio: null,
+          projects: [],
+          media: [],
+        };
+        if (setCacheHeaders(req, res, emptyPayload, 120)) return;
+        return res.json(emptyPayload);
+      }
+
+      const projects = await db
+        .select()
+        .from(portfolioProjects)
+        .where(and(
+          eq(portfolioProjects.portfolioId, portfolio.id),
+          eq(portfolioProjects.isPublic, true),
+        ))
+        .orderBy(desc(portfolioProjects.isFeatured), asc(portfolioProjects.sortOrder));
+
+      const allMedia = await db
+        .select()
+        .from(portfolioMedia)
+        .where(eq(portfolioMedia.portfolioId, portfolio.id))
+        .orderBy(asc(portfolioMedia.sortOrder));
+
+      // Media without a projectId belongs at the portfolio level (always
+      // OK to surface). Media tied to a project must belong to a published
+      // project, otherwise we'd leak unpublished/draft work.
+      const publicProjectIds = new Set(projects.map((p) => p.id));
+      const media = allMedia.filter(
+        (m) => m.projectId == null || publicProjectIds.has(m.projectId),
+      );
+
+      const payload = {
+        portfolio: {
+          id: portfolio.id,
+          title: portfolio.title,
+          tagline: portfolio.tagline,
+          description: portfolio.description,
+          theme: portfolio.theme,
+          primaryColor: portfolio.primaryColor,
+          socialLinks: portfolio.socialLinks ?? null,
+          contactInfo: portfolio.contactInfo ?? null,
+        },
+        projects: projects.map((p) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          category: p.category,
+          tags: p.tags ?? [],
+          coverImageUrl: p.coverImageUrl,
+          projectUrl: p.projectUrl,
+          isFeatured: p.isFeatured ?? false,
+          role: p.role,
+          duration: p.duration,
+          clientName: p.clientName,
+          projectDate: p.projectDate,
+        })),
+        media: media.map((m) => ({
+          id: m.id,
+          projectId: m.projectId,
+          fileUrl: m.fileUrl,
+          fileType: m.fileType,
+          mimeType: m.mimeType,
+          width: m.width,
+          height: m.height,
+          alt: m.alt,
+          caption: m.caption,
+        })),
+      };
+
+      if (setCacheHeaders(req, res, payload, 120)) return;
+      res.json(payload);
+    } catch (error) {
+      console.error("Get designer portfolio error:", error);
+      res.status(500).json({ error: "Failed to get portfolio" });
+    }
+  });
+
+  app.post("/api/mobile/devices/register", async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).json({ error: "Authentication required" });
+
+      const { token, platform } = req.body ?? {};
+      if (typeof token !== "string" || token.length < 8 || token.length > 1024) {
+        return res.status(400).json({ error: "Invalid push token" });
+      }
+      const normalizedPlatform =
+        platform === "ios" || platform === "android" || platform === "web"
+          ? platform
+          : "ios";
+
+      // Upsert by token. If another user previously owned this token (e.g.
+      // a shared physical device), reassign it.
+      const existing = await db.query.mobileDevices.findFirst({
+        where: eq(mobileDevices.token, token),
+      });
+
+      if (existing) {
+        await db
+          .update(mobileDevices)
+          .set({
+            userId: req.user.id,
+            platform: normalizedPlatform,
+            optedIn: true,
+            lastSeenAt: new Date(),
+          })
+          .where(eq(mobileDevices.id, existing.id));
+      } else {
+        await db.insert(mobileDevices).values({
+          userId: req.user.id,
+          token,
+          platform: normalizedPlatform,
+          optedIn: true,
+        });
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      console.error("Register device error:", error);
+      res.status(500).json({ error: "Failed to register device" });
+    }
+  });
+
+  app.delete("/api/mobile/devices/register", async (req: Request, res: Response) => {
+    try {
+      if (!req.user) return res.status(401).json({ error: "Authentication required" });
+
+      const { token } = req.body ?? {};
+      if (typeof token !== "string" || !token) {
+        return res.status(400).json({ error: "token required" });
+      }
+
+      await db
+        .update(mobileDevices)
+        .set({ optedIn: false, lastSeenAt: new Date() })
+        .where(and(eq(mobileDevices.token, token), eq(mobileDevices.userId, req.user.id)));
+
+      res.status(204).end();
+    } catch (error) {
+      console.error("Unregister device error:", error);
+      res.status(500).json({ error: "Failed to unregister device" });
     }
   });
 

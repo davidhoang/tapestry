@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -15,10 +14,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "@/components/EmptyState";
 import { GlassChrome } from "@/components/GlassChrome";
+import { LastUpdated } from "@/components/LastUpdated";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { SkeletonListRow } from "@/components/Skeleton";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { useColors } from "@/hooks/useColors";
 import { useDefaultWorkspace } from "@/hooks/useWorkspace";
+import { usePullRefresh } from "@/hooks/usePullRefresh";
 import { type } from "@/constants/typography";
 import { TAB_BAR_OFFSET } from "@/constants/chrome";
 import type { ListSummary } from "@/lib/api";
@@ -41,6 +43,8 @@ export default function ListsScreen() {
         query: { workspaceId: workspace!.id },
       }),
   });
+
+  const onRefresh = usePullRefresh(() => query.refetch());
 
   const lists = query.data?.lists ?? [];
 
@@ -93,24 +97,36 @@ export default function ListsScreen() {
             <Feather name="chevron-right" size={18} color={colors.textMuted} />
           </Pressable>
         )}
+        ListFooterComponent={
+          query.dataUpdatedAt && lists.length > 0 ? (
+            <LastUpdated updatedAt={query.dataUpdatedAt} />
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={query.isRefetching}
-            onRefresh={() => query.refetch()}
+            onRefresh={onRefresh}
             tintColor={colors.primary}
             progressViewOffset={chromeHeight}
           />
         }
         ListEmptyComponent={
           query.isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.primary} />
+            <View style={{ gap: 12 }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonListRow key={i} />
+              ))}
             </View>
           ) : (
             <EmptyState
               icon="bookmark"
               title="No lists yet"
-              description="Create lists from the web app to organize designers into collections."
+              description="Create lists from the web app to organize designers into curated collections."
+              action={{
+                label: "Browse designers",
+                icon: "users",
+                onPress: () => router.push("/designers"),
+              }}
             />
           )
         }
@@ -145,5 +161,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
   },
-  center: { padding: 48, alignItems: "center" },
 });

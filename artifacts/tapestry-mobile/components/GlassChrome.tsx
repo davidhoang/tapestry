@@ -1,6 +1,7 @@
 import { StyleSheet, type ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useColors } from "@/hooks/useColors";
 import { LiquidGlass } from "./LiquidGlass";
 
 type Props = ViewProps & {
@@ -27,10 +28,11 @@ export function GlassChrome({
   ...rest
 }: Props) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
 
   return (
     <LiquidGlass
-      tintColor="rgba(251,248,243,0.35)"
+      tintColor={colors.glassTint}
       style={[
         styles.base,
         sticky ? styles.sticky : null,

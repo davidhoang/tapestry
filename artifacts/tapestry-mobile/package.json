@@ -57,7 +57,13 @@
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.31",
     "@expo-google-fonts/crimson-text": "^0.4.0",
+    "@tanstack/query-async-storage-persister": "^5.100.5",
+    "@tanstack/react-query-persist-client": "^5.100.5",
     "expo-auth-session": "~7.0.10",
-    "expo-secure-store": "~15.0.8"
+    "expo-contacts": "~15.0.11",
+    "expo-device": "~8.0.10",
+    "expo-notifications": "~0.32.16",
+    "expo-secure-store": "~15.0.8",
+    "expo-sharing": "~14.0.8"
   }
 }

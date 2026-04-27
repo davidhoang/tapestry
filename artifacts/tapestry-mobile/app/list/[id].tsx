@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useEffect } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -12,9 +11,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DesignerCard } from "@/components/DesignerCard";
 import { EmptyState } from "@/components/EmptyState";
+import { LastUpdated } from "@/components/LastUpdated";
+import { SkeletonDesignerCard } from "@/components/Skeleton";
 import { useAuthFetch } from "@/hooks/useAuthFetch";
 import { useColors } from "@/hooks/useColors";
 import { useDefaultWorkspace } from "@/hooks/useWorkspace";
+import { usePullRefresh } from "@/hooks/usePullRefresh";
 import type { Designer } from "@/lib/api";
 
 type ListDetailsResponse = {
@@ -42,6 +44,8 @@ export default function ListDetailScreen() {
       }),
   });
 
+  const onRefresh = usePullRefresh(() => query.refetch());
+
   useEffect(() => {
     navigation.setOptions({ title: query.data?.list?.name ?? "" });
   }, [navigation, query.data?.list?.name]);
@@ -65,17 +69,24 @@ export default function ListDetailScreen() {
             onPress={() => router.push(`/designer/${item.id}`)}
           />
         )}
+        ListFooterComponent={
+          query.dataUpdatedAt && designers.length > 0 ? (
+            <LastUpdated updatedAt={query.dataUpdatedAt} />
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={query.isRefetching}
-            onRefresh={() => query.refetch()}
+            onRefresh={onRefresh}
             tintColor={colors.primary}
           />
         }
         ListEmptyComponent={
           query.isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.primary} />
+            <View style={{ gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonDesignerCard key={i} />
+              ))}
             </View>
           ) : query.isError ? (
             <EmptyState
@@ -86,12 +97,18 @@ export default function ListDetailScreen() {
                   ? query.error.message
                   : "Pull to refresh and try again."
               }
+              action={{ label: "Try again", icon: "refresh-cw", onPress: () => query.refetch() }}
             />
           ) : (
             <EmptyState
               icon="bookmark"
               title="No designers in this list"
-              description="Add designers from the directory to populate this list."
+              description="Open the directory to find designers to add from the web app."
+              action={{
+                label: "Browse directory",
+                icon: "users",
+                onPress: () => router.push("/designers"),
+              }}
             />
           )
         }
@@ -101,6 +118,4 @@ export default function ListDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  center: { padding: 48, alignItems: "center" },
-});
+const styles = StyleSheet.create({});

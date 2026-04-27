@@ -49,6 +49,20 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const mobileDevices = pgTable("mobile_devices", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  // Native push token (FCM on Android, APNs/device token on iOS).
+  token: text("token").notNull(),
+  platform: text("platform").notNull(), // "ios" | "android" | "web"
+  optedIn: boolean("opted_in").default(true).notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("mobile_devices_user_id_idx").on(table.userId),
+  tokenIdx: uniqueIndex("mobile_devices_token_unique").on(table.token),
+}));
+
 export const userLocations = pgTable("user_locations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),

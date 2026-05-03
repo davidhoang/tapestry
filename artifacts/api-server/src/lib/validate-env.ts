@@ -15,7 +15,10 @@ export function validateEnv(): void {
   const isProd = process.env.NODE_ENV === "production";
   const env = isProd ? "production" : "development";
 
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.PRODUCTION_DATABASE_URL || process.env.DATABASE_URL;
+  const dbUrlSource = process.env.PRODUCTION_DATABASE_URL
+    ? "PRODUCTION_DATABASE_URL"
+    : "DATABASE_URL";
   const pk = process.env.VITE_CLERK_PUBLISHABLE_KEY ?? "";
   const sk = process.env.CLERK_SECRET_KEY ?? "";
 
@@ -23,13 +26,14 @@ export function validateEnv(): void {
   const warnings: string[] = [];
 
   if (!dbUrl) {
-    errors.push("DATABASE_URL is not set.");
+    errors.push("Neither PRODUCTION_DATABASE_URL nor DATABASE_URL is set.");
   } else if (isProd) {
     const host = extractHostname(dbUrl);
     if (host && INTERNAL_DB_HOSTNAMES.some((h) => host === h || host.startsWith(`${h}.`))) {
       errors.push(
-        `DATABASE_URL points at an internal/dev hostname ("${host}") that is not reachable from production. ` +
-          `Set the production DATABASE_URL deployment secret to the external Postgres connection string.`,
+        `${dbUrlSource} points at an internal/dev hostname ("${host}") that is not reachable from production. ` +
+          `Set a PRODUCTION_DATABASE_URL deployment secret to the external Postgres connection string ` +
+          `(this overrides the DATABASE_URL the Replit Postgres integration auto-injects).`,
       );
     }
   }
@@ -77,12 +81,13 @@ export function validateEnv(): void {
   }
 
   console.log(
-    `[env] Environment validated: env=${env} clerkInstance=${pkKind} dbHost=${dbUrl ? extractHostname(dbUrl) : "null"}`,
+    `[env] Environment validated: env=${env} clerkInstance=${pkKind} dbSource=${dbUrlSource} dbHost=${dbUrl ? extractHostname(dbUrl) : "null"}`,
   );
   logger.info(
     {
       env,
       clerkInstance: pkKind,
+      dbSource: dbUrlSource,
       dbHost: dbUrl ? extractHostname(dbUrl) : null,
     },
     "Environment validated",

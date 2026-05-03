@@ -7,6 +7,7 @@ import {
   apiTokens,
   workspaces,
   designerEvents,
+  workspaceMembers,
 } from "@workspace/db";
 import { eq, and, desc, or, ilike, sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -40,6 +41,15 @@ async function validateCliToken(token: string): Promise<CliAuthContext | null> {
   if (!record) return null;
   if (record.expiresAt && new Date() > record.expiresAt) return null;
 
+  const membership = await db.query.workspaceMembers.findFirst({
+    where: and(
+      eq(workspaceMembers.workspaceId, record.workspaceId),
+      eq(workspaceMembers.userId, record.userId)
+    ),
+  });
+
+  if (!membership) return null;
+
   await db
     .update(apiTokens)
     .set({
@@ -48,12 +58,17 @@ async function validateCliToken(token: string): Promise<CliAuthContext | null> {
     })
     .where(eq(apiTokens.id, record.id));
 
+  const roleHierarchy: Record<string, number> = { owner: 4, admin: 3, editor: 2, member: 1, viewer: 0 };
+  const effectiveRole = (roleHierarchy[membership.role] ?? -1) < (roleHierarchy[record.role] ?? -1)
+    ? membership.role
+    : record.role;
+
   return {
     userId: record.userId,
     workspaceId: record.workspaceId,
     workspaceName: record.workspace.name,
     workspaceSlug: record.workspace.slug,
-    role: record.role,
+    role: effectiveRole,
     userEmail: record.user.email,
   };
 }

@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { Request, Response, Express } from "express";
 import { db } from "@workspace/db";
-import { designers, lists, listDesigners, workspaces, apiTokens, designerEvents } from "@workspace/db";
+import { designers, lists, listDesigners, workspaces, apiTokens, designerEvents, workspaceMembers } from "@workspace/db";
 import { eq, and, desc, or, ilike, sql } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -171,19 +171,35 @@ async function validateToken(token: string): Promise<AuthContext | null> {
     return null;
   }
   
+  const membership = await db.query.workspaceMembers.findFirst({
+    where: and(
+      eq(workspaceMembers.workspaceId, tokenRecord.workspaceId),
+      eq(workspaceMembers.userId, tokenRecord.userId)
+    ),
+  });
+
+  if (!membership) {
+    return null;
+  }
+
   await db.update(apiTokens)
     .set({ 
       lastUsedAt: new Date(),
       usageCount: sql`COALESCE(${apiTokens.usageCount}, 0) + 1`
     })
     .where(eq(apiTokens.id, tokenRecord.id));
-  
+
+  const roleHierarchy: Record<string, number> = { owner: 4, admin: 3, editor: 2, member: 1, viewer: 0 };
+  const effectiveRole = (roleHierarchy[membership.role] ?? -1) < (roleHierarchy[tokenRecord.role] ?? -1)
+    ? membership.role
+    : tokenRecord.role;
+
   return {
     userId: tokenRecord.userId,
     workspaceId: tokenRecord.workspaceId,
     workspaceName: tokenRecord.workspace.name,
     workspaceSlug: tokenRecord.workspace.slug,
-    role: tokenRecord.role,
+    role: effectiveRole,
     userEmail: tokenRecord.user.email,
   };
 }
@@ -633,6 +649,13 @@ async function handleToolCall(name: string, args: Record<string, unknown>, authC
 
     case "add_note": {
       const { designerId, content } = args as AddNoteArgs;
+
+      if (!hasWriteAccess(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "Error: You don't have permission to add notes. Required role: editor, admin, or owner." }],
+          isError: true
+        };
+      }
       
       if (!designerId || typeof designerId !== 'number') {
         return { 

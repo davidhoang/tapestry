@@ -157,3 +157,21 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Security vulnerability fixes for transitive dependencies
+  # picomatch: ReDoS via extglob (GHSA-c2c7-rcm5-vvqj) and method injection (GHSA-3v7f-55p6-f55p)
+  "picomatch@^2": "2.3.2"
+  "picomatch@^4": "4.0.4"
+  # path-to-regexp: DoS (GHSA-j3q9-mxjg-w52f, GHSA-27v5-c462-wpq7)
+  "path-to-regexp@^8": "8.4.2"
+  # lodash: code injection + prototype pollution (GHSA-r5fr-rjxr-66jc, GHSA-f23m-r3pf-42rh, GHSA-xxjr-mmjv-4gpg)
+  "lodash@^4": "4.18.1"
+  # brace-expansion: zero-step ReDoS (GHSA-f886-m6hf-6m8v, GHSA-v6h2-p8h4-qcjw)
+  "brace-expansion@^2": "2.1.0"
+  # yaml: stack overflow via deeply-nested input (GHSA-48c2-rrv3-qjmp)
+  "yaml@^2": "2.8.3"
+  # postcss: XSS via unescaped </style> tag (GHSA-qx2v-qp2m-jg93)
+  "postcss@^8": "8.5.13"
+  # uuid: missing buffer bounds check in v3/v5/v6 (GHSA-w5hq-g745-h8pq)
+  uuid: "14.0.0"
+  # @tootallnate/once: incorrect control flow (GHSA-vpq2-c234-7xj6)
+  "@tootallnate/once": "3.0.1"

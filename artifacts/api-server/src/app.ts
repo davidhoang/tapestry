@@ -30,14 +30,11 @@ if (app.get("env") === "production") {
       },
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    // COEP disabled: "credentialless" strips cookies on cross-origin sub-resource
-    // requests to clerk.tapestry.design, which breaks Clerk's OAuth handshake
-    // (Google sign-in lands back on the signed-out home page).
-    crossOriginEmbedderPolicy: false,
+    crossOriginEmbedderPolicy: { policy: "credentialless" },
   }));
 }
 
-// Rate-limit applies to mobile, MCP automation, and public portfolio endpoints
+// Rate-limit applies only to mobile and MCP automation endpoints
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -45,9 +42,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later" },
   skip: (req) => {
-    return !req.path.startsWith("/api/mobile") &&
-           !req.path.startsWith("/mcp") &&
-           !req.path.startsWith("/api/public/");
+    return !req.path.startsWith("/api/mobile") && !req.path.startsWith("/mcp");
   },
 });
 
@@ -77,12 +72,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-workspace-slug"],
 }));
-
-// Strict body-size limit for unauthenticated public portfolio write endpoints.
-// Must be registered BEFORE the global 10mb parser so body-parser honours the
-// smaller cap for these paths (body-parser skips re-parsing once req._body=true).
-app.use("/api/public/portfolios", express.json({ limit: "16kb" }));
-app.use("/api/public/portfolios", express.urlencoded({ extended: false, limit: "16kb" }));
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));

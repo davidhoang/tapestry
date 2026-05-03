@@ -772,6 +772,18 @@ export function registerRoutes(app: Express): Server {
       if (!designer) {
         return res.status(404).json({ error: "Designer not found" });
       }
+
+      // Verify the requesting user belongs to the same workspace as the designer
+      const membership = await db.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.userId, req.user.id),
+          eq(workspaceMembers.workspaceId, designer.workspaceId)
+        ),
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not authorized to access this designer" });
+      }
       
       res.json(designer);
     } catch (err) {
@@ -909,14 +921,35 @@ export function registerRoutes(app: Express): Server {
 
     const designerId = parseInt(req.params.id);
 
+    // Fetch existing designer to verify workspace ownership
+    const existingDesigner = await db.query.designers.findFirst({
+      where: eq(designers.id, designerId),
+    });
+
+    if (!existingDesigner) {
+      return res.status(404).json({ error: "Designer not found" });
+    }
+
+    // Verify user belongs to the same workspace as the designer
+    const membership = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.userId, req.user.id),
+        eq(workspaceMembers.workspaceId, existingDesigner.workspaceId)
+      ),
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Not authorized to update this designer" });
+    }
+
+    // Require editor, admin, or owner role to update designers
+    if (!['owner', 'admin', 'editor'].includes(membership.role)) {
+      return res.status(403).json({ error: "You do not have permission to edit designers" });
+    }
+
     let photoUrl;
     if (req.file?.buffer) {
-      // Get existing designer to clean up old image
-      const existingDesigner = await db.query.designers.findFirst({
-        where: eq(designers.id, designerId),
-      });
-
-      const oldFilename = existingDesigner?.photoUrl?.split('/').pop();
+      const oldFilename = existingDesigner.photoUrl?.split('/').pop();
       photoUrl = await handlePhotoUpload(req.file.buffer, oldFilename);
     }
 
@@ -1074,6 +1107,25 @@ export function registerRoutes(app: Express): Server {
       const { ids } = req.body;
       if (!Array.isArray(ids)) {
         return res.status(400).json({ error: "Invalid request format" });
+      }
+
+      // Fetch all targeted designers to validate workspace membership
+      const targetedDesigners = await db.query.designers.findMany({
+        where: inArray(designers.id, ids),
+      });
+
+      // Verify user has permission to delete each designer (must be in same workspace with editor+ role)
+      for (const designer of targetedDesigners) {
+        const membership = await db.query.workspaceMembers.findFirst({
+          where: and(
+            eq(workspaceMembers.userId, req.user.id),
+            eq(workspaceMembers.workspaceId, designer.workspaceId)
+          ),
+        });
+
+        if (!membership || !['owner', 'admin', 'editor'].includes(membership.role)) {
+          return res.status(403).json({ error: "Not authorized to delete one or more of the specified designers" });
+        }
       }
 
       const result = await db
@@ -1683,6 +1735,18 @@ export function registerRoutes(app: Express): Server {
 
         // If designerIds are provided, add them to the list
         if (designerIds?.length) {
+          // Validate all designers belong to the same workspace as the list
+          const designersToAdd = await tx.query.designers.findMany({
+            where: inArray(designers.id, designerIds),
+          });
+
+          const foreignDesigner = designersToAdd.find(
+            (d: { workspaceId: number }) => d.workspaceId !== workspaceContext.workspaceId
+          );
+          if (foreignDesigner) {
+            return res.status(403).json({ error: "One or more designers do not belong to this workspace" });
+          }
+
           await tx.insert(listDesigners)
             .values(
               designerIds.map((designerId: number) => ({
@@ -2064,6 +2128,11 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Designer not found" });
       }
 
+      // Verify the designer belongs to the same workspace as the list
+      if (designer.workspaceId !== list.workspaceId) {
+        return res.status(403).json({ error: "Designer does not belong to this workspace" });
+      }
+
       // Check if the designer is already in the list
       const existingEntry = await db.query.listDesigners.findFirst({
         where: and(
@@ -2127,6 +2196,18 @@ export function registerRoutes(app: Express): Server {
 
       if (list.userId !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to modify this list" });
+      }
+
+      // Validate all designers belong to the same workspace as the list
+      const designersToAdd = await db.query.designers.findMany({
+        where: inArray(designers.id, designerIds),
+      });
+
+      const foreignDesigner = designersToAdd.find(
+        d => d.workspaceId !== list.workspaceId
+      );
+      if (foreignDesigner) {
+        return res.status(403).json({ error: "One or more designers do not belong to this workspace" });
       }
 
       // Get existing entries to avoid duplicates
@@ -3911,6 +3992,11 @@ Please analyze this role and recommend the best matching designers.`
       return res.status(403).json({ error: "Not authorized to invite users to this workspace" });
     }
 
+    // Only owners can invite someone with the owner role
+    if (role === "owner" && membership.role !== "owner") {
+      return res.status(403).json({ error: "Only owners can invite users with the owner role" });
+    }
+
     // Check if user is already a member
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, email),
@@ -4303,11 +4389,21 @@ Please analyze this job and recommend the best matching designers.`
 
   // Route to check pending invitations for an email
   app.get("/api/invitations/check/:email", withErrorHandler(async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
     const { email } = req.params;
-    
+    const decodedEmail = decodeURIComponent(email);
+
+    // Only allow users to check invitations for their own email address
+    if (req.user.email?.toLowerCase() !== decodedEmail.toLowerCase()) {
+      return res.status(403).json({ error: "Not authorized to check invitations for this email" });
+    }
+
     const pendingInvitations = await db.query.workspaceInvitations.findMany({
       where: and(
-        eq(workspaceInvitations.email, decodeURIComponent(email)),
+        eq(workspaceInvitations.email, decodedEmail),
         sql`${workspaceInvitations.acceptedAt} IS NULL`
       ),
       with: {
@@ -4317,7 +4413,10 @@ Please analyze this job and recommend the best matching designers.`
 
     const validInvitations = pendingInvitations.filter(inv => new Date() <= inv.expiresAt);
 
-    res.json({ invitations: validInvitations });
+    // Strip the token from the response to avoid leaking sensitive data
+    const safeInvitations = validInvitations.map(({ token: _token, invitedBy: _invitedBy, ...inv }) => inv);
+
+    res.json({ invitations: safeInvitations });
   }));
 
   // Get user's workspaces

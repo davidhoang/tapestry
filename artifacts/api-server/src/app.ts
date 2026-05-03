@@ -30,7 +30,10 @@ if (app.get("env") === "production") {
       },
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginEmbedderPolicy: { policy: "credentialless" },
+    // COEP disabled: "credentialless" strips cookies on cross-origin sub-resource
+    // requests to clerk.tapestry.design, which breaks Clerk's OAuth handshake
+    // (Google sign-in lands back on the signed-out home page).
+    crossOriginEmbedderPolicy: false,
   }));
 }
 

@@ -193,44 +193,121 @@ export interface PDLEnrichmentResult {
   likelihood?: number;
 }
 
+/**
+ * Explicit allowlist of public professional-portfolio domains whose fetched HTML
+ * may be forwarded to OpenAI for extraction.
+ *
+ * Security rationale: forwarding arbitrary fetched content to a third-party AI
+ * service creates two risks:
+ *   1. Prompt-injection: attacker publishes a page with adversarial text that
+ *      manipulates the AI response.
+ *   2. Sensitive-data exfiltration: content from internal or restricted pages
+ *      (reachable after SSRF bypass) could leak through AI-returned fields.
+ *
+ * Restricting content forwarding to known public portfolio/professional sites
+ * limits the prompt-injection surface and eliminates risk (2) entirely for
+ * domains not on this list.  Domains not on the list still receive URL-only
+ * metadata analysis (no page content is sent to OpenAI).
+ */
+const CONTENT_FORWARD_ALLOWED_DOMAINS = new Set([
+  "dribbble.com",
+  "behance.net",
+  "github.com",
+  "github.io",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "instagram.com",
+  "cargo.site",
+  "cargocollective.com",
+  "squarespace.com",
+  "webflow.io",
+  "webflow.com",
+  "framer.com",
+  "framer.site",
+  "coroflot.com",
+  "portfolio.adobe.com",
+  "adobe.com",
+  "krop.com",
+  "carbonmade.com",
+  "dunked.com",
+  "format.com",
+  "journoportfolio.com",
+  "designspiration.com",
+  "notion.site",
+  "notion.so",
+  "read.cv",
+]);
+
+function isContentForwardingAllowed(hostname: string): boolean {
+  const lower = hostname.toLowerCase().replace(/^www\./, "");
+  if (CONTENT_FORWARD_ALLOWED_DOMAINS.has(lower)) return true;
+  for (const allowed of CONTENT_FORWARD_ALLOWED_DOMAINS) {
+    if (lower.endsWith("." + allowed)) return true;
+  }
+  return false;
+}
+
 export async function enrichFromUrl(
   url: string,
   designerName?: string
 ): Promise<EnrichmentResult> {
+  const { validatePublicUrl, safeFetch, SsrfError } = await import('./utils/safe-fetch.js');
+
+  let validatedUrl: URL;
   try {
-    // First, attempt to fetch the actual page content
+    validatedUrl = await validatePublicUrl(url);
+  } catch (e: any) {
+    return {
+      success: false,
+      confidence: 0,
+      error: e.message,
+    };
+  }
+
+  const allowContentForwarding = isContentForwardingAllowed(validatedUrl.hostname);
+
+  try {
+    // First, attempt to fetch the actual page content.
+    // Content is only forwarded to OpenAI when the hostname is on the explicit
+    // allowlist above — for all other destinations we perform URL-only analysis.
     let pageContent = '';
     let fetchSucceeded = false;
     
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; TapestryBot/1.0; +https://tapestry.design)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const html = await response.text();
-        // Extract text content, removing scripts and styles
-        pageContent = html
-          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .substring(0, 15000); // Limit content size for API
-        fetchSucceeded = true;
+    if (allowContentForwarding) {
+      try {
+        const response = await safeFetch(validatedUrl.toString(), {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; TapestryBot/1.0; +https://tapestry.design)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+          signal: AbortSignal.timeout(10000),
+          maxBytes: 512 * 1024,
+        });
+        
+        if (response.ok) {
+          const html = await response.text();
+          // Extract text content, removing scripts and styles
+          pageContent = html
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 15000); // Limit content size for API
+          fetchSucceeded = true;
+        }
+      } catch (fetchError) {
+        if (fetchError instanceof SsrfError) {
+          return {
+            success: false,
+            confidence: 0,
+            error: fetchError.message,
+          };
+        }
+        console.log('Could not fetch URL directly, will analyze URL pattern:', fetchError);
+        // Continue with URL-based analysis if fetch fails (common for LinkedIn, etc.)
       }
-    } catch (fetchError) {
-      console.log('Could not fetch URL directly, will analyze URL pattern:', fetchError);
-      // Continue with URL-based analysis if fetch fails (common for LinkedIn, etc.)
     }
 
     const prompt = fetchSucceeded

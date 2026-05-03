@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import rateLimit from "express-rate-limit";
 import healthRouter from "./health";
 import { setupAuth } from "../auth";
 import { db } from "@workspace/db";
@@ -1786,12 +1787,21 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const targetUrl = new URL(url);
-      const response = await fetch(targetUrl.toString(), {
+      const { safeFetch, validatePublicUrl } = await import("../utils/safe-fetch.js");
+
+      let targetUrl: URL;
+      try {
+        targetUrl = await validatePublicUrl(url);
+      } catch (e: any) {
+        return res.status(400).json({ error: e.message });
+      }
+
+      const response = await safeFetch(targetUrl.toString(), {
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; OGPreviewBot/1.0)",
         },
         signal: AbortSignal.timeout(8000),
+        maxBytes: 512 * 1024,
       });
 
       if (!response.ok) {
@@ -5455,8 +5465,34 @@ Analyze this role and recommend matching designers, considering feedback pattern
     res.json({ success: true });
   }));
 
+  // Rate limiters for unauthenticated public portfolio endpoints
+  const publicPortfolioViewLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `${req.ip}:${req.params.slug}`,
+    message: { error: "Too many requests, please try again later" },
+  });
+
+  const publicPortfolioInquiryLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `${req.ip}:${req.params.slug}`,
+    message: { error: "Too many inquiry submissions, please try again later" },
+  });
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function truncate(value: unknown, max: number): string | undefined {
+    if (typeof value !== "string") return undefined;
+    return value.slice(0, max) || undefined;
+  }
+
   // Public portfolio view (no authentication required)
-  app.get("/api/public/portfolios/:slug", withErrorHandler(async (req, res) => {
+  app.get("/api/public/portfolios/:slug", publicPortfolioViewLimiter, withErrorHandler(async (req, res) => {
     const slug = req.params.slug;
 
     const portfolio = await db.query.portfolios.findFirst({
@@ -5486,31 +5522,50 @@ Analyze this role and recommend matching designers, considering feedback pattern
       return res.status(404).json({ error: "Portfolio not found" });
     }
 
-    // Track portfolio view
-    const userAgent = req.get('User-Agent') || '';
-    const viewerIp = req.ip || req.connection.remoteAddress || '';
-    const referrer = req.get('Referer') || '';
+    // Track portfolio view — truncate attacker-controlled headers, deduplicate by IP per hour
+    // Uses a single atomic INSERT ... WHERE NOT EXISTS to eliminate any read-then-write race.
+    const rawUserAgent = req.get('User-Agent') || '';
+    const rawReferrer = req.get('Referer') || '';
+    const viewerIp = (req.ip || '').slice(0, 100);
+    const userAgent = rawUserAgent.slice(0, 500);
+    const referrer = rawReferrer.slice(0, 500);
+    const device = rawUserAgent.includes('Mobile') ? 'mobile' : 'desktop';
 
-    await db.insert(portfolioViews)
-      .values({
-        portfolioId: portfolio.id,
-        viewerIp,
-        userAgent,
-        referrer,
-        device: userAgent.includes('Mobile') ? 'mobile' : 'desktop'
-      })
-      .catch(() => {}); // Ignore errors for view tracking
+    db.execute(
+      sql`INSERT INTO portfolio_views (portfolio_id, viewer_ip, user_agent, referrer, device)
+          SELECT ${portfolio.id}, ${viewerIp}, ${userAgent}, ${referrer}, ${device}
+          WHERE NOT EXISTS (
+            SELECT 1 FROM portfolio_views
+            WHERE portfolio_id = ${portfolio.id}
+              AND viewer_ip = ${viewerIp}
+              AND created_at > NOW() - INTERVAL '1 hour'
+          )`
+    ).catch(() => {}); // Ignore errors — view tracking is non-critical
 
     res.json(portfolio);
   }));
 
   // Submit portfolio inquiry
-  app.post("/api/public/portfolios/:slug/inquiries", withErrorHandler(async (req, res) => {
+  app.post("/api/public/portfolios/:slug/inquiries", publicPortfolioInquiryLimiter, withErrorHandler(async (req, res) => {
     const slug = req.params.slug;
-    const { name, email, company, subject, message, phone, budget, timeline, projectType } = req.body;
+    const body = req.body ?? {};
+
+    const name = truncate(body.name, 200);
+    const email = truncate(body.email, 254);
+    const company = truncate(body.company, 200);
+    const subject = truncate(body.subject, 500);
+    const message = truncate(body.message, 5000);
+    const phone = truncate(body.phone, 50);
+    const budget = truncate(body.budget, 100);
+    const timeline = truncate(body.timeline, 100);
+    const projectType = truncate(body.projectType, 100);
 
     if (!name || !email || !message) {
       return res.status(400).json({ error: "Name, email, and message are required" });
+    }
+
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "A valid email address is required" });
     }
 
     const portfolio = await db.query.portfolios.findFirst({

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import healthRouter from "./health";
 import { setupAuth } from "../auth";
 import { db } from "@workspace/db";
@@ -5471,7 +5471,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
     max: 60,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => `${req.ip}:${req.params.slug}`,
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? "")}:${req.params.slug}`,
     message: { error: "Too many requests, please try again later" },
   });
 
@@ -5480,7 +5480,7 @@ Analyze this role and recommend matching designers, considering feedback pattern
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => `${req.ip}:${req.params.slug}`,
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? "")}:${req.params.slug}`,
     message: { error: "Too many inquiry submissions, please try again later" },
   });
 

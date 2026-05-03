@@ -61,15 +61,24 @@ export function validateEnv(): void {
     );
   }
 
-  for (const w of warnings) logger.warn(w);
+  for (const w of warnings) {
+    console.warn(`[env] WARN: ${w}`);
+    logger.warn(w);
+  }
 
   if (errors.length > 0) {
-    for (const e of errors) logger.error(e);
+    const banner = `\n========== ENVIRONMENT MISCONFIGURATION (${env}) ==========`;
+    console.error(banner);
+    for (const e of errors) console.error(`[env] ERROR: ${e}`);
+    console.error("=".repeat(banner.length - 1) + "\n");
     throw new Error(
-      `Refusing to start in ${env} mode due to environment misconfiguration (${errors.length} error${errors.length === 1 ? "" : "s"}).`,
+      `Refusing to start in ${env} mode due to environment misconfiguration:\n  - ${errors.join("\n  - ")}`,
     );
   }
 
+  console.log(
+    `[env] Environment validated: env=${env} clerkInstance=${pkKind} dbHost=${dbUrl ? extractHostname(dbUrl) : "null"}`,
+  );
   logger.info(
     {
       env,

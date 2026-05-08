@@ -10,6 +10,7 @@ import { setupMobileAuth } from "./mobile-routes";
 import { setupMcpRoutes } from "./mcp-http";
 import { setupCliRoutes } from "./cli-routes";
 import { registerRoutes } from "./routes/routes";
+import { jsonErrorHandler } from "./middlewares/json-error-handler";
 
 const app: Express = express();
 
@@ -109,5 +110,46 @@ setupAuth(app);
 
 // Register all main API routes (includes health check at /api/healthz)
 registerRoutes(app);
+
+// Dev-only forced error routes to verify the JSON error handler.
+// Gated on NODE_ENV !== "production" AND an explicit ENABLE_DEBUG_ROUTES flag,
+// so they cannot accidentally ship in staging-style environments.
+if (process.env.NODE_ENV !== "production" && process.env.ENABLE_DEBUG_ROUTES === "true") {
+  app.get("/api/_debug/force-error", (req, _res, next) => {
+    const kind = (req.query.kind as string | undefined) ?? "generic";
+    if (kind === "undefined_column") {
+      const err = new Error('column "does_not_exist" does not exist') as Error & {
+        code?: string; table?: string; column?: string;
+      };
+      err.code = "42703";
+      err.table = "api_tokens";
+      err.column = "does_not_exist";
+      next(err);
+      return;
+    }
+    if (kind === "undefined_table") {
+      const err = new Error('relation "missing_table" does not exist') as Error & {
+        code?: string;
+      };
+      err.code = "42P01";
+      next(err);
+      return;
+    }
+    next(new Error("forced generic error"));
+  });
+  app.post("/mcp/_debug/force-error", (_req, _res, next) => {
+    const err = new Error('column "usage_count" does not exist') as Error & {
+      code?: string; table?: string; column?: string;
+    };
+    err.code = "42703";
+    err.table = "api_tokens";
+    err.column = "usage_count";
+    next(err);
+  });
+}
+
+// JSON error handler for /api and /mcp — must be registered last so it catches
+// errors thrown from any route handler. Express 5 forwards async errors here.
+app.use(jsonErrorHandler);
 
 export default app;

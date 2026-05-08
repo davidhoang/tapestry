@@ -39,6 +39,24 @@ Schema changes in `lib/db/src/schema/schema.ts` are applied to the **development
 
 When adding/altering columns, after the change is merged you must tell the user to re-publish, otherwise production code that reads the new columns will throw "column does not exist" errors (this is exactly what caused the MCP `/mcp` 500s when `api_tokens.usage_count` shipped without a re-publish). Do **not** run `drizzle-kit push`, `psql`, or any custom migration script against production, and do **not** add startup-time DDL or deploy-build hooks to "self-heal" prod.
 
+### Web/API/Mobile auth keys (Clerk)
+
+Clerk keys are stored as **global Replit Secrets**, but the dev scripts use a `CLERK_DEV_*` fallback pattern so the Replit preview, the published web app, and the mobile app all see the right key without manual swapping at publish time.
+
+Required global Secrets:
+
+| Secret | Value | Used by |
+| --- | --- | --- |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_live_…` | Production web + mobile (default) |
+| `CLERK_SECRET_KEY` | `sk_live_…` | Production API server (default) |
+| `CLERK_DEV_PUBLISHABLE_KEY` | `pk_test_…` | Replit dev preview override (web, API, Expo) |
+| `CLERK_DEV_SECRET_KEY` | `sk_test_…` | Replit dev preview override (API server) |
+
+How the fallback works: each artifact's `dev` script in `package.json` exports the Clerk env vars using bash defaulting, e.g. `VITE_CLERK_PUBLISHABLE_KEY=${CLERK_DEV_PUBLISHABLE_KEY:-$VITE_CLERK_PUBLISHABLE_KEY}`. In the dev preview, `CLERK_DEV_*` is set so the test key wins; in production builds the dev script doesn't run, so the live `pk_live_…` / `sk_live_…` values are used directly. The Expo dev script also maps `CLERK_DEV_PUBLISHABLE_KEY` → `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, so there's no separate mobile dev secret to manage.
+
+Why this pattern (not per-environment Secrets): Replit's per-environment env-var mechanism stores values in `.replit`, which is committed to git — putting `CLERK_SECRET_KEY` there would leak it. Per-environment encrypted Secrets aren't available in this workspace's UI yet, so the `CLERK_DEV_*` override is the safest equivalent.
+
+Using the `pk_test_…` key in development is what avoids the "Production Keys are only allowed for domain 'tapestry.design'" error in the Replit preview. If you ever need to add another Clerk-related secret (e.g. a webhook signing secret), follow the same naming pattern: store the live value under its real name and the dev value under a `CLERK_DEV_*` alias, then mirror it in the dev script with `${CLERK_DEV_FOO:-$FOO}`.
+
 ### Mobile setup notes
-- Production-only Clerk key (`clerk.tapestry.design`) blocks the dev preview domain. Dev work needs a Clerk dev instance key in `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`.
 - For deployed builds, set `EXPO_PUBLIC_API_URL` to the published API origin (otherwise it falls back to `EXPO_PUBLIC_DOMAIN` / `REPLIT_DEV_DOMAIN`).

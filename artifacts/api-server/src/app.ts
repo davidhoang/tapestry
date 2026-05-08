@@ -87,6 +87,66 @@ app.use((req, res, next) => {
 
 app.use(apiLimiter);
 
+// Diagnostic endpoint — no auth, no secrets, just shows DB connectivity status.
+// Use this to verify in production that PRODUCTION_DATABASE_URL is being read
+// and the DB is actually reachable from the deployed container.
+app.get("/api/healthz/diagnostics", async (_req, res) => {
+  const rawUrl =
+    process.env.PRODUCTION_DATABASE_URL || process.env.DATABASE_URL || "";
+  let dbHost = "unknown";
+  let dbSource: "PRODUCTION_DATABASE_URL" | "DATABASE_URL" | "none" = "none";
+  if (process.env.PRODUCTION_DATABASE_URL) dbSource = "PRODUCTION_DATABASE_URL";
+  else if (process.env.DATABASE_URL) dbSource = "DATABASE_URL";
+  try {
+    if (rawUrl) dbHost = new URL(rawUrl).hostname;
+  } catch {
+    dbHost = "invalid-url";
+  }
+  let dbReachable = false;
+  let dbLatencyMs: number | null = null;
+  let dbError: string | null = null;
+  try {
+    const { db } = await import("@workspace/db");
+    const { sql } = await import("drizzle-orm");
+    const start = Date.now();
+    await Promise.race([
+      db.execute(sql`select 1 as ok`),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("db query timeout (5s)")), 5000),
+      ),
+    ]);
+    dbLatencyMs = Date.now() - start;
+    dbReachable = true;
+  } catch (err) {
+    const e = err as { code?: string; message?: string };
+    dbError = `${e?.code ?? ""} ${e?.message ?? String(err)}`.trim();
+  }
+  res.json({
+    env: process.env.NODE_ENV ?? "unknown",
+    dbSource,
+    dbHost,
+    dbReachable,
+    dbLatencyMs,
+    dbError,
+    clerk: {
+      hasPublishableKey: !!process.env.VITE_CLERK_PUBLISHABLE_KEY,
+      publishableKeyKind: process.env.VITE_CLERK_PUBLISHABLE_KEY?.startsWith(
+        "pk_live_",
+      )
+        ? "live"
+        : process.env.VITE_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_")
+          ? "test"
+          : "unknown",
+      hasSecretKey: !!process.env.CLERK_SECRET_KEY,
+      secretKeyKind: process.env.CLERK_SECRET_KEY?.startsWith("sk_live_")
+        ? "live"
+        : process.env.CLERK_SECRET_KEY?.startsWith("sk_test_")
+          ? "test"
+          : "unknown",
+    },
+  });
+});
+
 // Clerk middleware — validates session tokens from both cookies (web) and Bearer headers (mobile/CLI)
 app.use(clerkMiddleware({
   publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,

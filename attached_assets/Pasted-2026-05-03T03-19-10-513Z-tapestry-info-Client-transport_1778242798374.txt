@@ -1,0 +1,241 @@
+2026-05-03T03:19:10.513Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-03T03:19:10.513Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-05-03T04:41:39.619Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-05-03T04:41:39.640Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      '-y',
+      'mcp-remote',
+      'https://tapestry.design/mcp',
+      '--header',
+      'Authorization: Bearer tap_RAaeTU4q82aEW6NWH4Kj0oyax-4LTPbo2k0MWF7AwAA',
+      [length]: 5
+    ],
+    paths: [
+      '/Users/davidhoang/.antigravity/antigravity/bin',
+      '/Users/davidhoang/.opencode/bin',
+      '/Users/davidhoang/.local/bin',
+      '/Users/davidhoang/.pyenv/shims',
+      '/Users/davidhoang/.pyenv/bin',
+      '/opt/homebrew/bin',
+      '/opt/homebrew/sbin',
+      '/usr/local/bin',
+      '/System/Cryptexes/App/usr/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin',
+      '/opt/pmk/env/global/bin',
+      '/Library/Apple/usr/bin',
+      '/Applications/Obsidian.app/Contents/MacOS',
+      '/Users/davidhoang/.lmstudio/bin',
+      '/Users/davidhoang/Library/pnpm',
+      [length]: 21
+    ]
+  }
+} %o
+2026-05-03T04:41:39.642Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-05-03T04:41:39.647Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[80792] Using automatically selected callback port: 17932
+[80792] Using custom headers: {"Authorization":"Bearer tap_RAaeTU4q82aEW6NWH4Kj0oyax-4LTPbo2k0MWF7AwAA"}
+[80792] Discovering OAuth server configuration...
+[80792] [80792] Connecting to remote server: https://tapestry.design/mcp
+[80792] Using transport strategy: http-first
+[80792] Connection error: StreamableHTTPError: Streamable HTTP error: Error POSTing to endpoint: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Internal Server Error</pre>
+<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-referral-code="q55dlyo2y996" data-repl-id="28ce8c8f-bd0b-42e1-bd63-3d692386114f"></script></body>
+</html>
+
+    at StreamableHTTPClientTransport.send (file:///Users/davidhoang/.npm/_npx/705d23756ff7dacc/node_modules/mcp-remote/dist/chunk-65X3S4HB.js:19897:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 500
+}
+[80792] Fatal error: StreamableHTTPError: Streamable HTTP error: Error POSTing to endpoint: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Internal Server Error</pre>
+<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-referral-code="q55dlyo2y996" data-repl-id="28ce8c8f-bd0b-42e1-bd63-3d692386114f"></script></body>
+</html>
+
+    at StreamableHTTPClientTransport.send (file:///Users/davidhoang/.npm/_npx/705d23756ff7dacc/node_modules/mcp-remote/dist/chunk-65X3S4HB.js:19897:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 500
+}
+2026-05-03T04:41:43.839Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-05-03T04:41:43.840Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-05-03T04:41:43.840Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-05-03T04:41:43.840Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-03T04:41:43.840Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-03T15:23:49.628Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-05-03T15:23:49.653Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      '-y',
+      'mcp-remote',
+      'https://tapestry.design/mcp',
+      '--header',
+      'Authorization: Bearer tap_RAaeTU4q82aEW6NWH4Kj0oyax-4LTPbo2k0MWF7AwAA',
+      [length]: 5
+    ],
+    paths: [
+      '/Users/davidhoang/.antigravity/antigravity/bin',
+      '/Users/davidhoang/.opencode/bin',
+      '/Users/davidhoang/.local/bin',
+      '/Users/davidhoang/.pyenv/shims',
+      '/Users/davidhoang/.pyenv/bin',
+      '/opt/homebrew/bin',
+      '/opt/homebrew/sbin',
+      '/usr/local/bin',
+      '/System/Cryptexes/App/usr/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin',
+      '/opt/pmk/env/global/bin',
+      '/Library/Apple/usr/bin',
+      '/Applications/Obsidian.app/Contents/MacOS',
+      '/Users/davidhoang/.lmstudio/bin',
+      '/Users/davidhoang/Library/pnpm',
+      [length]: 21
+    ]
+  }
+} %o
+2026-05-03T15:23:49.657Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-05-03T15:23:49.695Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[3334] Using automatically selected callback port: 17932
+[3334] Using custom headers: {"Authorization":"Bearer tap_RAaeTU4q82aEW6NWH4Kj0oyax-4LTPbo2k0MWF7AwAA"}
+[3334] Discovering OAuth server configuration...
+[3334] [3334] Connecting to remote server: https://tapestry.design/mcp
+[3334] Using transport strategy: http-first
+[3334] Connection error: StreamableHTTPError: Streamable HTTP error: Error POSTing to endpoint: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Internal Server Error</pre>
+</body>
+</html>
+
+    at StreamableHTTPClientTransport.send (file:///Users/davidhoang/.npm/_npx/705d23756ff7dacc/node_modules/mcp-remote/dist/chunk-65X3S4HB.js:19897:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 500
+}
+[3334] Fatal error: StreamableHTTPError: Streamable HTTP error: Error POSTing to endpoint: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Internal Server Error</pre>
+</body>
+</html>
+
+    at StreamableHTTPClientTransport.send (file:///Users/davidhoang/.npm/_npx/705d23756ff7dacc/node_modules/mcp-remote/dist/chunk-65X3S4HB.js:19897:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 500
+}
+2026-05-03T15:24:03.381Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-05-03T15:24:03.381Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-05-03T15:24:03.381Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-05-03T15:24:03.381Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-03T15:24:03.381Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-08T12:18:30.763Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-08T12:18:30.763Z [tapestry] [info] Shutting down server... { metadata: undefined }
+2026-05-08T12:18:39.652Z [tapestry] [info] Initializing server... { metadata: undefined }
+2026-05-08T12:18:39.684Z [tapestry] [info] Using MCP server command: /opt/homebrew/bin/npx with args and path: {
+  metadata: {
+    args: [
+      '-y',
+      'mcp-remote',
+      'https://tapestry.design/mcp',
+      '--header',
+      'Authorization: Bearer tap_RAaeTU4q82aEW6NWH4Kj0oyax-4LTPbo2k0MWF7AwAA',
+      [length]: 5
+    ],
+    paths: [
+      '/Users/davidhoang/.antigravity/antigravity/bin',
+      '/Users/davidhoang/.opencode/bin',
+      '/Users/davidhoang/.local/bin',
+      '/Users/davidhoang/.pyenv/shims',
+      '/Users/davidhoang/.pyenv/bin',
+      '/opt/homebrew/bin',
+      '/opt/homebrew/sbin',
+      '/usr/local/bin',
+      '/System/Cryptexes/App/usr/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin',
+      '/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin',
+      '/opt/pmk/env/global/bin',
+      '/Library/Apple/usr/bin',
+      '/Applications/Obsidian.app/Contents/MacOS',
+      '/Users/davidhoang/.lmstudio/bin',
+      '/Users/davidhoang/Library/pnpm',
+      [length]: 21
+    ]
+  }
+} %o
+2026-05-08T12:18:39.685Z [tapestry] [info] Server started and connected successfully { metadata: undefined }
+2026-05-08T12:18:39.723Z [tapestry] [info] Message from client: {"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}},"clientInfo":{"name":"claude-ai","version":"0.1.0"}},"jsonrpc":"2.0","id":0} { metadata: undefined }
+[37797] Using automatically selected callback port: 17932
+[37797] Using custom headers: {"Authorization":"Bearer tap_RAaeTU4q82aEW6NWH4Kj0oyax-4LTPbo2k0MWF7AwAA"}
+[37797] Discovering OAuth server configuration...
+[37797] [37797] Connecting to remote server: https://tapestry.design/mcp
+[37797] Using transport strategy: http-first
+[37797] Connection error: StreamableHTTPError: Streamable HTTP error: Error POSTing to endpoint: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Internal Server Error</pre>
+</body>
+</html>
+
+    at StreamableHTTPClientTransport.send (file:///Users/davidhoang/.npm/_npx/705d23756ff7dacc/node_modules/mcp-remote/dist/chunk-65X3S4HB.js:19897:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 500
+}
+[37797] Fatal error: StreamableHTTPError: Streamable HTTP error: Error POSTing to endpoint: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Internal Server Error</pre>
+</body>
+</html>
+
+    at StreamableHTTPClientTransport.send (file:///Users/davidhoang/.npm/_npx/705d23756ff7dacc/node_modules/mcp-remote/dist/chunk-65X3S4HB.js:19897:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 500
+}
+2026-05-08T12:18:43.207Z [tapestry] [info] Server transport closed { metadata: undefined }
+2026-05-08T12:18:43.207Z [tapestry] [info] Server transport closed unexpectedly, this is likely due to the process exiting early. If you are developing this MCP server you can add output to stderr (i.e. `console.error('...')` in JavaScript, `print('...', file=sys.stderr)` in python) and it will appear in this log. { metadata: undefined }
+2026-05-08T12:18:43.207Z [tapestry] [error] Server disconnected. For troubleshooting guidance, please visit our [debugging documentation](https://modelcontextprotocol.io/docs/tools/debugging) { metadata: { context: 'connection', stack: undefined } }
+2026-05-08T12:18:43.207Z [tapestry] [info] Client transport closed { metadata: undefined }
+2026-05-08T12:18:43.207Z [tapestry] [info] Client transport closed { metadata: undefined }

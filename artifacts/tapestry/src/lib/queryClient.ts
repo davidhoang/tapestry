@@ -1,6 +1,6 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
-// Module-level token provider — set by ClerkTokenSync in main.tsx
 let _getToken: (() => Promise<string | null>) | null = null;
 
 export function setTokenProvider(fn: () => Promise<string | null>) {
@@ -16,6 +16,68 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     // ignore token errors
   }
   return {};
+}
+
+export interface ApiErrorBody {
+  error?: string;
+  message?: string;
+  requestId?: string | number;
+  code?: string;
+  table?: string;
+  column?: string;
+  detail?: string;
+  pgCode?: string;
+  [key: string]: unknown;
+}
+
+export class ApiError extends Error {
+  status: number;
+  statusText: string;
+  requestId?: string | number;
+  code?: string;
+  errorKind?: string;
+  body: ApiErrorBody | null;
+
+  constructor(status: number, statusText: string, body: ApiErrorBody | null, fallbackText: string) {
+    const message =
+      (body && typeof body.message === "string" && body.message) ||
+      fallbackText ||
+      `${status} ${statusText}`;
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.statusText = statusText;
+    this.body = body;
+    this.requestId = body?.requestId;
+    this.code = body?.code ?? body?.pgCode;
+    this.errorKind = body?.error;
+  }
+
+  get isSchemaMismatch(): boolean {
+    return this.errorKind === "database_schema_mismatch";
+  }
+}
+
+async function readErrorBody(res: Response): Promise<{ body: ApiErrorBody | null; text: string }> {
+  const text = await res.text().catch(() => "");
+  if (!text) return { body: null, text: "" };
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === "object") {
+        return { body: parsed as ApiErrorBody, text };
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return { body: null, text };
+}
+
+async function throwApiError(res: Response): Promise<never> {
+  const { body, text } = await readErrorBody(res);
+  throw new ApiError(res.status, res.statusText, body, text || res.statusText);
 }
 
 interface ApiRequestOptions {
@@ -51,16 +113,61 @@ export async function apiRequest(url: string, options: ApiRequestOptions = {}) {
   });
 
   if (!response.ok) {
-    if (response.status >= 500) {
-      throw new Error(`${response.status}: ${response.statusText}`);
-    }
-    throw new Error(`${response.status}: ${await response.text()}`);
+    await throwApiError(response);
   }
 
   return response.json();
 }
 
+function describeError(err: unknown): { title: string; description: string } | null {
+  if (!(err instanceof ApiError)) return null;
+  if (err.status < 500) return null;
+
+  if (err.isSchemaMismatch) {
+    const where =
+      err.body?.table && err.body?.column
+        ? ` (${err.body.table}.${err.body.column})`
+        : err.body?.table
+          ? ` (${err.body.table})`
+          : "";
+    const idSuffix = err.requestId ? ` (id: ${err.requestId})` : "";
+    return {
+      title: "Database is out of sync",
+      description: `The production schema is missing fields this app needs${where}. Re-publish the app to apply pending migrations.${idSuffix}`,
+    };
+  }
+
+  const idSuffix = err.requestId ? ` (id: ${err.requestId})` : "";
+  return {
+    title: "Something went wrong",
+    description: `${err.message}${idSuffix}. Please retry or contact support.`,
+  };
+}
+
+const recentErrorToasts = new Map<string, number>();
+const ERROR_TOAST_DEDUP_MS = 4000;
+
+function showErrorToast(err: unknown) {
+  const desc = describeError(err);
+  if (!desc) return;
+  const key = `${desc.title}::${desc.description}`;
+  const now = Date.now();
+  const last = recentErrorToasts.get(key);
+  if (last && now - last < ERROR_TOAST_DEDUP_MS) return;
+  recentErrorToasts.set(key, now);
+  toast({
+    variant: "destructive",
+    title: desc.title,
+    description: desc.description,
+  });
+}
+
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      showErrorToast(error);
+    },
+  }),
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
@@ -71,11 +178,7 @@ export const queryClient = new QueryClient({
         });
 
         if (!res.ok) {
-          if (res.status >= 500) {
-            throw new Error(`${res.status}: ${res.statusText}`);
-          }
-
-          throw new Error(`${res.status}: ${await res.text()}`);
+          await throwApiError(res);
         }
 
         return res.json();
@@ -87,6 +190,9 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-    }
+      onError: (error) => {
+        showErrorToast(error);
+      },
+    },
   },
 });

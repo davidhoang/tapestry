@@ -15,6 +15,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 // Eager-loaded pages (critical path)
 import HomePage from "./pages/HomePage";
 import RegisterPage from "./pages/RegisterPage";
+import AuthPage from "./pages/AuthPage";
 
 // Lazy-loaded pages for better initial bundle size
 const DirectoryPage = lazy(() => import("./pages/DirectoryPage"));
@@ -203,6 +204,7 @@ function App() {
                 <Route path="/docs">{() => { window.location.replace('/docs/mcp'); return null; }}</Route>
                 {!user && <Route path="/" component={HomePage} />}
                 <Route path="/register" component={RegisterPage} />
+                <Route path="/auth" component={AuthPage} />
                 <Route path="/invite/:token" component={InvitePage} />
                 {user ? (
                   <>

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SelectUser } from "@db/schema";
 import { getAuthHeaders } from '../lib/queryClient';
 import { useState, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export function useUser() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -39,11 +40,27 @@ export function useUser() {
   const isLoading = !effectivelyLoaded || (!!isSignedIn && isUserLoading);
 
   const login = async (_userData?: any) => {
+    // Redirect-based sign-in is the primary path. The Clerk modal relies on
+    // cross-origin iframes / partitioned storage, which silently no-ops in
+    // browsers like Dia. A full-page redirect to the in-app /auth route works
+    // consistently across Chrome, Safari, Firefox, Arc, Edge, and Dia.
+    const here = window.location.pathname + window.location.search + window.location.hash;
+    const base = import.meta.env.BASE_URL || '/';
+    const target = `${base}auth?redirect_url=${encodeURIComponent(here || '/')}`;
+
     if (!isLoaded) {
-      window.location.href = 'https://accounts.tapestry.design/sign-in';
-      return { ok: true as const };
+      // Clerk hasn't initialized yet (e.g. blocked FAPI). Log a breadcrumb so
+      // we can see how often this happens in production, and surface the
+      // degraded path to the user instead of failing silently.
+      // eslint-disable-next-line no-console
+      console.warn('[auth] Clerk not loaded at sign-in click; redirecting to /auth');
+      toast({
+        title: 'Opening sign in…',
+        description: "Taking you to the sign-in page.",
+      });
     }
-    openSignIn();
+
+    window.location.href = target;
     return { ok: true as const };
   };
 

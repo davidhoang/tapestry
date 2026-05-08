@@ -90,6 +90,19 @@ export async function resolveClerkUser(
     (req as any).isAuthenticated = () => true;
     (req as any).isUnauthenticated = () => false;
   } catch (error) {
+    // Surface the real error to deploy logs (pino) instead of swallowing it
+    // with console.error. This was hiding production DB connectivity failures
+    // (e.g. unreachable "helium" DATABASE_URL) which silently produced 401s.
+    const err = error as { code?: string; message?: string; stack?: string };
+    (req as any).log?.error(
+      {
+        clerkUserId,
+        errCode: err?.code,
+        errMessage: err?.message,
+        errStack: err?.stack,
+      },
+      'Clerk user resolution failed',
+    );
     console.error('Clerk user resolution error:', error);
   }
 

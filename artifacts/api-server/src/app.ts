@@ -1,3 +1,19 @@
+// Clerk key resolution: in production, prefer CLERK_LIVE_* if set so we can
+// keep the working test (pk_test_/sk_test_) keys in workspace secrets for
+// the dev preview while production uses the live (pk_live_/sk_live_) keys.
+// Must run before importing @clerk/express so the clerkClient singleton picks
+// these up from process.env on first use.
+if (process.env.NODE_ENV === "production") {
+  if (process.env.CLERK_LIVE_PUBLISHABLE_KEY) {
+    process.env.VITE_CLERK_PUBLISHABLE_KEY =
+      process.env.CLERK_LIVE_PUBLISHABLE_KEY;
+    process.env.CLERK_PUBLISHABLE_KEY = process.env.CLERK_LIVE_PUBLISHABLE_KEY;
+  }
+  if (process.env.CLERK_LIVE_SECRET_KEY) {
+    process.env.CLERK_SECRET_KEY = process.env.CLERK_LIVE_SECRET_KEY;
+  }
+}
+
 import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -91,12 +107,19 @@ app.use(apiLimiter);
 // Use this to verify in production that PRODUCTION_DATABASE_URL is being read
 // and the DB is actually reachable from the deployed container.
 app.get("/api/healthz/diagnostics", async (_req, res) => {
-  const rawUrl =
-    process.env.PRODUCTION_DATABASE_URL || process.env.DATABASE_URL || "";
+  // Mirror the gating in lib/db/src/index.ts so what the diagnostic reports
+  // matches what the app actually connects with.
+  const isProd = process.env.NODE_ENV === "production";
+  const rawUrl = isProd
+    ? process.env.PRODUCTION_DATABASE_URL || process.env.DATABASE_URL || ""
+    : process.env.DATABASE_URL || process.env.PRODUCTION_DATABASE_URL || "";
   let dbHost = "unknown";
   let dbSource: "PRODUCTION_DATABASE_URL" | "DATABASE_URL" | "none" = "none";
-  if (process.env.PRODUCTION_DATABASE_URL) dbSource = "PRODUCTION_DATABASE_URL";
+  if (isProd && process.env.PRODUCTION_DATABASE_URL)
+    dbSource = "PRODUCTION_DATABASE_URL";
   else if (process.env.DATABASE_URL) dbSource = "DATABASE_URL";
+  else if (process.env.PRODUCTION_DATABASE_URL)
+    dbSource = "PRODUCTION_DATABASE_URL";
   try {
     if (rawUrl) dbHost = new URL(rawUrl).hostname;
   } catch {
@@ -158,6 +181,9 @@ app.get("/api/healthz/diagnostics", async (_req, res) => {
         : process.env.CLERK_SECRET_KEY?.startsWith("sk_test_")
           ? "test"
           : "unknown",
+      liveOverrideAvailable:
+        !!process.env.CLERK_LIVE_PUBLISHABLE_KEY &&
+        !!process.env.CLERK_LIVE_SECRET_KEY,
     },
   });
 });

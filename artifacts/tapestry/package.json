@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "VITE_CLERK_PUBLISHABLE_KEY=${CLERK_DEV_PUBLISHABLE_KEY:-$VITE_CLERK_PUBLISHABLE_KEY} vite --config vite.config.ts --host 0.0.0.0",
-    "build": "VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY:-$CLERK_DEV_PUBLISHABLE_KEY} sh -c 'if [ -z \"$VITE_CLERK_PUBLISHABLE_KEY\" ]; then echo \"ERROR: VITE_CLERK_PUBLISHABLE_KEY is required to build the web app. Set VITE_CLERK_PUBLISHABLE_KEY or CLERK_DEV_PUBLISHABLE_KEY before building. Without a key, the app builds successfully but crashes on launch when Clerk fails to initialize.\" >&2; exit 1; fi; vite build --config vite.config.ts'",
+    "dev": "CLERK_LIVE_PUBLISHABLE_KEY= VITE_CLERK_PUBLISHABLE_KEY=${CLERK_DEV_PUBLISHABLE_KEY:-$VITE_CLERK_PUBLISHABLE_KEY} vite --config vite.config.ts --host 0.0.0.0",
+    "build": "VITE_CLERK_PUBLISHABLE_KEY=${CLERK_LIVE_PUBLISHABLE_KEY:-${VITE_CLERK_PUBLISHABLE_KEY:-$CLERK_DEV_PUBLISHABLE_KEY}} sh -c 'if [ -z \"$VITE_CLERK_PUBLISHABLE_KEY\" ]; then echo \"ERROR: VITE_CLERK_PUBLISHABLE_KEY is required to build the web app. Set CLERK_LIVE_PUBLISHABLE_KEY (preferred for prod), VITE_CLERK_PUBLISHABLE_KEY, or CLERK_DEV_PUBLISHABLE_KEY before building. Without a key, the app builds successfully but crashes on launch when Clerk fails to initialize.\" >&2; exit 1; fi; vite build --config vite.config.ts'",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -1,8 +1,11 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
 
+// drizzle-kit (push/migrate) is a dev-time tool — always target the local
+// dev DATABASE_URL unless the caller explicitly opts into prod by setting
+// only PRODUCTION_DATABASE_URL (no DATABASE_URL).
 const connectionString =
-  process.env.PRODUCTION_DATABASE_URL || process.env.DATABASE_URL;
+  process.env.DATABASE_URL || process.env.PRODUCTION_DATABASE_URL;
 
 if (!connectionString) {
   throw new Error(

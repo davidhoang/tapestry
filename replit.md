@@ -47,12 +47,20 @@ Required global Secrets:
 
 | Secret | Value | Used by |
 | --- | --- | --- |
-| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_live_…` | Production web + mobile (default) |
-| `CLERK_SECRET_KEY` | `sk_live_…` | Production API server (default) |
-| `CLERK_DEV_PUBLISHABLE_KEY` | `pk_test_…` | Replit dev preview override (web, API, Expo) |
-| `CLERK_DEV_SECRET_KEY` | `sk_test_…` | Replit dev preview override (API server) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_test_…` | Default key for web + mobile (used by dev preview) |
+| `CLERK_SECRET_KEY` | `sk_test_…` | Default key for API server (used by dev preview) |
+| `CLERK_DEV_PUBLISHABLE_KEY` | `pk_test_…` | Explicit dev preview override (web, API, Expo) |
+| `CLERK_DEV_SECRET_KEY` | `sk_test_…` | Explicit dev preview override (API server) |
+| `CLERK_LIVE_PUBLISHABLE_KEY` | `pk_live_…` | Production override (web build + API server runtime) |
+| `CLERK_LIVE_SECRET_KEY` | `sk_live_…` | Production override (API server runtime) |
 
-How the fallback works: each artifact's `dev` script in `package.json` exports the Clerk env vars using bash defaulting, e.g. `VITE_CLERK_PUBLISHABLE_KEY=${CLERK_DEV_PUBLISHABLE_KEY:-$VITE_CLERK_PUBLISHABLE_KEY}`. In the dev preview, `CLERK_DEV_*` is set so the test key wins; in production builds the dev script doesn't run, so the live `pk_live_…` / `sk_live_…` values are used directly. The Expo dev script also maps `CLERK_DEV_PUBLISHABLE_KEY` → `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, so there's no separate mobile dev secret to manage.
+How the fallback works:
+
+- **Production**: the API server's `app.ts` runs an early `process.env` swap when `NODE_ENV === "production"`: if `CLERK_LIVE_*` is set, it overwrites `VITE_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` / `CLERK_PUBLISHABLE_KEY` before `@clerk/express` initializes. The web build script (`artifacts/tapestry/package.json` → `build`) also prefers `CLERK_LIVE_PUBLISHABLE_KEY` so the bundle inlines the live key.
+- **Dev preview**: each artifact's `dev` script wipes `CLERK_LIVE_*` (`CLERK_LIVE_PUBLISHABLE_KEY=` prefix) and exports `${CLERK_DEV_*:-$VITE_CLERK_PUBLISHABLE_KEY}`, so dev always uses test keys regardless of what's in workspace secrets.
+- The Expo dev script also maps `CLERK_DEV_PUBLISHABLE_KEY` → `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`. For published Expo builds, set `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_…` separately.
+
+You can verify what's actually being used at runtime by hitting `/api/healthz/diagnostics` (no auth required). It returns `clerk.publishableKeyKind` / `secretKeyKind` (`"live"` or `"test"`) and `liveOverrideAvailable`.
 
 Why this pattern (not per-environment Secrets): Replit's per-environment env-var mechanism stores values in `.replit`, which is committed to git — putting `CLERK_SECRET_KEY` there would leak it. Per-environment encrypted Secrets aren't available in this workspace's UI yet, so the `CLERK_DEV_*` override is the safest equivalent.
 

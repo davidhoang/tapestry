@@ -118,8 +118,23 @@ app.get("/api/healthz/diagnostics", async (_req, res) => {
     dbLatencyMs = Date.now() - start;
     dbReachable = true;
   } catch (err) {
-    const e = err as { code?: string; message?: string };
-    dbError = `${e?.code ?? ""} ${e?.message ?? String(err)}`.trim();
+    const parts: string[] = [];
+    let current: unknown = err;
+    let depth = 0;
+    while (current && depth < 5) {
+      const e = current as {
+        code?: string;
+        message?: string;
+        cause?: unknown;
+        name?: string;
+      };
+      parts.push(
+        `[${e?.name ?? "Error"}${e?.code ? ` ${e.code}` : ""}] ${e?.message ?? String(current)}`,
+      );
+      current = e?.cause;
+      depth++;
+    }
+    dbError = parts.join(" → ");
   }
   res.json({
     env: process.env.NODE_ENV ?? "unknown",

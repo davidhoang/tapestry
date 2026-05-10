@@ -8,7 +8,7 @@ import {
 import { Request, Response, Express } from "express";
 import { db } from "@workspace/db";
 import { designers, lists, listDesigners, workspaces, apiTokens, designerEvents, workspaceMembers } from "@workspace/db";
-import { eq, and, desc, or, ilike, sql } from "drizzle-orm";
+import { eq, and, desc, or, ilike, sql, not } from "drizzle-orm";
 import crypto from "crypto";
 
 interface AuthContext {
@@ -84,6 +84,14 @@ interface ListIdArgs {
 interface CreateListArgs {
   name: string;
   description?: string;
+  isPublic?: boolean;
+}
+
+interface UpdateListArgs {
+  listId: number;
+  name?: string;
+  description?: string;
+  summary?: string;
   isPublic?: boolean;
 }
 
@@ -340,6 +348,21 @@ const TOOLS = [
         isPublic: { type: "boolean", description: "Whether the list is publicly shareable" }
       },
       required: ["name"]
+    }
+  },
+  {
+    name: "update_list",
+    description: "Update an existing designer list's name, description, summary, or public-share flag",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        listId: { type: "number", description: "The list ID to update" },
+        name: { type: "string", description: "New list name" },
+        description: { type: "string", description: "New list description" },
+        summary: { type: "string", description: "New list summary" },
+        isPublic: { type: "boolean", description: "Whether the list is publicly shareable" }
+      },
+      required: ["listId"]
     }
   },
   {
@@ -944,6 +967,78 @@ async function handleToolCall(name: string, args: Record<string, unknown>, authC
             success: true,
             message: `Created list "${newList.name}"`,
             list: { id: newList.id, name: newList.name, slug: newList.slug }
+          }, null, 2)
+        }]
+      };
+    }
+
+    case "update_list": {
+      const { listId, name, description, summary, isPublic } = args as UpdateListArgs;
+
+      if (!['owner', 'admin', 'editor'].includes(authContext.role)) {
+        return {
+          content: [{ type: "text", text: "Error: You don't have permission to modify lists. Required role: editor, admin, or owner." }],
+          isError: true
+        };
+      }
+
+      const list = await db.query.lists.findFirst({
+        where: and(eq(lists.id, listId), eq(lists.workspaceId, authContext.workspaceId))
+      });
+
+      if (!list) {
+        return { content: [{ type: "text", text: `Error: List with ID ${listId} not found in your workspace.` }], isError: true };
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (name !== undefined) {
+        if (typeof name !== 'string' || name.trim().length === 0) {
+          return {
+            content: [{ type: "text", text: "Error: name cannot be empty." }],
+            isError: true
+          };
+        }
+        updateData.name = name;
+        if (name !== list.name) {
+          const { generateSlug, generateUniqueSlug } = await import('./utils/slug');
+          let slug = generateSlug(name);
+          const existingList = await db.query.lists.findFirst({
+            where: and(eq(lists.slug, slug), not(eq(lists.id, listId)))
+          });
+          if (existingList) slug = generateUniqueSlug(slug);
+          updateData.slug = slug;
+        }
+      }
+      if (description !== undefined) updateData.description = description;
+      if (summary !== undefined) updateData.summary = summary;
+      if (isPublic !== undefined) updateData.isPublic = isPublic;
+
+      if (Object.keys(updateData).length === 0) {
+        return {
+          content: [{ type: "text", text: "Error: Provide at least one field to update (name, description, summary, or isPublic)." }],
+          isError: true
+        };
+      }
+
+      const [updated] = await db.update(lists)
+        .set(updateData)
+        .where(and(eq(lists.id, listId), eq(lists.workspaceId, authContext.workspaceId)))
+        .returning();
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: true,
+            message: `Updated list "${updated.name}"`,
+            list: {
+              id: updated.id,
+              name: updated.name,
+              slug: updated.slug,
+              description: updated.description,
+              summary: updated.summary,
+              isPublic: updated.isPublic,
+            }
           }, null, 2)
         }]
       };

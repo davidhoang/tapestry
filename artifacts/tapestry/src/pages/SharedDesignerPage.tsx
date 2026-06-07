@@ -10,7 +10,6 @@ import { getAuthHeaders } from "@/lib/queryClient";
 import { slugify } from "@/utils/slugify";
 import { MapPin, Briefcase, ExternalLink, Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { useClerk } from "@clerk/react";
 
 interface SharedDesigner {
   id: number;
@@ -30,15 +29,19 @@ interface SharedDesigner {
 
 export default function SharedDesignerPage() {
   const shareToken = window.location.pathname.split('/')[2];
-  const { user, isLoading: isUserLoading } = useUser();
+  const { user, isLoading: isUserLoading, login } = useUser();
   const [, setLocation] = useLocation();
-  const { openSignIn } = useClerk();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      openSignIn({ redirectUrl: window.location.href });
+      // Use the redirect-based login() helper from use-user. The Clerk modal
+      // path relies on cross-origin iframes / partitioned storage which
+      // silently no-ops in browsers like Dia; a full-page redirect to /auth
+      // works consistently and lands the visitor back on this shared
+      // designer page after auth.
+      void login();
     }
-  }, [isUserLoading, user, openSignIn]);
+  }, [isUserLoading, user, login]);
 
   const { data: designer, isLoading, error } = useQuery<SharedDesigner>({
     queryKey: ["/api/shared/designers", shareToken],

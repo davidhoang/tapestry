@@ -1,4 +1,5 @@
 import { QueryCache, QueryClient } from "@tanstack/react-query";
+import * as Sentry from "@sentry/react";
 import { toast } from "@/hooks/use-toast";
 
 let _getToken: (() => Promise<string | null>) | null = null;
@@ -144,6 +145,49 @@ function describeError(err: unknown): { title: string; description: string } | n
   };
 }
 
+function reportApiErrorToMonitoring(err: unknown, context: "query" | "mutation") {
+  if (!(err instanceof ApiError)) return;
+  if (err.status < 500) return;
+  try {
+    if (err.requestId !== undefined) {
+      Sentry.addBreadcrumb({
+        category: "api",
+        type: "http",
+        level: "error",
+        message: `API ${err.status} (request id ${err.requestId})`,
+        data: {
+          status: err.status,
+          requestId: err.requestId,
+          errorKind: err.errorKind,
+          pgCode: err.code,
+        },
+      });
+    }
+    Sentry.captureException(err, {
+      tags: {
+        source: "api",
+        context,
+        status: String(err.status),
+        errorKind: err.errorKind ?? "unknown",
+        ...(err.code ? { pgCode: err.code } : {}),
+        ...(err.requestId !== undefined ? { requestId: String(err.requestId) } : {}),
+      },
+      contexts: {
+        api: {
+          status: err.status,
+          statusText: err.statusText,
+          requestId: err.requestId,
+          errorKind: err.errorKind,
+          pgCode: err.code,
+          message: err.message,
+        },
+      },
+    });
+  } catch {
+    // never let monitoring break the app
+  }
+}
+
 const recentErrorToasts = new Map<string, number>();
 const ERROR_TOAST_DEDUP_MS = 4000;
 
@@ -165,6 +209,7 @@ function showErrorToast(err: unknown) {
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
+      reportApiErrorToMonitoring(error, "query");
       showErrorToast(error);
     },
   }),
@@ -191,6 +236,7 @@ export const queryClient = new QueryClient({
     mutations: {
       retry: false,
       onError: (error) => {
+        reportApiErrorToMonitoring(error, "mutation");
         showErrorToast(error);
       },
     },

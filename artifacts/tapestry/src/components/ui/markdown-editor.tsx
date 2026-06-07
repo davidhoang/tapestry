@@ -24,7 +24,7 @@ const MarkdownEditor = forwardRef<HTMLDivElement, MarkdownEditorProps>(
           {...cleanProps}
           height={height}
           hideToolbar={hideToolbar}
-          visibleDragBar={visibleDragBar}
+          visibleDragbar={visibleDragBar}
           data-color-mode="light"
         />
       </div>

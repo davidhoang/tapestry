@@ -14,7 +14,7 @@ import { useUpdateDesigner } from "@/hooks/use-designer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertDesignerSchema } from "@db/schema";
-import { z } from "zod";
+import { z } from "zod/v4";
 import {
   Form,
   FormControl,
@@ -124,7 +124,10 @@ export default function DesignerDetailsPage() {
   };
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    // insertDesignerSchema is a drizzle-zod (zod v4) schema, but @hookform/resolvers@3
+    // types zodResolver against the zod v3 ZodType. The cast bridges that version
+    // boundary; the schema validates correctly at runtime (zod v4 supports safeParseAsync).
+    resolver: zodResolver(formSchema as any),
     defaultValues: {
       name: "",
       title: "",

@@ -99,7 +99,7 @@ export default function WorkspaceMembersPage() {
       if (!workspaceId) return [];
       const response = await fetch(`/api/workspaces/${workspaceId}/members`);
       if (!response.ok) throw new Error('Failed to fetch members');
-      return response.json() as WorkspaceMember[];
+      return (await response.json()) as WorkspaceMember[];
     },
     enabled: !!workspaceId && permissions.canViewMembersList,
   });
@@ -111,7 +111,7 @@ export default function WorkspaceMembersPage() {
       if (!workspaceId) return [];
       const response = await fetch(`/api/workspaces/${workspaceId}/invitations`);
       if (!response.ok) throw new Error('Failed to fetch invitations');
-      return response.json() as WorkspaceInvitation[];
+      return (await response.json()) as WorkspaceInvitation[];
     },
     enabled: !!workspaceId && permissions.canManageInvitations,
   });

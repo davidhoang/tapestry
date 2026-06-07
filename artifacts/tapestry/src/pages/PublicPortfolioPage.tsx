@@ -143,7 +143,7 @@ export default function PublicPortfolioPage() {
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: portfolio.primaryColor }}>
+              <h1 className="text-2xl font-bold" style={{ color: portfolio.primaryColor ?? undefined }}>
                 {portfolio.title}
               </h1>
               {portfolio.tagline && (
@@ -154,7 +154,7 @@ export default function PublicPortfolioPage() {
             {portfolio.settings?.allowMessages && (
               <Dialog open={isInquiryDialogOpen} onOpenChange={setIsInquiryDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button style={{ backgroundColor: portfolio.primaryColor }}>
+                  <Button style={{ backgroundColor: portfolio.primaryColor ?? undefined }}>
                     <Mail className="h-4 w-4 mr-2" />
                     Get in Touch
                   </Button>
@@ -239,7 +239,7 @@ export default function PublicPortfolioPage() {
                       <Button 
                         type="submit" 
                         disabled={submitInquiryMutation.isPending}
-                        style={{ backgroundColor: portfolio.primaryColor }}
+                        style={{ backgroundColor: portfolio.primaryColor ?? undefined }}
                       >
                         {submitInquiryMutation.isPending ? "Sending..." : "Send Inquiry"}
                       </Button>
@@ -291,7 +291,7 @@ export default function PublicPortfolioPage() {
         {/* Featured Projects */}
         {featuredProjects.length > 0 && (
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8" style={{ color: portfolio.primaryColor }}>
+            <h2 className="text-3xl font-bold mb-8" style={{ color: portfolio.primaryColor ?? undefined }}>
               Featured Work
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -381,7 +381,7 @@ export default function PublicPortfolioPage() {
         {/* Other Projects */}
         {otherProjects.length > 0 && (
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8" style={{ color: portfolio.primaryColor }}>
+            <h2 className="text-3xl font-bold mb-8" style={{ color: portfolio.primaryColor ?? undefined }}>
               {featuredProjects.length > 0 ? 'More Work' : 'Portfolio'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -431,7 +431,7 @@ export default function PublicPortfolioPage() {
         {/* Contact Section */}
         {portfolio.settings?.showContact && (
           <section className="mb-16 text-center">
-            <h2 className="text-3xl font-bold mb-8" style={{ color: portfolio.primaryColor }}>
+            <h2 className="text-3xl font-bold mb-8" style={{ color: portfolio.primaryColor ?? undefined }}>
               Let's Work Together
             </h2>
             

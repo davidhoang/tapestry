@@ -687,7 +687,7 @@ function ViewListDialog({
   );
 
   type ListDesignerEntry = {
-    id: number;
+    id?: number;
     designer: SelectDesigner;
     notes?: string | null;
     sortOrder?: number | null;
@@ -915,7 +915,7 @@ function ViewListDialog({
                     {orderedDesigners.map((entry) => (
                       <SortableDesignerCard
                         key={entry.designer.id}
-                        designer={{ ...entry.designer, notes: entry.notes }}
+                        designer={{ ...entry.designer, notes: entry.notes ?? null }}
                         editingNotesFor={editingNotesFor}
                         notesValue={notesValue}
                         setNotesValue={setNotesValue}

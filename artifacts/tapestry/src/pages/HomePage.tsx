@@ -178,6 +178,7 @@ function ApiFeatureCard() {
     } else {
       setDisplayedCode("");
       setShowResponse(false);
+      return undefined;
     }
   }, [isHovered]);
 

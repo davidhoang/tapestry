@@ -74,6 +74,12 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Dedupe zod to a single copy. openai pulls zod@4.x while the rest of the
+  # workspace (drizzle-zod, hand-written form schemas) uses 3.25.x. Two zod
+  # copies make @hookform/resolvers see a different ZodType than the schemas,
+  # breaking every zodResolver() call's types. Both openai and drizzle-zod
+  # accept ^3.25, so pin everything to one version.
+  "zod": "3.25.76"
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"

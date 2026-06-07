@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 
 export function useUser() {
   const { isSignedIn, isLoaded } = useAuth();
-  const { signOut, openSignIn, openSignUp } = useClerk();
+  const { signOut } = useClerk();
   const queryClient = useQueryClient();
 
   // Safety net: if Clerk hasn't loaded within 10 seconds, treat user as
@@ -71,7 +71,24 @@ export function useUser() {
   };
 
   const register = async (_userData?: any) => {
-    openSignUp();
+    // Redirect-based sign-up mirrors login(): the Clerk modal relies on
+    // cross-origin iframes / partitioned storage, which silently no-ops in
+    // browsers like Dia. A full-page redirect to the in-app /register route
+    // works consistently across Chrome, Safari, Firefox, Arc, Edge, and Dia.
+    const here = window.location.pathname + window.location.search + window.location.hash;
+    const base = import.meta.env.BASE_URL || '/';
+    const target = `${base}register?redirect_url=${encodeURIComponent(here || '/')}`;
+
+    if (!isLoaded) {
+      // eslint-disable-next-line no-console
+      console.warn('[auth] Clerk not loaded at sign-up click; redirecting to /register');
+      toast({
+        title: 'Opening sign up…',
+        description: 'Taking you to the sign-up page.',
+      });
+    }
+
+    window.location.href = target;
     return { ok: true as const };
   };
 

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { SelectPortfolio, SelectPortfolioProject, InsertPortfolio, InsertPortfolioProject } from '@db/schema';
+import type { SelectPortfolio, SelectPortfolioProject, SelectDesigner, InsertPortfolio, InsertPortfolioProject } from '@db/schema';
 import { useLocation } from 'wouter';
 
 // Custom hook to extract workspace from URL
@@ -273,6 +273,7 @@ export function usePublicPortfolio(slug: string) {
         throw new Error('Failed to fetch portfolio');
       }
       return res.json() as Promise<SelectPortfolio & {
+        designer: SelectDesigner;
         projects: SelectPortfolioProject[];
       }>;
     },

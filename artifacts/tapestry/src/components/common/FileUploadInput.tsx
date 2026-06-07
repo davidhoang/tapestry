@@ -11,7 +11,7 @@ interface FileUploadInputProps {
   accept: string;
   multiple?: boolean;
   disabled?: boolean;
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   selectedFiles: FileList | null;
   isProcessing: boolean;
   processingProgress: number;

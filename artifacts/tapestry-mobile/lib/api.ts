@@ -203,10 +203,15 @@ export async function apiFetch<T>(
     } catch {
       body = await response.text().catch(() => null);
     }
-    const message =
+    const serverError =
       typeof body === "object" && body && "error" in body && typeof (body as { error?: unknown }).error === "string"
         ? (body as { error: string }).error
-        : `Request failed: ${response.status}`;
+        : null;
+    const message =
+      serverError ??
+      (response.status >= 500
+        ? "Something went wrong on our end. Please try again in a moment."
+        : `Request failed: ${response.status}`);
     throw new ApiError(message, response.status, body);
   }
 

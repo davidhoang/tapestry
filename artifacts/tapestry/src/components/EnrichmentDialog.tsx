@@ -201,14 +201,14 @@ export default function EnrichmentDialog({
           <div className="flex flex-wrap gap-2 ml-7">
             {value.map((item, index) => (
               <Badge key={index} variant="outline" className="text-xs">
-                {item}
+                {String(item)}
               </Badge>
             ))}
           </div>
         ) : typeof value === 'object' ? (
           <div className="ml-7 space-y-2">
-            {Object.entries(value).map(([subKey, subValue]) => (
-              subValue && (
+            {Object.entries(value as Record<string, unknown>).map(([subKey, subValue]) =>
+              subValue ? (
                 <div key={subKey} className="flex items-center gap-2 text-sm">
                   <span className="capitalize font-medium">{subKey}:</span>
                   <a 
@@ -221,8 +221,8 @@ export default function EnrichmentDialog({
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
-              )
-            ))}
+              ) : null
+            )}
           </div>
         ) : (
           <div className="ml-7 text-sm text-muted-foreground">

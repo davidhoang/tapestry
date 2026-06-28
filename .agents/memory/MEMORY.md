@@ -1,2 +1,1 @@
-- [zod pin & resolvers boundary](zod-and-resolvers.md) — zod pinned to 3.25.76 (ships v3+v4 subpaths); keep @hookform/resolvers on v3, cast the one drizzle-zod form's resolver.
-- [api-server pre-existing typecheck errors](api-server-typecheck.md) — api-server fails tsc but builds via esbuild; scope "web build" typecheck checks to @workspace/tapestry only.
+- [Metro stale module resolution](metro-stale-resolution.md) — new Expo dep reports "Unable to resolve module" until the expo workflow restarts; also how to verify a web export actually bundles.

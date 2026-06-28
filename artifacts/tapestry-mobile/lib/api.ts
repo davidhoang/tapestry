@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
 
+import { captureApiError } from "./monitoring";
+
 export type Workspace = {
   id: number;
   name: string;
@@ -212,7 +214,9 @@ export async function apiFetch<T>(
       (response.status >= 500
         ? "Something went wrong on our end. Please try again in a moment."
         : `Request failed: ${response.status}`);
-    throw new ApiError(message, response.status, body);
+    const apiError = new ApiError(message, response.status, body);
+    captureApiError(apiError, { status: response.status, path, body });
+    throw apiError;
   }
 
   if (response.status === 204) return undefined as T;

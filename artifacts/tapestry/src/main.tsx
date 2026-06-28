@@ -4,6 +4,7 @@ import { ClerkProvider, useAuth } from "@clerk/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient, setTokenProvider } from "./lib/queryClient";
 import { initMonitoring } from "./lib/monitoring";
+import { MonitoringIdentity } from "./components/MonitoringIdentity";
 import { Toaster } from "@/components/ui/toaster";
 import App from './App';
 import "./index.css";
@@ -33,6 +34,7 @@ createRoot(document.getElementById("root")!).render(
     <ClerkProvider publishableKey={publishableKey}>
       <QueryClientProvider client={queryClient}>
         <ClerkTokenSync />
+        <MonitoringIdentity />
         <App />
         <Toaster />
       </QueryClientProvider>

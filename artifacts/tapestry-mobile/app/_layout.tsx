@@ -29,6 +29,13 @@ import { defaultTextFontFamily } from "@/constants/typography";
 import { isAndroidSkin } from "@/lib/platform-skin";
 import { hasOnboarded } from "@/lib/preferences";
 import { tokenCache } from "@/lib/token-cache";
+import { useDefaultWorkspace } from "@/hooks/useWorkspace";
+import {
+  initMonitoring,
+  setMonitoringUser,
+  setMonitoringWorkspace,
+} from "@/lib/monitoring";
+import * as Sentry from "@sentry/react-native";
 
 // Make every <Text> default to the active skin's body font. Components that
 // pass an explicit fontFamily (via the `type.*` tokens) still win.
@@ -40,6 +47,25 @@ TextAny.defaultProps.style = [
 ];
 
 SplashScreen.preventAutoHideAsync();
+
+initMonitoring();
+
+// Keeps crash/error reports tagged with the signed-in user and the workspace
+// they're viewing, so we know who hit an error and where. Renders nothing.
+function MonitoringIdentity() {
+  const { userId } = useAuth();
+  const { workspace } = useDefaultWorkspace();
+
+  useEffect(() => {
+    setMonitoringUser(userId ? { id: userId } : null);
+  }, [userId]);
+
+  useEffect(() => {
+    setMonitoringWorkspace(workspace?.slug ?? null);
+  }, [workspace?.slug]);
+
+  return null;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -162,7 +188,7 @@ const styles = StyleSheet.create({
   splash: { flex: 1, backgroundColor: "#fafaf9" },
 });
 
-export default function RootLayout() {
+function RootLayout() {
   // Load both font families so the same bundle can render either skin —
   // we don't want a flash if the URL param flips between sessions.
   const [fontsLoaded, fontError] = useFonts({
@@ -221,6 +247,7 @@ export default function RootLayout() {
           >
             <GestureHandlerRootView>
               <KeyboardProvider>
+                <MonitoringIdentity />
                 <AuthGate />
               </KeyboardProvider>
             </GestureHandlerRootView>
@@ -230,3 +257,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

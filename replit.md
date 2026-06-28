@@ -68,3 +68,20 @@ Using the `pk_test_…` key in development is what avoids the "Production Keys a
 
 ### Mobile setup notes
 - For deployed builds, set `EXPO_PUBLIC_API_URL` to the published API origin (otherwise it falls back to `EXPO_PUBLIC_DOMAIN` / `REPLIT_DEV_DOMAIN`).
+
+## Error monitoring (Sentry)
+
+Both web and mobile have Sentry wired in but **inert until a DSN is set** — `initMonitoring()` is a safe no-op when its DSN env var is missing, so local dev stays silent. Setting the DSN is the single "go-live" switch.
+
+| Env var | Used by | Notes |
+| --- | --- | --- |
+| `VITE_SENTRY_DSN` | Web (`artifacts/tapestry`) | Inlined into the Vite bundle at build time; must be present in the publish/build environment. |
+| `EXPO_PUBLIC_SENTRY_DSN` | Mobile (`artifacts/tapestry-mobile`) | Read at runtime via `process.env`; set in the env for published Expo builds. |
+
+Optional (both default sensibly if unset): `*_SENTRY_ENVIRONMENT`, `*_SENTRY_RELEASE` (web uses `VITE_…`, mobile uses `EXPO_PUBLIC_…`).
+
+- Web init lives in `artifacts/tapestry/src/lib/monitoring.ts`; identity tagging in `src/components/MonitoringIdentity.tsx`. 5xx capture is in `src/lib/queryClient.ts` (query/mutation cache `onError`, fires once after retries).
+- Mobile init lives in `artifacts/tapestry-mobile/lib/monitoring.ts`; `app/_layout.tsx` calls `initMonitoring()` at module load and exports `Sentry.wrap(RootLayout)` for native crash capture. 5xx capture is in `lib/api.ts`; `captureApiError` dedupes by `{status,path}` within a 10s window so React Query retries don't emit duplicate events.
+- **No PII is sent**: only `user.id` and the workspace slug tag; `sendDefaultPii: false` on both.
+- The `@sentry/react-native` Expo config plugin (auto-added to `app.json`) only matters for **native** source-map upload, which needs `SENTRY_AUTH_TOKEN`. That step is skipped; the web export and JS error capture work without it.
+- After installing `@sentry/react-native` (or any new mobile dep), **restart the expo workflow** — Metro caches module resolution and will report a stale "Unable to resolve module" error for the new package until it does.

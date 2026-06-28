@@ -24,3 +24,22 @@ export function initMonitoring() {
 
   initialized = true;
 }
+
+/**
+ * Attach (or clear) the signed-in user on error reports. We deliberately send
+ * only the stable user id — no email or name — to keep PII out of monitoring
+ * (sendDefaultPii is false). No-op until monitoring is initialized.
+ */
+export function setMonitoringUser(user: { id: string | number } | null) {
+  if (!initialized) return;
+  Sentry.setUser(user ? { id: String(user.id) } : null);
+}
+
+/**
+ * Tag error reports with the active workspace so issues can be grouped and
+ * filtered by workspace in Sentry. Pass null to clear (e.g. on sign-out).
+ */
+export function setMonitoringWorkspace(slug: string | null) {
+  if (!initialized) return;
+  Sentry.setTag("workspace", slug ?? undefined);
+}

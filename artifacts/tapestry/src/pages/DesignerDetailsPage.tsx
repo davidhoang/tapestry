@@ -337,7 +337,7 @@ export default function DesignerDetailsPage() {
                           type="button"
                           variant="destructive"
                           size="sm"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                          className="absolute -top-2 -right-2 h-6 w-6 min-h-0 min-w-0 shrink-0 rounded-full p-0"
                           onClick={removePhoto}
                         >
                           <X className="h-3 w-3" />

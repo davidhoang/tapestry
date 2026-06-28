@@ -887,7 +887,7 @@ function ViewListDialog({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleJobUrlSubmit(jobUrlInput);
                         }}
-                        placeholder="Paste a job description URL…"
+                        placeholder="Add a designer — paste a job posting link…"
                         className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50 py-3"
                       />
                       {jobUrlInput && (

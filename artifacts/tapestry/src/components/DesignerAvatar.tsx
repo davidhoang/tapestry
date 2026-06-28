@@ -30,7 +30,6 @@ export function DesignerAvatar({ imageUrl, name, size = "md", className = "" }: 
         <AvatarImage 
           src={imageUrl} 
           alt={name}
-          className="object-cover"
         />
       ) : (
         <AvatarFallback

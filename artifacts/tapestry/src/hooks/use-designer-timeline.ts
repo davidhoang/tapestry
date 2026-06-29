@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { getAuthHeaders } from "@/lib/queryClient";
 
 interface TimelineAuthor {
   id: number;
@@ -68,7 +69,9 @@ export function useDesignerTimeline(
   return useQuery<TimelineResponse>({
     queryKey: ["/api/designers", designerId, "timeline", filter, workspaceSlug],
     queryFn: async () => {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        ...(await getAuthHeaders()),
+      };
       
       if (workspaceSlug && workspaceSlug.length > 0) {
         headers['x-workspace-slug'] = workspaceSlug;
@@ -110,6 +113,7 @@ export function useCreateDesignerNote() {
     mutationFn: async ({ designerId, content, contentPlain }: CreateNoteInput) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        ...(await getAuthHeaders()),
       };
       
       if (workspaceSlug && workspaceSlug.length > 0) {
@@ -157,6 +161,7 @@ export function useUpdateDesignerNote() {
     mutationFn: async ({ designerId, noteId, content, contentPlain, isPinned }: UpdateNoteInput) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        ...(await getAuthHeaders()),
       };
       
       if (workspaceSlug && workspaceSlug.length > 0) {
@@ -199,7 +204,9 @@ export function useDeleteDesignerNote() {
 
   return useMutation({
     mutationFn: async ({ designerId, noteId }: DeleteNoteInput) => {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        ...(await getAuthHeaders()),
+      };
       
       if (workspaceSlug && workspaceSlug.length > 0) {
         headers['x-workspace-slug'] = workspaceSlug;

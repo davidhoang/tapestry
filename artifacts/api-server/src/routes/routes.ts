@@ -966,6 +966,7 @@ export function registerRoutes(app: Express): Server {
       .set({
         ...designerData,
         ...(photoUrl && { photoUrl }),
+        updatedAt: new Date(),
       })
       .where(eq(designers.id, designerId))
       .returning();

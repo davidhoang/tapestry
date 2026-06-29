@@ -129,6 +129,7 @@ export const designers = pgTable("designers", {
   enrichmentSource: text("enrichment_source"),
   shareToken: text("share_token").unique(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   workspaceIdIdx: index("designers_workspace_id_idx").on(table.workspaceId),
   createdAtIdx: index("designers_created_at_idx").on(table.createdAt),

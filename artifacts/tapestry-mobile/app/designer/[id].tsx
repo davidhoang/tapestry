@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
+import { LastUpdated } from "@/components/LastUpdated";
 import { PortfolioGallery } from "@/components/PortfolioGallery";
 import { SkeletonDesignerDetail } from "@/components/Skeleton";
 import { SkillChip } from "@/components/SkillChip";
@@ -153,6 +154,16 @@ export default function DesignerScreen() {
             </Text>
           </View>
         ) : null}
+
+        <LastUpdated
+          updatedAt={
+            designer.updatedAt
+              ? new Date(designer.updatedAt).getTime()
+              : designer.createdAt
+                ? new Date(designer.createdAt).getTime()
+                : null
+          }
+        />
 
         <View style={styles.heroActions}>
           <ActionButton

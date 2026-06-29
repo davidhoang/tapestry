@@ -246,6 +246,7 @@ export function setupMobileAuth(app: any) {
         description: designer.description,
         available: designer.available,
         createdAt: designer.createdAt,
+        updatedAt: designer.updatedAt,
       }));
 
       const responseData = {
@@ -312,6 +313,7 @@ export function setupMobileAuth(app: any) {
         enrichedAt: designer.enrichedAt,
         enrichmentSource: designer.enrichmentSource,
         createdAt: designer.createdAt,
+        updatedAt: designer.updatedAt,
         timelineEventCount: eventCountResult?.count || 0,
       };
       if (setCacheHeaders(req, res, responseData, 120)) return;

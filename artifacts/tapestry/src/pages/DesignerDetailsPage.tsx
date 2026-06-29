@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
 import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles, Share2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useDesignerBySlug, useDesignerTalentGraph } from "@/hooks/use-designer";
@@ -662,6 +663,12 @@ export default function DesignerDetailsPage() {
                   </div>
                 </div>
               </div>
+
+              {(designer.updatedAt || designer.createdAt) && (
+                <p className="text-xs text-muted-foreground/70">
+                  Updated {formatDistanceToNow(new Date(designer.updatedAt ?? designer.createdAt!), { addSuffix: true })}
+                </p>
+              )}
 
               {/* Timeline + Talent Graph Tabs */}
               <div className="space-y-6 pb-12 border-b">

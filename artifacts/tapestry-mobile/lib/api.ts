@@ -24,6 +24,7 @@ export type Designer = {
   description: string | null;
   available: boolean | null;
   createdAt: string;
+  updatedAt: string | null;
 };
 
 export type DesignerDetails = Designer & {

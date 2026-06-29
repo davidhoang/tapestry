@@ -57,7 +57,6 @@ import {
   Plus,
   Trash,
   ListPlus,
-  Sparkles,
   Grid3X3,
   List,
   Table,
@@ -68,7 +67,6 @@ import {
 } from "lucide-react";
 import { slugify } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import EnrichmentDialog from "@/components/EnrichmentDialog";
 import LinkedInImportModal from "@/components/LinkedInImportModal";
 import { DesignerCardSkeletonGrid } from "@/components/DesignerCardSkeleton";
 import { SelectDesigner } from "@db/schema";
@@ -197,9 +195,6 @@ export default function DirectoryPage() {
   );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showAddToListDialog, setShowAddToListDialog] = useState(false);
-  const [showEnrichment, setShowEnrichment] = useState(false);
-  const [enrichmentDesigner, setEnrichmentDesigner] =
-    useState<SelectDesigner | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showLinkedInImport, setShowLinkedInImport] = useState(false);
   const { toast } = useToast();
@@ -524,10 +519,6 @@ export default function DirectoryPage() {
                     key={designer.id}
                     designer={designer}
                     onEdit={setDesignerToEdit}
-                    onEnrich={(designer) => {
-                      setEnrichmentDesigner(designer);
-                      setShowEnrichment(true);
-                    }}
                     showCheckbox={true}
                     isSelected={selectedIds.includes(designer.id)}
                     onToggleSelect={toggleDesignerSelection}
@@ -539,10 +530,6 @@ export default function DirectoryPage() {
                 designers={filteredDesigners}
                 workspaceSlug={workspaceSlug || ''}
                 onEdit={setDesignerToEdit}
-                onEnrich={(designer) => {
-                  setEnrichmentDesigner(designer);
-                  setShowEnrichment(true);
-                }}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleDesignerSelection}
                 columnWidths={columnWidths}
@@ -626,16 +613,6 @@ export default function DirectoryPage() {
           onSuccess={() => setSelectedIds([])}
         />
 
-        <EnrichmentDialog
-          open={showEnrichment}
-          onOpenChange={setShowEnrichment}
-          designer={enrichmentDesigner}
-          onSuccess={() => {
-            setShowEnrichment(false);
-            setEnrichmentDesigner(null);
-          }}
-        />
-
         {/* LinkedIn Import Modal */}
         <Dialog open={showLinkedInImport} onOpenChange={setShowLinkedInImport}>
           <DialogContent className="sm:max-w-4xl max-h-[90vh] sm:max-h-[90vh] md:max-h-[85vh] flex flex-col">
@@ -711,7 +688,6 @@ function AddDesignerDialog({
   const updateDesigner = useUpdateDesigner();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
-  const [isEnrichingProfile, setIsEnrichingProfile] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(designerSchema),
@@ -878,87 +854,6 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
     }
   };
 
-  const handleEnrichProfile = async () => {
-    setIsEnrichingProfile(true);
-    try {
-      const currentValues = form.getValues();
-
-      if (!currentValues.name.trim()) {
-        toast({
-          title: "Error",
-          description: "Please enter a name before enriching the profile",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const response = await fetch("/api/designers/enrich-new", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name: currentValues.name }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to enrich profile");
-      }
-
-      const enrichment = await response.json();
-
-      if (enrichment.success && enrichment.data) {
-        const data = enrichment.data;
-
-        // Update form with enriched data (only if current field is empty)
-        if (data.title && !currentValues.title) {
-          form.setValue("title", data.title);
-        }
-        if (data.company && !currentValues.company) {
-          form.setValue("company", data.company);
-        }
-        if (data.location && !currentValues.location) {
-          form.setValue("location", data.location);
-        }
-        if (data.email && !currentValues.email) {
-          form.setValue("email", data.email);
-        }
-        if (data.portfolioUrl && !currentValues.website) {
-          form.setValue("website", data.portfolioUrl);
-        }
-        if (data.socialLinks?.linkedin && !currentValues.linkedIn) {
-          form.setValue("linkedIn", data.socialLinks.linkedin);
-        }
-        if (data.bio && !currentValues.notes) {
-          form.setValue("notes", data.bio);
-        }
-        if (data.skills && data.skills.length > 0) {
-          const currentSkills = form.getValues("skills") || [];
-          const newSkills = [...Array.from(new Set([...currentSkills, ...data.skills]))];
-          form.setValue("skills", newSkills);
-        }
-
-        toast({
-          title: "Profile Enriched",
-          description: `Found information with ${Math.round(enrichment.confidence * 100)}% confidence. Empty fields have been populated.`,
-        });
-      } else {
-        toast({
-          title: "No Additional Information",
-          description:
-            "Could not find additional information for this person online.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to enrich profile",
-        variant: "destructive",
-      });
-    } finally {
-      setIsEnrichingProfile(false);
-    }
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -967,22 +862,6 @@ ${currentValues.email ? `Email: ${currentValues.email}\n` : ""}${currentValues.a
             <label htmlFor="photo" className="block text-sm font-medium">
               Photo
             </label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleEnrichProfile}
-              disabled={isEnrichingProfile}
-            >
-              {isEnrichingProfile ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enriching...
-                </>
-              ) : (
-                <>AI enrich profile</>
-              )}
-            </Button>
           </div>
           <input
             type="file"
@@ -1528,14 +1407,12 @@ function DesignerListItem({
   designer,
   workspaceSlug,
   onEdit,
-  onEnrich,
   isSelected,
   onToggleSelect,
 }: {
   designer: SelectDesigner;
   workspaceSlug: string;
   onEdit: (designer: SelectDesigner) => void;
-  onEnrich: (designer: SelectDesigner) => void;
   isSelected: boolean;
   onToggleSelect: (id: number) => void;
 }) {
@@ -1804,7 +1681,6 @@ interface DesignerTableProps {
   designers: SelectDesigner[];
   workspaceSlug: string;
   onEdit: (designer: SelectDesigner) => void;
-  onEnrich: (designer: SelectDesigner) => void;
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   columnWidths: { [key: string]: number };
@@ -1822,7 +1698,6 @@ function DesignerTable({
   designers,
   workspaceSlug,
   onEdit,
-  onEnrich,
   selectedIds,
   onToggleSelect,
   columnWidths,

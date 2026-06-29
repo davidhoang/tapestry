@@ -5,7 +5,7 @@ import PageLayout from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectDesigner } from "@db/schema";
-import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Sparkles, Share2 } from "lucide-react";
+import { Globe, Linkedin, Mail, ArrowLeft, Pencil, Upload, X, ListPlus, Loader2, Share2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RichTextPreview } from "@/components/ui/rich-text-preview";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -50,7 +50,6 @@ import PortfolioManager from "@/components/PortfolioManager";
 import { useLists, useAddDesignersToList, useCreateList } from "@/hooks/use-lists";
 import { DesignerAvatar } from "@/components/DesignerAvatar";
 import SimilarDesigners from "@/components/SimilarDesigners";
-import { EnrichmentModal } from "@/components/EnrichmentModal";
 import DesignerTimeline from "@/components/DesignerTimeline";
 
 const EXPERIENCE_LEVELS = [
@@ -74,7 +73,6 @@ export default function DesignerDetailsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [isEnrichmentModalOpen, setIsEnrichmentModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
@@ -261,11 +259,13 @@ export default function DesignerDetailsPage() {
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
+            size="icon"
             onClick={() => setLocation(`/${workspaceSlug}/directory`)}
             className="mb-8"
+            aria-label="Back to directory"
+            title="Back to directory"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to directory
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold mb-4">Designer Not Found</h1>
@@ -277,7 +277,7 @@ export default function DesignerDetailsPage() {
   }
 
   return (
-    <PageLayout className="min-h-screen bg-background">
+    <PageLayout className="min-h-screen bg-background pt-0">
       {/* Cover Photo Section */}
       <div className="relative h-64 overflow-hidden">
         <img 
@@ -290,11 +290,13 @@ export default function DesignerDetailsPage() {
         {/* Back Button */}
         <Button
           variant="ghost"
+          size="icon"
           onClick={() => setLocation(`/${workspaceSlug}/directory`)}
           className="absolute top-6 left-6 bg-background/80 backdrop-blur-sm hover:bg-background/90 text-foreground"
+          aria-label="Back to directory"
+          title="Back to directory"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to directory
+          <ArrowLeft className="h-4 w-4" />
         </Button>
 
         {/* Available badge */}
@@ -644,15 +646,6 @@ export default function DesignerDetailsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setIsEnrichmentModalOpen(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        Enrich
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
                         onClick={handleEdit}
                         className="flex items-center gap-2"
                       >
@@ -757,28 +750,6 @@ export default function DesignerDetailsPage() {
           )}
         </div>
       </div>
-
-      {/* Enrichment Modal */}
-      {designer && (
-        <EnrichmentModal
-          open={isEnrichmentModalOpen}
-          onOpenChange={setIsEnrichmentModalOpen}
-          designerId={designer.id}
-          currentData={{
-            email: designer.email,
-            phoneNumber: (designer as any).phoneNumber,
-            location: designer.location,
-            company: designer.company,
-            title: designer.title,
-            linkedIn: designer.linkedIn,
-            website: designer.website,
-            skills: Array.isArray(designer.skills) ? designer.skills : [],
-          }}
-          onSuccess={() => {
-            refetch();
-          }}
-        />
-      )}
     </PageLayout>
   );
 }

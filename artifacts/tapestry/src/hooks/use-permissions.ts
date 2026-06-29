@@ -44,7 +44,6 @@ interface WorkspacePermissions {
   canViewAuditLogs: boolean;
   
   // AI Features
-  canUseAIEnrichment: boolean;
   canConfigureAI: boolean;
   
   // Billing & Admin
@@ -103,7 +102,6 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canAccessAnalytics: true,
       canExportData: true,
       canViewAuditLogs: true,
-      canUseAIEnrichment: true,
       canConfigureAI: true,
       canManageBilling: true,
       canViewUsage: true,
@@ -151,7 +149,6 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canAccessAnalytics: true,
       canExportData: true,
       canViewAuditLogs: true,
-      canUseAIEnrichment: true,
       canConfigureAI: true,
       canManageBilling: false,
       canViewUsage: true,
@@ -199,7 +196,6 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canAccessAnalytics: true,
       canExportData: true,
       canViewAuditLogs: false,
-      canUseAIEnrichment: true,
       canConfigureAI: false,
       canManageBilling: false,
       canViewUsage: false,
@@ -247,7 +243,6 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
       canAccessAnalytics: false,
       canExportData: false,
       canViewAuditLogs: false,
-      canUseAIEnrichment: true,
       canConfigureAI: false,
       canManageBilling: false,
       canViewUsage: false,
@@ -294,7 +289,6 @@ function calculatePermissions(role: WorkspaceRole | null): WorkspacePermissions 
     canAccessAnalytics: false,
     canExportData: false,
     canViewAuditLogs: false,
-    canUseAIEnrichment: false,
     canConfigureAI: false,
     canManageBilling: false,
     canViewUsage: false,

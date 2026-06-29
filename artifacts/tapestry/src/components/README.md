@@ -7,7 +7,6 @@ This directory contains all reusable UI components for the Tapestry application.
 ### Core Components
 - **AdminRoute** - Protected route for admin users
 - **DesignerCard** - Card component for displaying designer profiles
-- **EnrichmentDialog** - Dialog for enriching designer profiles with AI
 - **Navigation** - Main navigation component with authentication
 - **SkillsInput** - Input component for managing designer skills
 - **WorkspaceSwitcher** - Dropdown for switching between workspaces
@@ -41,7 +40,6 @@ Or import from specific categories:
 
 ```tsx
 import { SkillsInput } from '@/components/forms';
-import { EnrichmentDialog } from '@/components/dialogs';
 ```
 
 ## Accessibility

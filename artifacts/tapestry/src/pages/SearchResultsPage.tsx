@@ -217,7 +217,6 @@ export default function SearchResultsPage() {
                 key={designer.id}
                 designer={designer}
                 onEdit={() => {}}
-                onEnrich={() => {}}
                 showCheckbox={false}
                 isSelected={false}
                 onToggleSelect={() => {}}

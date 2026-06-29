@@ -2,7 +2,6 @@
 export { default as AdminRoute } from './AdminRoute';
 export { default as CsvImport } from './CsvImport';
 export { default as DesignerCard } from './DesignerCard';
-export { default as EnrichmentDialog } from './EnrichmentDialog';
 export { default as FeedbackAnalyticsDashboard } from './FeedbackAnalyticsDashboard';
 export { default as Footer } from './Footer';
 export { default as LinkedInImportModal } from './LinkedInImportModal';

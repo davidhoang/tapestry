@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DesignerAvatar } from "./DesignerAvatar";
 import { SelectDesigner } from "@db/schema";
-import { Pencil, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { useState, memo } from "react";
 import { getDesignerCoverImage } from "@/utils/coverImages";
@@ -15,7 +15,6 @@ interface DesignerCardProps {
   onEdit?: (designer: SelectDesigner) => void;
   onAdd?: (designer: SelectDesigner) => void;
   onSkillClick?: (skill: string) => void;
-  onEnrich?: (designer: SelectDesigner) => void;
   showCheckbox?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: number) => void;
@@ -26,7 +25,6 @@ function DesignerCard({
   onEdit, 
   onAdd, 
   onSkillClick, 
-  onEnrich, 
   showCheckbox = false, 
   isSelected = false, 
   onToggleSelect 
